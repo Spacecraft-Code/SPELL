@@ -1,0 +1,16 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Printing capabilities
+Bundle-SymbolicName: com.astra.ses.spell.gui.print;singleton:=true
+Bundle-Version: 2.0.0
+Bundle-Activator: com.astra.ses.spell.gui.print.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ com.astra.ses.spell.gui;bundle-version="2.0.0",
+ com.astra.ses.spell.gui.core;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.procs;bundle-version="2.0.0",
+ com.astra.ses.spell.gui.types;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.preferences;bundle-version="1.0.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.

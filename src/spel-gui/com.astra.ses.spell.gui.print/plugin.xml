@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            description="Print the active procedure"
+            id="com.astra.ses.spell.gui.commands.print"
+            name="Print procedure data">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.print.mode"
+               name="mode"
+               optional="false"
+               values="code">
+         </commandParameter>
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.print.commands.PrintHandler"
+            commandId="com.astra.ses.spell.gui.commands.print">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:com.astra.ses.spell.gui.menu.procedures?after=com.astra.ses.spell.gui.menus.procedures.separator4">
+         <menu
+               icon="images/printer.png"
+               label="Print...">
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.print"
+                  label="Print code"
+                  style="push">
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.print.mode"
+                     value="CODE">
+               </parameter>
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.print"
+                  label="Print text"
+                  style="push">
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.print.mode"
+                     value="TEXT">
+               </parameter>
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.print"
+                  label="Print log"
+                  style="push">
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.print.mode"
+                     value="LOG">
+               </parameter>
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.print"
+                  label="Print ASRUN"
+                  style="push">
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.print.mode"
+                     value="ASRUN">
+               </parameter>
+            </command>
+         </menu>
+      </menuContribution>
+   </extension>
+
+</plugin>

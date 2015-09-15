@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: spel-gui-preferences-ui
+Bundle-SymbolicName: com.astra.ses.spell.gui.preferences.ui;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.expressions,
+ com.astra.ses.spell.gui.core,
+ com.astra.ses.spell.gui.types,
+ com.astra.ses.spell.gui.procs,
+ com.astra.ses.spell.gui.preferences,
+ org.eclipse.core.runtime

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="DEBUG">
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout pattern="[ %-23c{1}][ %-6p][%d{MMM d, yyyy h:mm:ss a:SSS}]%msg%n"/>
+		</Console>
+		<File name="LogFile" fileName="${env:SPELL_LOG}/${date:yyyy-MM-dd_HHmmss}_Gui.log">
+			<PatternLayout pattern="[ %-23c{1}][ %-6p][%d{MMM d, yyyy h:mm:ss a:SSS}]%msg%n"/>
+		</File>
+	</Appenders>
+
+	<Loggers>
+		<Root level="debug">
+			<AppenderRef ref="Console"/>
+			<AppenderRef ref="LogFile"/>
+		</Root>
+		
+		<!-- 
+		<Logger name="GUI" level="debug"/>
+		<Logger name="COMM" level="debug"/>
+		<Logger name="PROC" level="debug"/>
+		<Logger name="INIT" level="debug"/>
+		<Logger name="CONFIG" level="debug"/>
+		<Logger name="MAIN" level="debug"/>
+		 -->
+	</Loggers>
+</Configuration>

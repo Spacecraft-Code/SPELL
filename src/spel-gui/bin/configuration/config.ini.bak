@@ -1,0 +1,29 @@
+#Product Runtime Configuration File
+
+eclipse.product=com.astra.ses.spell.gui.product
+osgi.bundles.defaultStartLevel=4
+osgi.bundles=org.eclipse.core.runtime@start,\
+             org.eclipse.equinox.common@2:start,\
+             org.eclipse.update.configurator@3:start,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.hifly@3:start,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.commsocket,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.core,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.types,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.procs,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.shell,\
+             ../../spel-gui/plugins/com.astra.ses.spell.language,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.preferences,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.replay,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.preferences.ui,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.codeview,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.textview,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.shellview,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.watchvariables,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.outline,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.documentation,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.htree,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.clock,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.shared,\
+             ../../spel-gui/plugins/com.astra.ses.spell.gui.print
+

@@ -1,0 +1,1169 @@
+// -*- java -*-
+//good reading for error handling: https://javacc.dev.java.net/doc/errorrecovery.html
+//check Python.asdl for references on the python implementation of the grammar
+options
+{
+    // only non-defaults are given here.
+    NODE_SCOPE_HOOK       = true;   // call jjtree*NodeScope()
+    NODE_FACTORY          = true;
+    NODE_USES_PARSER      = true;
+    STATIC                = false;  // multiple parsers
+    COMMON_TOKEN_ACTION   = true;   // CommonTokenAction(Token)
+    DEBUG_PARSER          = false;  // must be used to enable tracing 
+    DEBUG_LOOKAHEAD       = false;
+    DEBUG_TOKEN_MANAGER   = false;  // used to debug the tokens we have generating 
+
+    USER_CHAR_STREAM      = true;
+    UNICODE_INPUT         = true;
+    ERROR_REPORTING       = true;  // this is NOT used to shut down errors regarding javacc org.python.pydev.parser.jython.PythonGrammar$LookaheadSuccess
+                                      // because the generated information is not complete enough if we do it.
+}
+
+
+PARSER_BEGIN(SpellGrammar)
+package com.astra.ses.spell.language.grammar;
+import java.util.List;
+import java.util.ArrayList;
+import com.astra.ses.spell.language.common.IGrammar;
+import com.astra.ses.spell.language.common.AbstractGrammar;
+import com.astra.ses.spell.language.common.IJJTGrammarState;
+import com.astra.ses.spell.language.common.AbstractTokenManager;
+import com.astra.ses.spell.language.common.JfpDef;
+import com.astra.ses.spell.language.model.CharStream;
+import com.astra.ses.spell.language.model.IParserHost;
+import com.astra.ses.spell.language.model.ParseException;
+import com.astra.ses.spell.language.model.SimpleNode;
+import com.astra.ses.spell.language.model.Token;
+import com.astra.ses.spell.language.model.ast.Import;
+import com.astra.ses.spell.language.model.ast.ImportFrom;
+import com.astra.ses.spell.language.model.ast.Name;
+import com.astra.ses.spell.language.model.ast.Num;
+import com.astra.ses.spell.language.model.ast.Str;
+import com.astra.ses.spell.language.model.ast.Yield;
+import com.astra.ses.spell.language.model.ast.modType;
+import com.astra.ses.spell.language.model.TokenMgrError;
+
+
+public class SpellGrammar extends AbstractGrammar implements IGrammar
+{
+
+    /**
+     * @return the current token found.
+     */
+    protected final Token getCurrentToken() {
+        return this.token;
+    }
+    
+    
+    /**
+     * @return the jjtree from this grammar
+     */
+    protected final IJJTGrammarState getJJTree(){
+        return jjtree;
+    }
+
+
+    /**
+     * @return the special tokens in the token source
+     */
+    @SuppressWarnings("unchecked")
+    protected final List<Object> getTokenSourceSpecialTokensList(){
+        return token_source.specialTokens;
+    }
+
+
+    /**
+     * @return the jj_lastpos
+     */
+    protected final Token getJJLastPos(){
+        return jj_lastpos;
+    }
+    
+    
+    private void handleFutureImports(String importName){
+        
+    }
+
+
+
+    protected final void addSpecialToArgDef(String str){
+        SimpleNode peeked = jjtree.peekNode();
+        if(peeked instanceof JfpDef){
+            JfpDef jfpdef = (JfpDef) peeked;
+            if(jfpdef.typeDef != null){
+                jfpdef.typeDef.getSpecialsAfter().add(str);
+            }else{
+                jfpdef.nameNode.getSpecialsAfter().add(str);
+            }
+        }else{
+            peeked.getSpecialsAfter().add(str);
+        }
+        
+    }
+
+   // constructors taking a IParserHost impl
+
+   public SpellGrammar(CharStream stream,IParserHost host) {
+       this(stream);
+       hostLiteralMkr = host;
+   }
+
+   public SpellGrammar(SpellGrammarTokenManager tm,
+                        IParserHost host)
+   {
+        this(tm);
+        hostLiteralMkr = host;
+   }
+
+}
+
+
+PARSER_END(SpellGrammar)
+
+TOKEN_MGR_DECLS:
+{
+    protected final int getDedentId(){return DEDENT;}
+    protected final int getEofId(){return EOF;}
+    protected final int getDefaultId(){return DEFAULT;}
+    protected final int getNewlineId(){return NEWLINE;}
+    protected final int getCurLexState(){return curLexState;}
+
+
+    private final void indenting(int ind) {
+        indent = ind;
+        if (indent == indentation[level])
+            SwitchTo(INDENTATION_UNCHANGED);
+        else
+            SwitchTo(INDENTING);
+    }
+}
+
+
+SKIP :
+{
+    <SPACE: " ">
+|   "\t"
+|   "\014"
+|   <CONTINUATION: ("\\") ("\r\n"|"\n"|"\r")>
+|   <NEWLINE1: ("\r\n"|"\n"|"\r")>
+        {
+            if (parens == 0) {
+                indent = 0;
+                input_stream.backup(1);
+                if (level == 0)
+                    SwitchTo(FORCE_NEWLINE1);
+                else
+                    SwitchTo(FORCE_NEWLINE2);
+            }
+        }
+}
+
+
+<FORCE_NEWLINE1> TOKEN :
+{ <NEWLINE: ("\n" | "\r")> : INDENTATION_UNCHANGED }
+
+
+<FORCE_NEWLINE2> TOKEN :
+{ <NEWLINE2: ("\n" | "\r")> { matchedToken.kind = NEWLINE; }: INDENTING }
+
+
+
+<INDENTING, INDENTATION_UNCHANGED> SKIP :
+{
+    "\t"
+        { indenting((indent/8+1)*8); }
+|   " "
+        { indenting(indent+1); }
+|   "\014"
+        { indenting(0); }
+|   <CRLF1: ("\r\n" | "\n" | "\r")>
+        {
+            indenting(0);
+        }
+}
+
+
+<INDENTATION_UNCHANGED> SKIP :
+{
+    <""> : DEFAULT
+}
+
+
+<INDENTING> TOKEN :
+{
+    <DEDENT: "">
+        {
+            if (indent > indentation[level]) {
+                level++;
+                indentation[level] = indent;
+                matchedToken.kind=INDENT;
+                matchedToken.image = "<INDENT>";
+            }
+            else if (level > 0) {
+                Token t = matchedToken;
+                level -= 1;
+                while (level > 0 && indent < indentation[level]) {
+                    level--;
+                    t = addDedent(t);
+                }
+                if (indent != indentation[level]) {
+                    throw new TokenMgrError("inconsistent dedent",
+                                            t.endLine, t.endColumn);
+                }
+                t.next = null;
+            }
+        } : DEFAULT
+}
+
+
+<UNREACHABLE> TOKEN :
+{
+    < INDENT:"<INDENT>">
+//|     < DEDENT:"<DEDENT>">
+}
+
+
+<DEFAULT> SPECIAL_TOKEN: /* COMMENTS 1*/
+{
+    <TRAILING_COMMENT: "#" (~["\n","\r"])* >{
+//    System.out.println("TRAILING_COMMENT "+image);
+//    matchedToken.image = image.toString();
+    }
+}
+
+<INDENTING, INDENTATION_UNCHANGED> SPECIAL_TOKEN: /* COMMENTS 2*/
+{
+    <SINGLE_LINE_COMMENT: "#" (~["\n","\r"])* ("\r\n" | "\n" | "\r")> {
+//    System.out.println("SINGLE_LINE_COMMENT "+image);
+//    matchedToken.image = image.toString();
+        indenting(0);
+    }
+}
+
+TOKEN : /* SEPARATORS */
+{
+    < LPAREN: "(" > {parens++;}
+|   < RPAREN: ")" > {parens--;}
+|   < LBRACE: "{" > {parens++;}
+|   < RBRACE: "}" > {parens--;}
+|   < LBRACKET: "[" > {parens++;}
+|   < RBRACKET: "]" > {parens--;}
+|   < SEMICOLON: ";" >
+|   < COMMA: "," >
+|   < DOT: "." >
+|   < COLON: ":" >
+}
+
+
+TOKEN : /* OPERATORS */
+{
+    < PLUS: "+" >
+|   < MINUS: "-" >
+|   < MULTIPLY: "*" >
+|   < DIVIDE: "/" >
+|   < FLOORDIVIDE: "//" >
+|   < POWER: "**" >
+|   < LSHIFT: "<<" >
+|   < RSHIFT: ">>" >
+|   < MODULO: "%" >
+|   < NOT: "~" >
+|   < XOR: "^" >
+|   < OR: "|" >
+|   < AND: "&" >
+|   < EQUAL: "=" >
+|   < GREATER: ">" >
+|   < LESS: "<" >
+|   < EQEQUAL: "==" >
+|   < EQLESS: "<=" >
+|   < EQGREATER: ">=" >
+|   < NOTEQUAL: "!=" >
+|   < PLUSEQ: "+=" >
+|   < MINUSEQ: "-=" >
+|   < MULTIPLYEQ: "*=" >
+|   < DIVIDEEQ: "/=" >
+|   < FLOORDIVIDEEQ: "//=" >
+|   < MODULOEQ: "%=" >
+|   < ANDEQ: "&=" >
+|   < OREQ: "|=" >
+|   < XOREQ: "^=" >
+|   < LSHIFTEQ: "<<=" >
+|   < RSHIFTEQ: ">>=" >
+|   < POWEREQ: "**=" >
+}
+
+TOKEN : /* KEYWORDS */
+{
+    < OR_BOOL: "or" >
+|   < AND_BOOL: "and" >
+|   < NOT_BOOL: "not" >
+|   < IS: "is" >
+|   < IN: "in" >
+|   < LAMBDA: "lambda" >
+|   < IF: "if" >
+|   < ELSE: "else" >
+|   < ELIF: "elif" >
+|   < WHILE: "while" >
+|   < FOR: "for" >
+|   < TRY: "try" >
+|   < EXCEPT: "except" >
+|   < DEF: "def" >
+|   < CLASS: "class" >
+|   < FINALLY: "finally" >
+|   < PASS: "pass" >
+|   < BREAK: "break" >
+|   < CONTINUE: "continue" >
+|   < RETURN: "return" >
+|   < YIELD: "yield" >
+|   < IMPORT: "import" >
+|   < FROM: "from" >
+|   < DEL: "del" >
+|   < RAISE: "raise" >
+|   < GLOBAL: "global" >
+|   < NONLOCAL: "nonlocal" >
+|   < ASSERT: "assert" >
+|   < AS: "as" >
+|   < WITH: "with" >
+|   < FALSE: "False" >
+|   < TRUE: "True" >
+|   < NONE: "None" >
+|   < AT: "@" >
+}
+
+
+TOKEN : /* Python identifiers */
+{
+    < NAME: <LETTER> ( <LETTER> | <DIGIT>)* >
+|   < #LETTER: ["_","a"-"z","A"-"Z"] >
+}
+
+
+TOKEN : /* Numeric literals */
+{
+    < DECNUMBER:
+        ["1"-"9"] (["0"-"9"])* (["l", "L"])?
+      | "0"
+      >
+|   < HEXNUMBER: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ (["l","L"])? >
+|   < OCTNUMBER: "0" ["o","O"] (["0"-"7"])* (["l","L"])? >
+|
+    < FLOAT:
+        (["0"-"9"])+ "." (["0"-"9"])* (<EXPONENT>)?
+      | "." (["0"-"9"])+ (<EXPONENT>)?
+      | (["0"-"9"])+ <EXPONENT>
+      >
+|   < COMPLEX: (<DECNUMBER> | <FLOAT> | "0" <DECNUMBER> ) ["j", "J"]>
+|   < #EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+|   < #DIGIT: ["0" - "9"] >
+}
+
+
+MORE : /* Strings */
+{
+    < (["b", "B"]) (["r", "R"])? "'" > :  IN_BSTRING11
+|   < (["b", "B"]) (["r", "R"])? "\"" > :  IN_BSTRING21
+|   < (["b", "B"]) (["r", "R"])? "'''" > :  IN_BSTRING13
+|   < (["b", "B"]) (["r", "R"])? "\"\"\"" > :  IN_BSTRING23
+|   < (["r", "R"])? "'" > :  IN_STRING11
+|   < (["r", "R"])? "\"" > :  IN_STRING21
+|   < (["r", "R"])? "'''" > :  IN_STRING13
+|   < (["r", "R"])? "\"\"\"" > :  IN_STRING23
+}
+
+<IN_STRING11> TOKEN : { <SINGLE_STRING: "'"> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+<IN_STRING21> TOKEN : { <SINGLE_STRING2: "\""> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+<IN_STRING13> TOKEN : { <TRIPLE_STRING: "'''"> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+<IN_STRING23> TOKEN : { <TRIPLE_STRING2: "\"\"\""> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+
+<IN_BSTRING11> TOKEN : { <SINGLE_BSTRING: "'"> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+<IN_BSTRING21> TOKEN : { <SINGLE_BSTRING2: "\""> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+<IN_BSTRING13> TOKEN : { <TRIPLE_BSTRING: "'''"> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+<IN_BSTRING23> TOKEN : { <TRIPLE_BSTRING2: "\"\"\""> {
+    matchedToken.image = image.toString(); } : DEFAULT}
+
+<IN_STRING11> MORE:
+{
+    <"\\\r\n">           { image.setLength(image.length()-3); } : IN_STRING1NLC
+|   <("\\" ("\n"|"\r"))> { image.setLength(image.length()-2); } : IN_STRING1NLC
+}
+
+<IN_STRING21> MORE:
+{
+    <"\\\r\n">           { image.setLength(image.length()-3); } : IN_STRING2NLC
+|   <("\\" ("\n"|"\r"))> { image.setLength(image.length()-2); } : IN_STRING2NLC
+}
+
+<IN_BSTRING11> MORE:
+{
+    <"\\\r\n">           { image.setLength(image.length()-3); } : IN_BSTRING1NLC
+|   <("\\" ("\n"|"\r"))> { image.setLength(image.length()-2); } : IN_BSTRING1NLC
+}
+
+<IN_BSTRING21> MORE:
+{
+    <"\\\r\n">           { image.setLength(image.length()-3); } : IN_BSTRING2NLC
+|   <("\\" ("\n"|"\r"))> { image.setLength(image.length()-2); } : IN_BSTRING2NLC
+}
+
+<IN_STRING1NLC> MORE:
+{
+ <""> : IN_STRING11
+}
+
+<IN_STRING2NLC> MORE:
+{
+ <""> : IN_STRING21
+}
+
+<IN_BSTRING1NLC> MORE:
+{
+ <""> : IN_BSTRING11
+}
+
+<IN_BSTRING2NLC> MORE:
+{
+ <""> : IN_BSTRING21
+}
+
+<IN_STRING11, IN_BSTRING11> MORE: { <("\\" ("\\"|"'")) | ~["\n","\r"]> }
+<IN_STRING21, IN_BSTRING21> MORE: { <("\\" ("\\"|"\"")) | ~["\n","\r"]> }
+
+/* This is a test to see if we can make the loading of strings more efficient (and maybe replace the MORE that is declared below.
+I stopped this because I've seen that making the CharStream was apparently the number 1 thing to do, but it might be worth
+comming back to this approach later).
+<IN_STRING23> MORE:
+{
+    <~[]> 
+    {
+         try {
+                 while(true){
+                         char c = input_stream.readChar();
+                         image.append(c);
+                         int len = image.length();
+                         if(len > 3 && image.charAt(len-3) == '"' && image.charAt(len-2) == '"'  && image.charAt(len-1) == '"' ){
+                                 input_stream.backup(3);
+                                 image.delete(image.length()-3, image.length());
+                                 break;
+                         }
+                 }
+         } catch (Exception e) {
+             throw new RuntimeException(e);
+         }
+    }
+}
+*/
+
+<IN_STRING13, IN_STRING23, IN_BSTRING13, IN_BSTRING23> MORE:
+{
+    <"\r\n"> {
+        int l = image.length();
+        image.setLength(l-1);
+        image.setCharAt(l-2, '\n');
+    }
+|   <"\n">
+|   <"\r"> { image.setCharAt(image.length()-1, '\n'); }
+|   <~["\n","\r"]>
+|   <"\\" ~["\n","\r"]>
+}
+
+
+//file_input: (NEWLINE | stmt)* ENDMARKER
+modType file_input(): {}
+{
+    (<NEWLINE> | stmt())* <EOF>
+    { return (modType) jjtree.popNode(); }
+}
+
+
+//funcdef: 'def' NAME parameters ['->' test] ':' suite
+void funcdef(): {}
+{ 
+    <DEF> Name() parameters() [<MINUS><GREATER>{this.addSpecialToken("->", STRATEGY_BEFORE_NEXT);} test()#funcdef_return_annottation] <COLON> 
+        {this.addSpecialToken(":");}  suite() 
+}
+
+
+
+//decorators: decorator+
+//decorator: '@' dotted_name [ '(' [arglist] ')' ] NEWLINE
+void decorators(): {}
+{
+    (begin_decorator() [<LPAREN>  {this.addSpecialToken("(", STRATEGY_BEFORE_NEXT);} [arglist()] <RPAREN>  {this.findTokenAndAdd(")");} ] <NEWLINE> )+ 
+}
+
+
+void begin_decorator(): {}
+{ <AT> dotted_name()
+}
+
+//parameters: '(' [typedargslist] ')'
+void parameters() #void:  {}
+{ <LPAREN>{this.findTokenAndAdd("(");}
+  [typedargslist()] 
+  <RPAREN>{this.findTokenAndAdd(")");} 
+}
+  
+//typedargslist: ((tfpdef ['=' test] ',')*//                ('*' [tfpdef] (',' tfpdef ['=' test])* [',' '**' tfpdef] | '**' tfpdef)//                | tfpdef ['=' test] (',' tfpdef ['=' test])* [','])
+void typedargslist() #void: {}
+{
+// Doing the exact same does not yield good results for javacc, so, we have to work with an alternative specification
+// (that does the same thing)
+//       (LOOKAHEAD(2) (defaultarg2() <COMMA>)*//        (ExtraArgList2() (<COMMA> defaultarg2())* [<COMMA> ExtraKeywordList2()] | ExtraKeywordList2())//        | defaultarg2() (<COMMA> defaultarg2())* [<COMMA>])
+
+
+       ((defaultarg2() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> defaultarg2())*) [LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> ((ExtraArgList2() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> onlykeywordarg2())* [{this.addSpecialToken(",");} <COMMA> ExtraKeywordList2()]) | (ExtraKeywordList2()) )]) [{this.addSpecialToken(",");} <COMMA>]
+    |  (ExtraArgList2() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> onlykeywordarg2())* [LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> ExtraKeywordList2()]) [{this.addSpecialToken(",");} <COMMA>]   
+    |   ExtraKeywordList2() [{this.addSpecialToken(",");} <COMMA>]
+}
+
+void ExtraArgList2(): {}
+{
+	<MULTIPLY> {this.addSpecialToken("*", STRATEGY_BEFORE_NEXT);} [tfpdef()]
+}
+
+void ExtraKeywordList2(): {}
+{
+	<POWER> {this.addSpecialToken("**", STRATEGY_BEFORE_NEXT);} tfpdef()
+}
+
+void defaultarg2(): {}
+{ tfpdef() [<EQUAL> {this.addSpecialToArgDef("=");}  test()] }
+
+
+void onlykeywordarg2(): {}
+{ tfpdef() [<EQUAL> {this.addSpecialToArgDef("=");}  test()] }
+
+
+//tfpdef: NAME [':' test]
+void tfpdef(): {}
+{ 
+	Name() [LOOKAHEAD(2)<COLON> {this.addSpecialToken(":", STRATEGY_BEFORE_NEXT);} test()]
+}
+
+
+//varargslist: ((vfpdef ['=' test] ',')*//              ('*' [vfpdef] (',' vfpdef ['=' test])*  [',' '**' vfpdef] | '**' vfpdef)//              | vfpdef ['=' test] (',' vfpdef ['=' test])* [','])
+void varargslist() #void: {}
+{
+       ((defaultarg() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> defaultarg())*) [LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> ((ExtraArgList() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> onlykeywordarg())* [{this.addSpecialToken(",");} <COMMA> ExtraKeywordList()]) | (ExtraKeywordList()) )]) [{this.addSpecialToken(",");} <COMMA>]
+    |  (ExtraArgList() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> onlykeywordarg())* [LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> ExtraKeywordList()]) [{this.addSpecialToken(",");} <COMMA>]   
+    |   ExtraKeywordList() [{this.addSpecialToken(",");} <COMMA>]
+}
+
+void ExtraArgList(): {}
+{ <MULTIPLY> {this.addSpecialToken("*", STRATEGY_BEFORE_NEXT);} [Name()] }
+
+void ExtraKeywordList(): {}
+{ (<POWER>{this.addSpecialToken("**", STRATEGY_BEFORE_NEXT);}|<MULTIPLY> {this.addSpecialToken("*", STRATEGY_BEFORE_NEXT);}{this.addSpecialToken("*", STRATEGY_BEFORE_NEXT);} <MULTIPLY>) Name() }
+
+void onlykeywordarg(): {}
+{ fpdef() [<EQUAL> {this.addSpecialToArgDef("=");}  test()] }
+
+void defaultarg(): {}
+{ fpdef() [<EQUAL> {this.addSpecialToArgDef("=");}  test()] }
+
+//fpdef: NAME | '(' fplist ')'
+void fpdef() #void: {}
+{ Name() | <LPAREN>  {this.addSpecialToken("(",STRATEGY_BEFORE_NEXT);}   fplist() <RPAREN> {this.findTokenAndAdd(")");}  }
+
+//fplist: fpdef (',' fpdef)* [',']
+void fplist() #tuple: {}
+{ fpdef() (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> fpdef())* [{this.addSpecialToken(",");} <COMMA>] }
+
+
+//stmt: simple_stmt | compound_stmt
+void stmt() #void: {}
+{ simple_stmt() | compound_stmt() }
+
+//simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
+void simple_stmt() #void: {}
+{ small_stmt() (LOOKAHEAD(2) <SEMICOLON> small_stmt())* [<SEMICOLON>] <NEWLINE>
+}
+
+//small_stmt: expr_stmt | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | nonlocal_stmt | assert_stmt 
+void small_stmt() #void: {SimpleNode simpleNode;}
+{
+    expr_stmt()
+|   del_stmt()
+|   pass_stmt() {addToPeek("pass", false); }
+|   flow_stmt()
+|   import_stmt()
+|   global_stmt()
+|   nonlocal_stmt()
+|   assert_stmt() {addToPeek("assert ", false); }
+}
+
+//expr_stmt: testlist (augassign (yield_expr|testlist) |
+//                     ('=' (yield_expr|testlist))*)
+void expr_stmt() #void: {}
+{
+    SmartTestList() (
+    <PLUSEQ>        (yield_expr()|SmartTestList())   #aug_plus(2)
+|   <MINUSEQ>       (yield_expr()|SmartTestList())   #aug_minus(2)
+|   <MULTIPLYEQ>    (yield_expr()|SmartTestList())   #aug_multiply(2)
+|   <DIVIDEEQ>      (yield_expr()|SmartTestList())   #aug_divide(2)
+|   <FLOORDIVIDEEQ> (yield_expr()|SmartTestList())   #aug_floordivide(2)
+|   <MODULOEQ>      (yield_expr()|SmartTestList())   #aug_modulo(2)
+|   <ANDEQ>         (yield_expr()|SmartTestList())   #aug_and(2)
+|   <OREQ>          (yield_expr()|SmartTestList())   #aug_or(2)
+|   <XOREQ>         (yield_expr()|SmartTestList())   #aug_xor(2)
+|   <LSHIFTEQ>      (yield_expr()|SmartTestList())   #aug_lshift(2)
+|   <RSHIFTEQ>      (yield_expr()|SmartTestList())   #aug_rshift(2)
+|   <POWEREQ>       (yield_expr()|SmartTestList())   #aug_power(2)
+|  (<EQUAL>         (yield_expr()|SmartTestList()))* #expr_stmt(jjtree.nodeArity()+1))
+
+}
+
+
+//del_stmt: 'del' exprlist
+void del_stmt(): {}
+{ begin_del_stmt() exprlist() }
+
+void begin_del_stmt(): {}
+{ <DEL> {this.addToPeek("del ",false);}
+}
+
+//pass_stmt: 'pass'
+void pass_stmt(): {}
+{ <PASS> }
+
+//flow_stmt: break_stmt | continue_stmt | return_stmt | yield_stmt | raise_stmt
+void flow_stmt() #void: {}
+{
+    <BREAK> {addToPeek("break",true);} #break_stmt(0)
+|   <CONTINUE>  {addToPeek("continue",true);} #continue_stmt(0)
+|   return_stmt()
+|   yield_stmt()
+|   raise_stmt()
+}
+
+//return_stmt: 'return' [testlist]
+void return_stmt(): {}
+{ begin_return_stmt() [SmartTestList()] }
+
+void begin_return_stmt(): {}
+{ <RETURN> {this.addToPeek("return ",false);}
+}
+
+
+//yield_stmt: yield_expr
+void yield_stmt(): {}
+{ yield_expr() }
+
+//yield_expr: 'yield' [testlist]
+void yield_expr(): {}
+{ <YIELD> [SmartTestList()] {this.addToPeek("yield ",false, Yield.class);}}
+
+
+//raise_stmt: 'raise' [test ['from' test]]
+void raise_stmt(): {}
+{ <RAISE> {this.addSpecialToken("raise ", STRATEGY_BEFORE_NEXT);} [test() [{this.addSpecialToken(" from ");} <FROM> test()]] }
+
+//import_stmt: 'import' dotted_name (',' dotted_name)* | 'from' dotted_name 'import' ('*' | NAME (',' NAME)*)
+void import_stmt() #void: {Import imp;}
+{  <IMPORT> imp = Import() {imp.addSpecial("import ",false);} 
+  |<FROM> {this.addSpecialToken("from ",STRATEGY_BEFORE_NEXT);} ImportFrom() 
+}
+
+
+Import Import(): {}
+{ dotted_as_name() ({this.addSpecialToken(",");} <COMMA> dotted_as_name())* 
+  {return (Import)jjtree.peekNode();}
+}
+
+//import_from: ('from' ('.'* dotted_name | '.'+)
+//              'import' ('*' | '(' import_as_names ')' | import_as_names))
+void ImportFrom(): { int level=0; int state=0;String fromName=null;String importName=null; }
+{
+    //we need to set the  <IMPORT> {this.addSpecialToken(" import ");} in both otherwise the lookahead will not work as we want it to work
+    //because it confuses the import with the dotted name
+     (("." {this.addSpecialToken(".");level++;} )* (fromName=dotted_name())? )  {if(fromName==null && level==0){throw new ParseException("Expecting to find '.' or name in import.");}}
+     <IMPORT> {this.addSpecialToken(" import ");} 
+    
+    (
+        //from xxx import *
+        <MULTIPLY> {this.addSpecialToken("*",STRATEGY_ADD_AFTER_PREV);}//from xx import *
+        
+        //from xxx import a,b,c
+        | (importName=import_as_name() {if(fromName != null && fromName.equals("__future__"))handleFutureImports(importName);} 
+            ({this.addSpecialToken(",");} <COMMA> (importName=import_as_name()){if(fromName != null && fromName.equals("__future__"))handleFutureImports(importName);})* 
+          ) 
+        
+        //from xxx import (a,b,c)
+        | <LPAREN>  {this.addSpecialToken("(",STRATEGY_BEFORE_NEXT);}   
+          (importName=import_as_name()){if(fromName != null && fromName.equals("__future__"))handleFutureImports(importName);} 
+          (
+           ({
+             if(state!=0){
+                 throw new ParseException("Invalid syntax: 2 commas cannot be grouped.", getToken(1));
+             }
+             state=1; 
+             this.addSpecialToken(",");
+             } 
+             <COMMA> ( {state=0;} (importName=import_as_name(){if(fromName != null && fromName.equals("__future__"))handleFutureImports(importName);}))? )* 
+           <RPAREN>  {this.findTokenAndAdd(")");} 
+          )
+    )
+    //now, let's set the correct level for the module
+    {((ImportFrom)jjtree.peekNode()).level = level;}
+}
+
+//dotted_as_name: dotted_name [NAME NAME]
+void dotted_as_name(): {}
+{ dotted_name() [<AS> {this.addSpecialToken(" as ");} Name()] }
+
+//dotted_name: NAME ('.' NAME)*
+String dotted_name(): { Token t; StringBuffer sb = new StringBuffer(); }
+{ t=Name() { sb.append(t.image); }
+    (<DOT> t=Name() { sb.append("." + t.image); } )*
+        { return sb.toString(); }
+}
+
+//import_as_name: NAME [NAME NAME]
+String import_as_name(): { Token t; }
+{ t=Name() [<AS> {this.addSpecialToken(" as ");} Name()] { return t.image; } }
+
+//global_stmt: 'global' NAME (',' NAME)*
+void global_stmt(): {}
+{ <GLOBAL> {this.addSpecialToken("global ", STRATEGY_BEFORE_NEXT);} Name() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> Name())* [{this.addSpecialToken(",");} <COMMA>] [<EQUAL> {this.addSpecialToken("=", STRATEGY_BEFORE_NEXT);} testlist()] }
+
+
+//nonlocal_stmt: 'nonlocal' NAME (',' NAME)* [','] ['=' testlist]
+void nonlocal_stmt(): {}{ <NONLOCAL> {this.addSpecialToken("nonlocal ", STRATEGY_BEFORE_NEXT);} Name() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> Name())* [{this.addSpecialToken(",");} <COMMA>] [<EQUAL> {this.addSpecialToken("=", STRATEGY_BEFORE_NEXT);} testlist()]}
+
+
+//assert_stmt: 'assert' test [',' test]
+void assert_stmt(): {}
+{ <ASSERT> test() [{this.addSpecialToken(",");} <COMMA> test()] }
+
+//compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef
+void compound_stmt() #void : { token_source.compound = true; }
+{if_stmt() | while_stmt() | for_stmt() | try_stmt() | with_stmt() | funcdef() | classdef() | decorated()}
+
+//if_stmt: 'if' test ':' suite ('elif' test ':' suite)* ['else' ':' suite]
+void if_stmt(): {Object spStr;}
+{
+	{spStr = createSpecialStr("if","if ", false);}
+    <IF> {this.addSpecialTokenToLastOpened(spStr);} test() <COLON> {this.addSpecialToken(":");} suite()
+         (begin_elif_stmt() test() <COLON> {this.addSpecialToken(":");} suite())* 
+             [ <ELSE> <COLON> {this.findTokenAndAdd("else","else:",true);} suite()]
+}
+
+
+void begin_elif_stmt(): {}
+{ <ELIF> {this.addToPeek("elif",false);}
+}
+
+
+//while_stmt: 'while' test ':' suite ['else' ':' suite]
+void while_stmt(): {}
+{ begin_while_stmt() test() <COLON> {this.addSpecialToken(":");} suite() 
+  [ begin_else_stmt()  suite()] }
+
+void begin_while_stmt(): {}
+{ {this.addSpecialToken("while ",STRATEGY_BEFORE_NEXT);} <WHILE> 
+}
+void begin_else_stmt(): {}
+{ <ELSE> {this.addSpecialToken("else",STRATEGY_BEFORE_NEXT);} {this.addSpecialToken(":",STRATEGY_BEFORE_NEXT);} <COLON>  
+}
+
+//for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
+void for_stmt(): {}
+{   <FOR> {this.addSpecialTokenToLastOpened("for ");} exprlist() <IN> {this.addSpecialToken(" in ");} SmartTestList() <COLON> {this.addSpecialToken(":");} suite()
+    [begin_for_else_stmt() suite()]
+    
+} 
+
+
+void begin_for_else_stmt(): {}
+{ <ELSE> {this.addSpecialToken("else",STRATEGY_BEFORE_NEXT);} {this.addSpecialToken(":",STRATEGY_BEFORE_NEXT);} <COLON>  
+}
+//try_stmt: ('try' ':' suite (except_clause ':' suite)+ #diagram:break
+//           ['else' ':' suite] | 'try' ':' suite 'finally' ':' suite)
+void try_stmt() #void: {SimpleNode tryNode;int i=0;}
+{ 
+    begin_try_stmt() {tryNode = (SimpleNode)jjtree.peekNode();}  suite() (
+        (
+            (except_clause(tryNode) {i++;})+ 
+    
+            [begin_try_else_stmt() suite() {i++;} #tryelse_stmt(2) ]
+            
+            [begin_finally_stmt()  suite() {i++;} #tryfinally_outer_stmt(2)]
+            
+            #try_stmt(i)
+        )
+        
+        | begin_finally_stmt() suite()
+            #tryfinally_stmt(jjtree.nodeArity()+1)
+    )
+}
+
+//this is the 'try' ':'  it is needed because we need that scope closing for getting the specials.
+void begin_try_stmt(): {}
+{ <TRY> {this.addSpecialToken("try", STRATEGY_BEFORE_NEXT);} {this.addSpecialToken(":", STRATEGY_BEFORE_NEXT);} <COLON> 
+}
+void begin_try_else_stmt(): {}
+{ <ELSE> {this.addSpecialToken("else", STRATEGY_BEFORE_NEXT);}{this.addSpecialToken(":", STRATEGY_BEFORE_NEXT);}<COLON>
+}
+
+void begin_finally_stmt(): {}
+{ <FINALLY> {this.addSpecialToken("finally", STRATEGY_BEFORE_NEXT);} {this.addSpecialToken(":", STRATEGY_BEFORE_NEXT);} <COLON> 
+}
+
+//except_clause: 'except' [test [as test]]
+void except_clause(SimpleNode tryNode): {}
+{ begin_except_clause() {this.addToPeek("except",false);} [test() [{this.addSpecialToken(" as ");} <AS> test()]] <COLON> { this.addSpecialToken(":");} suite() }
+
+void begin_except_clause(): {}
+{ <EXCEPT> }
+
+
+//with_stmt: 'with' test [ with_var ] ':' suite
+void with_stmt(): {}
+{ <WITH> 
+    {this.addSpecialToken("with ", STRATEGY_BEFORE_NEXT); } 
+    
+    test() 
+    
+    [with_var()] <COLON> { this.addSpecialToken(":");} suite() }
+
+//with_var: 'as' expr
+void with_var():{}
+{ <AS> {this.addSpecialToken(" as ", STRATEGY_BEFORE_NEXT);} expr()}
+
+//suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
+void suite(): {}
+{ simple_stmt() |  <NEWLINE>
+                   { token_source.expect_indent = true; } <INDENT> { token_source.expect_indent = false; } (stmt())+ <DEDENT> }
+
+
+//test: or_test ['if' or_test 'else' test] | lambdef
+void test(): {}
+{  lambdef() | or_test() [if_exp()] }
+
+//test_nocond: or_test | lambdef_nocond
+void test_nocond() #void: {}
+{  or_test() | lambdef_nocond() }
+
+
+void if_exp():{}
+{<IF> {this.addSpecialToken(" if ",STRATEGY_ADD_AFTER_PREV);} or_test() <ELSE> {this.addSpecialToken(" else ");} test()}
+
+
+//or_test: and_test ('or' and_test)*
+void or_test() #or_boolean(>1): {}
+{ and_test() (<OR_BOOL> and_test())* }
+
+
+//and_test: not_test ('and' not_test)*
+void and_test() #and_boolean(>1): {}
+{ not_test() (<AND_BOOL> not_test())* }
+
+//not_test: 'not' not_test | comparison
+void not_test() #void: {}
+{ <NOT_BOOL> not_test() #not_1op(1) | comparison() }
+
+//comparison: expr (comp_op expr)*
+void comparison() #void: {}
+{ (expr() (comp_op() expr())*) #comparision(>1) }
+
+
+//comp_op: '<'|'>'|'=='|'>='|'<='|'!='|'in'|'not' 'in'|'is'|'is' 'not'
+void comp_op() #void: {}
+{
+    <LESS> #less_cmp(0)
+|   <GREATER> #greater_cmp(0)
+|   <EQEQUAL> #equal_cmp(0)
+|   <EQGREATER> #greater_equal_cmp(0)
+|   <EQLESS> #less_equal_cmp(0)
+|   <NOTEQUAL> #notequal_cmp(0)
+|   <IN> #in_cmp(0)
+|   <NOT_BOOL> <IN> #not_in_cmp(0)
+|   LOOKAHEAD(2) <IS> <NOT_BOOL> #is_not_cmp(0)
+|   <IS> #is_cmp(0)
+}
+
+//expr: xor_expr ('|' xor_expr)*
+void expr() #void : {}
+{ xor_expr() (<OR> xor_expr() #or_2op(2))* }
+
+//xor_expr: and_expr ('^' and_expr)*
+void xor_expr() #void : {}
+{ and_expr() (<XOR> and_expr() #xor_2op(2))* }
+
+//and_expr: shift_expr ('&' shift_expr)*
+void and_expr() #void : {}
+{ shift_expr() (<AND> shift_expr() #and_2op(2))* }
+
+//shift_expr: arith_expr (('<<'|'>>') arith_expr)*
+void shift_expr() #void : {}
+{
+    arith_expr() (<LSHIFT> arith_expr() #lshift_2op(2)
+|   <RSHIFT> arith_expr() #rshift_2op(2) )*
+}
+
+//arith_expr: term (('+'|'-') term)*
+void arith_expr() #void : {}
+{
+    term() (<PLUS> term() #add_2op(2)
+|   <MINUS> term() #sub_2op(2) )*
+}
+
+//term: factor (('*'|'/'|'%') factor)*
+void term() #void : {}
+{
+    factor()  ( <MULTIPLY> factor() #mul_2op(2)
+|   <DIVIDE> factor() #div_2op(2)
+|   <FLOORDIVIDE> factor() #floordiv_2op(2)
+|   <MODULO> factor() #mod_2op(2) )*
+}
+
+//factor: ('+'|'-'|'~') factor | power
+void factor() #void: {}
+{
+    <PLUS> factor() #pos_1op(1)
+|   <MINUS> factor() #neg_1op(1)
+|   <NOT> factor() #invert_1op(1)
+|   power()
+} /*Modified, no recursion*/
+
+//power: atom trailer* ('**' factor)*
+void power() #void: {}
+{ atom() (trailer())* (LOOKAHEAD(2) <POWER> factor() #pow_2op(2))* }
+
+//trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
+void trailer() #void: {Object spStr;Object spStr2;}
+{
+ 
+    ({spStr  = createSpecialStr("(", false);} <LPAREN>  
+    [arglist()] 
+    <RPAREN> {spStr2 = createSpecialStr(")", false);}  
+    )#Call_Op(jjtree.nodeArity()+1) {addToPeekCallFunc(spStr, true); addToPeek(spStr2, true);}
+
+
+|   ({spStr = createSpecialStr("[", false);} <LBRACKET> 
+    subscriptlist()
+    <RBRACKET> {spStr2 = createSpecialStr("]", false);}   
+    )#Index_Op(2) {addToPeek(spStr, false); addToPeek(spStr2, true);}
+
+|   <DOT> Name() #Dot_Op(2) 
+}
+
+
+
+//atom: ('(' [yield_expr|testlist_comp] ')' |//       '[' [testlist_comp] ']' |//       '{' [dictorsetmaker] '}' |//       NAME | NUMBER | STRING+ | '...' | 'None' | 'True' | 'False')
+void atom() #void: {Object spStr;Object spStr2;}
+{
+    LOOKAHEAD(2) (  
+      {spStr  = createSpecialStr("(", false);} <LPAREN>  
+      {spStr2 = createSpecialStr(")", false);} <RPAREN> 
+    ) #tuple {addToPeek(spStr, false); addToPeek(spStr2, true);}
+
+|   LOOKAHEAD(2) (  
+      {spStr  = createSpecialStr("(", false);} <LPAREN>  
+      (yield_expr() | testlist_comp())
+      {spStr2 = createSpecialStr(")", false);} <RPAREN> 
+    ) #tuple {addToPeek(spStr, false); addToPeek(spStr2, true);}
+
+
+|   ( {spStr = createSpecialStr("[", false);} <LBRACKET> 
+      [testlist_comp()] 
+      {spStr2 = createSpecialStr("]", false);} <RBRACKET>  
+    ) #list {addToPeek(spStr, false); addToPeek(spStr2, true);}
+      
+      
+|   ( {spStr  = createSpecialStr("{", false);}<LBRACE> 
+      [dictorsetmaker()] 
+      {spStr2  = createSpecialStr("}", false);} <RBRACE> 
+    ) #dictionary {addToPeek(spStr, false); addToPeek(spStr2, true);}
+    
+|   (<FALSE>)#False
+|   (<TRUE>)#True
+|   (<NONE>)#None
+|   Name() 
+|   Number()
+|   String() (String() #strjoin(2))*
+}
+
+//lambdef: 'lambda' [varargslist] ':' test
+//we add the colon to the args if there is some argument... otherwise, we add it to the first token that appears on the test
+void lambdef():{boolean hasArgs=false;}
+{ <LAMBDA> [varargslist(){hasArgs=true;}] <COLON> {if(hasArgs)this.addSpecialToken(":");else this.addSpecialToken(":",STRATEGY_BEFORE_NEXT);} test() }
+
+//lambdef_nocond: 'lambda' [varargslist] ':' test_nocond
+void lambdef_nocond():{boolean hasArgs=false;}
+{ <LAMBDA> [varargslist(){hasArgs=true;}] <COLON> {if(hasArgs)this.addSpecialToken(":");else this.addSpecialToken(":",STRATEGY_BEFORE_NEXT);} test_nocond() }
+
+
+//subscriptlist: subscript (',' subscript)* [',']
+void subscriptlist() #void: {}
+{ (subscript() (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> subscript())* [Comma()]) #subscriptlist(>1) }
+
+//subscript: '.' '.' '.' | test | [test] ':' [test] [sliceop]
+void subscript() #void: {}
+{
+    <DOT> <DOT> <DOT> #Ellipses
+|   (test() (slice())?) #Slice
+|   slice() #Slice(>0)
+}
+
+//sliceop: ':' [test]
+void slice() #void: {}
+{ Colon() [test()] (Colon() [test()])? }
+
+void Colon(): {} {{this.addSpecialToken(createSpecialStr(":", false), STRATEGY_BEFORE_NEXT);} <COLON> }
+void Comma(): {} {{this.addSpecialToken(",");} <COMMA>}
+
+//exprlist: expr (',' expr)* [',']
+void exprlist() #void: {}
+{ (expr() (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> expr())* [Comma()]) #tuple(>1) }
+
+//testlist: test (',' test)* [',']
+void SmartTestList() #void: {}
+{ (test() (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> test())* [Comma()]) #tuple(>1) }
+
+//testlist: test (',' test)* [',']
+void testlist() #void: {}
+{ test() (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> test())* [{this.addSpecialToken(",");} <COMMA>]}
+
+//dictorsetmaker: ( 
+//                   (test ':' test (comp_for | (',' test ':' test)* [','])) 
+//                  |(test (comp_for | (',' test)* [','])) 
+//                )
+void dictorsetmaker() #void: {}
+{
+    LOOKAHEAD(2)
+    (test() <COLON> {this.addSpecialToken(":");} test() 
+        (
+            comp_for()|
+            (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> test()<COLON> {this.addSpecialToken(":");} test())*
+            [{this.addSpecialToken(",");} <COMMA>]
+        )
+    )    |
+    (
+      test() (LOOKAHEAD(2) comp_for() | ({this.addSpecialToken(",");} <COMMA> test())*#set [{this.addSpecialToken(",");} <COMMA>] )
+    )
+}
+
+
+//testlist_comp: test ( comp_for | (',' test)* [','] )
+void testlist_comp() #void: {}
+{ test() ( LOOKAHEAD(2)(comp_for())+ | (LOOKAHEAD(2) {this.addSpecialToken(",");} <COMMA> test())* [Comma()] #tuple(>1)) }
+
+
+//comp_iter: [comp_for | comp_if]
+void comp_iter() #void: {}
+{ comp_for() | comp_if() }
+
+//comp_for: 'for' exprlist 'in' or_test [comp_iter]
+void comp_for(): {}
+{ <FOR> {this.addSpecialToken(" for ");} exprlist() <IN> {this.addSpecialToken(" in ");} or_test() [comp_iter()] }
+
+//comp_if: 'if' test_nocond [comp_iter]
+void comp_if()#void:{}
+{ <IF>  {this.addSpecialToken(" if ");} test_nocond() [comp_iter()]}
+
+
+//decorated: decorators (classdef | funcdef)
+void decorated():{}
+{
+    decorators() (classdef()|funcdef())
+}
+
+//classdef: 'class' NAME ['(' [arglist] ')'] ':' suite
+void classdef(): {Object spStr;Object spStr2;}
+{
+    <CLASS> Name() [<LPAREN>  {this.addSpecialToken("(",STRATEGY_ADD_AFTER_PREV);}   [arglist()] <RPAREN>  {this.findTokenAndAdd(")");} ] <COLON> 
+        {this.addSpecialToken(":");} suite()
+}
+
+//arglist: (argument ',')* (argument [',']//                         |'*' test (',' argument)* [',' '**' test] //                         |'**' test)
+void arglist() #void: {}
+{
+       ((argument() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> argument())*) [LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> ((ExtraArgValueList() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> argument())* [{this.addSpecialToken(",");} <COMMA> ExtraKeywordValueList()]) | (ExtraKeywordValueList()) )]) [{this.addSpecialToken(",");} <COMMA>]
+    |  (ExtraArgValueList() (LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> argument())* [LOOKAHEAD(2){this.addSpecialToken(",");} <COMMA> ExtraKeywordValueList()]) [{this.addSpecialToken(",");} <COMMA>]   
+    |   ExtraKeywordValueList() [{this.addSpecialToken(",");} <COMMA>]
+}
+
+
+void ExtraArgValueList(): {}
+{ {this.addSpecialToken(createSpecialStr("*", false));} <MULTIPLY> test() }
+
+void ExtraKeywordValueList(): {}
+{ {this.addSpecialToken(createSpecialStr("**", false));} <POWER> test() }
+
+
+//argument: test [comp_for] | test '=' test  # Really [keyword '='] test
+void argument(): {}
+{ 
+	   test() (LOOKAHEAD(2)  (Keyword()) |  [comp_for()])
+}
+
+void Keyword() : {}
+{
+	<EQUAL>{this.addSpecialToken("=");} test()
+}
+
+void Number() #Num :
+{
+    Token t;
+}
+{
+    (
+        t=<HEXNUMBER> {
+            String s = t.image.substring(2, t.image.length());
+            makeInt(s, 16, t.image, (Num)jjtThis);
+        } {}
+    )
+|   (
+        t=<OCTNUMBER> {
+            s = t.image.substring(2, t.image.length());
+            makeInt(s, 8, t.image, (Num) jjtThis); 
+        } {}
+    )
+|   (
+        t=<DECNUMBER> { makeInt(t.image, 10, t.image, (Num)jjtThis); } {}
+    )
+|   (
+        t=<FLOAT> { makeFloat(t.image, (Num)jjtThis); } {}
+    )
+|   (
+        t=<COMPLEX> { makeComplex(t.image, (Num)jjtThis); } {}
+    )
+}
+
+
+void Complex(): {}
+{ <FLOAT>   }
+
+Token Name() #Name:
+{
+    Token t;
+}
+{
+    t = <NAME> { ((Name)jjtThis).id = t.image; return t; } {}
+}
+
+void String() #void :
+{
+    Token t;
+}
+{
+    ( t=<SINGLE_STRING> { makeString(t.image, 1, (Str)jjtThis); } {} )#String
+|   ( t=<SINGLE_STRING2> { makeString(t.image, 1, (Str)jjtThis); } {} )#String
+|   ( t=<TRIPLE_STRING> { makeString(t.image, 3, (Str)jjtThis); } {} )#String
+|   ( t=<TRIPLE_STRING2> { makeString(t.image, 3, (Str)jjtThis); } {} )#String
+|   ( t=<SINGLE_BSTRING> { makeString(t.image, 1, (Str)jjtThis); } {} )#Binary
+|   ( t=<SINGLE_BSTRING2> { makeString(t.image, 1, (Str)jjtThis); } {} )#Binary
+|   ( t=<TRIPLE_BSTRING> { makeString(t.image, 3, (Str)jjtThis); } {} )#Binary
+|   ( t=<TRIPLE_BSTRING2> { makeString(t.image, 3, (Str)jjtThis); } {} )#Binary
+}
+
+//Token AnyName() #void://{//    Token t;//}//{//    ( t= <NAME> { ((Name)jjtThis).id = t.image; return t; } {} )#Name
+//|   ( t = <OR_BOOL> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <AND_BOOL> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <NOT_BOOL> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <IS> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <IN> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <LAMBDA> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <IF> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <ELSE> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <ELIF> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <WHILE> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <FOR> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <TRY> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <EXCEPT> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <DEF> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <CLASS> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <FINALLY> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <PASS> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <BREAK> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <CONTINUE> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <RETURN> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <YIELD> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <IMPORT> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <FROM> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <DEL> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <RAISE> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <GLOBAL> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <NONLOCAL> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <ASSERT> { jjtThis.setImage(t.image); return t; } {} )#Name//|   ( t = <AS> { jjtThis.setImage(t.image); return t; } {} )#Name
+//}

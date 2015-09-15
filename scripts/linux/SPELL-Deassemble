@@ -1,0 +1,58 @@
+#!/bin/sh
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Startup script for SPELL Shell
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+#===============================================================================
+# Setup main environment variables
+#===============================================================================
+
+# SPELL home
+if [[ -z "$SPELL_HOME" ]]
+then
+    echo "ERROR: SPELL_HOME environment variable is not defined"
+    exit 1
+else
+    [[ ! -d $SPELL_HOME ]] && echo "ERROR: cannot find SPELL home directory: $SPELL_HOME" && exit 1
+fi
+echo "SPELL home: $SPELL_HOME"
+
+[[ -z "$1" ]] && echo "Must provide a procedure file: $0 <proc>" && exit 1
+
+#===============================================================================
+# Setup environment
+#===============================================================================
+SETUP_SCRIPT=$SPELL_HOME/bin/setup-environment.sh
+[[ ! -e $SETUP_SCRIPT ]] && echo "ERROR: cannot find environment setup script: $SETUP_SCRIPT" && exit 1
+source $SETUP_SCRIPT
+
+EXT=`basename $1 | awk -F . '{print $NF}'`
+
+if [[ "$EXT" == "pyc" ]]
+then
+	python $SPELL_HOME/bin/deassemble.py $1
+else
+	$SPELL_HOME/bin/SPELL-Compile $1
+	python $SPELL_HOME/bin/deassemble.py ${1}c
+fi
+

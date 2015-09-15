@@ -1,0 +1,71 @@
+#!/bin/sh
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Startup script for SPEL development environment
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+#===============================================================================
+# Setup main environment variables
+#===============================================================================
+
+# SPELL home
+if [[ -z "$SPELL_HOME" ]]
+then
+    echo "ERROR: SPELL_HOME environment variable is not defined"
+    exit 1
+else
+    [[ ! -d $SPELL_HOME ]] && echo "ERROR: cannot find SPELL home directory: $SPELL_HOME" && exit 1
+fi
+echo "SPELL home: $SPELL_HOME"
+
+#===============================================================================
+# Setup environment
+#===============================================================================
+SETUP_SCRIPT=$SPELL_HOME/bin/setup-environment.sh
+[[ ! -e $SETUP_SCRIPT ]] && echo "ERROR: cannot find environment setup script: $SETUP_SCRIPT" && exit 1
+source $SETUP_SCRIPT
+
+#===============================================================================
+# Configure application
+#===============================================================================
+RCP_HOME=$SPELL_HOME/rcp/plugins
+LAUNCHER=$RCP_HOME/equinox-launcher.jar
+DEV_HOME=$SPELL_HOME/spel-dev/
+DEV_RCP_CONFIG=$DEV_HOME/configuration
+rm -rf $DEV_RCP_CONFIG/org*
+rm -f $DEV_RCP_CONFIG/*.log
+
+#===============================================================================
+# Execute application
+#===============================================================================
+#If eclipse ask for restarting the application (switch workspace or restart), java process returns 23
+last=23
+echo "Starting..."
+while [ $last -eq 23 ]
+do
+	$JAVA -Xms256m -Xmx512m -XX:MaxPermSize=256m -jar $LAUNCHER -showsplash $DEV_HOME/splash.bmp \
+		 -configuration $DEV_RCP_CONFIG \
+		 -os linux -arch x86 -ws gtk -clean \
+                 -eclipse.vm $JAVA
+        last=$?
+        (( $last == 23 )) && echo "Restarting..."
+done

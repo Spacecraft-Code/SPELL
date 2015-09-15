@@ -1,0 +1,219 @@
+<language>
+    <defaults interface="TM">
+        <modifier name="OnFailure">ABORT|SKIP|RECHECK|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="ValueFormat">ENG</modifier>
+        <modifier name="Timeout">30</modifier>
+        <modifier name="Retries">2</modifier>
+        <modifier name="Tolerance">0.1</modifier>
+        <modifier name="Wait">False</modifier>
+        <modifier name="Delay">None</modifier>
+        <modifier name="PromptUser">True</modifier>
+        <modifier name="OnFalse">NOACTION</modifier>
+        <modifier name="OnTrue">NOACTION</modifier>
+        <modifier name="IgnoreCase">False</modifier>
+        <modifier name="AdjLimits">False</modifier>
+    </defaults>
+    
+    <defaults interface="TC">
+        <modifier name="OnFailure">ABORT|SKIP|RESEND|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="Time">0</modifier>
+        <modifier name="Timeout">30</modifier>
+        <modifier name="Tolerance">0.1</modifier>
+        <modifier name="SendDelay">None</modifier>
+        <modifier name="Confirm">False</modifier>
+        <modifier name="PromptUser">True</modifier>
+        <modifier name="OnFalse">ABORT|SKIP|RESEND|CANCEL</modifier>
+        <modifier name="OnTrue">NOACTION</modifier>
+        <modifier name="AdjLimits">False</modifier>
+        <modifier name="ConfirmCritical">False</modifier>
+    </defaults>
+
+    <defaults interface="EV">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="Severity">INFORMATION</modifier>
+        <modifier name="Scope">SCOPE_PROC</modifier>
+        <modifier name="Mode">TIME_MODE_LIVE</modifier>
+        <modifier name="PromptUser">True</modifier>
+        <modifier name="OnFalse">NOACTION</modifier>
+        <modifier name="OnTrue">NOACTION</modifier>
+        <modifier name="Time">""</modifier>
+    </defaults>
+
+    <defaults interface="RNG">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="PromptUser">True</modifier>
+    </defaults>
+
+    <defaults interface="MEM">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="PromptUser">True</modifier>
+    </defaults>
+    
+    <defaults interface="RSC">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+    </defaults>
+
+    <defaults interface="USR">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+    </defaults>
+    
+    <defaults function="GetTM">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+        <modifier name="Wait">False</modifier>
+    </defaults>
+   
+    <defaults function="SetGroundParameter">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+ 
+    <defaults function="Verify">
+        <modifier name="OnFailure">ABORT|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="OnFalse">ABORT|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">None</modifier>
+        <modifier name="Strict">False</modifier>
+    </defaults>
+
+    <defaults function="Send">
+        <modifier name="OnFailure">ABORT|REPEAT|RESEND|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="OnFalse">ABORT|REPEAT|RESEND|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+
+    <defaults function="BuildTC">
+        <modifier name="OnFailure">ABORT|SKIP|CANCEL|REPEAT</modifier>
+        <modifier name="SendDelay">None</modifier>
+    </defaults>
+
+    <defaults function="Prompt">
+        <modifier name="OnFailure">REPEAT|ABORT</modifier>
+        <modifier name="AllowInterrupt">True</modifier>
+        <modifier name="Type">OK_CANCEL</modifier>
+	<modifier name="Timeout">0</modifier>
+    </defaults>
+
+    <defaults function="WaitFor">
+        <modifier name="Delay">None</modifier>
+        <modifier name="OnFailure">ABORT|SKIP|CANCEL</modifier>
+        <modifier name="AllowInterrupt">True</modifier>
+    </defaults>
+
+    <defaults function="LoadDictionary">
+        <modifier name="OnFailure">ABORT|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="OpenDisplay">
+        <modifier name="Delay">6</modifier>
+    </defaults>
+
+    <defaults function="PrintDisplay">
+        <modifier name="Delay">6</modifier>
+        <modifier name="Format">"ps"</modifier>
+    </defaults>
+
+    <defaults function="CloseDisplay">
+       <modifier name="Delay">3</modifier>
+    </defaults>
+
+    <defaults function="StartProc">
+        <modifier name="Automatic">True</modifier>
+        <modifier name="Blocking">True</modifier>
+        <modifier name="Visible">True</modifier>
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+        <modifier name="AllowInterrupt">True</modifier>
+    </defaults>
+
+    <defaults function="SetTMparam">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="AdjustLimits">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="SaveDictionary">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="OpenFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="CloseFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="WriteFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="ReadFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="DeleteFile">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="ReadDirectory">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="RestoreNormalLimits">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="AddSharedDataScope">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="GetSharedData">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="SetSharedData">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="GetSharedDataKeys">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="GetSharedDataScopes">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="ClearSharedData">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="ClearSharedDataScopes">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="GenerateMemoryReport">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="CompareMemoryImages">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+
+    <defaults function="MemoryLookup">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+    <defaults function="TMTCLookup">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+
+</language>
+

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.GeneralPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.general"
+            name="1. General">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.ServersPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.servers"
+            name="2. Servers">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.PresentationsPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.presentations"
+            name="3. Presentations">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.StatusColorsPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.statuscolors"
+            name="4. Status colors">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.GUIColorsPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.guicolors"
+            name="5. GUI colors">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.ProcedureColorsPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.procedurecolors"
+            name="6. Procedure colors">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.FontsPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.fonts"
+            name="7. Fonts">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.ScopeStylesPreferencePage"
+            id="com.astra.ses.spell.gui.preferences.fonts.scopes"
+            name="8. Scope styles">
+      </page>
+      <page
+            class="com.astra.ses.spell.gui.preferences.ui.pages.ProcPanelPreferencePage"
+            id="gcs.scc.autofly.gui.preferences.ui.ProcPanelPage"
+            name="9. Procedure panel">
+      </page>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:com.astra.ses.spell.gui.menu.system">
+         <separator
+               name="com.astra.ses.spell.gui.preferences.separator"
+               visible="true">
+         </separator>
+         <command
+               commandId="org.eclipse.ui.window.preferences"
+               icon="icons/wrench.png"
+               id="com.astra.ses.spell.gui.preferences.showdialog"
+               label="Preferences"
+               mnemonic="&amp;p"
+               style="push"
+               tooltip="Show preference pages">
+            <visibleWhen
+                  checkEnabled="false">
+               <test
+                     property="com.astra.ses.spell.gui.properties.PreferencesEnabled">
+               </test>
+            </visibleWhen>
+         </command>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.propertyTesters">
+      <propertyTester
+            class="com.astra.ses.spell.gui.preferences.ui.properties.PreferencesEnabledTester"
+            id="com.astra.ses.spell.gui.propertyTesters.PreferencesEnabledTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="PreferencesEnabled"
+            type="java.lang.Object">
+      </propertyTester>
+   </extension>
+
+</plugin>

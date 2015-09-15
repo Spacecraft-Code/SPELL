@@ -1,0 +1,4 @@
+#Tue Feb 23 14:43:37 CET 2010
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.so.debug.1418800832=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="false"/>\n
+environment/project/cdt.managedbuild.config.gnu.so.release.849585653=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="true">\n<variable delimiter\=";" name\="SPELL_COTS" operation\="append" value\="/opt/spell_cots"/>\n</environment>\n

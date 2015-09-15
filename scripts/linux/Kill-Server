@@ -1,0 +1,75 @@
+#!/bin/sh
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Cleanup script for SPELL servers
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+
+if [ $# -ne 1 ]
+then
+    echo "Usage: `basename $0` <satellite>"
+    exit -1
+fi
+
+# Satellite
+SATELLITE=$1
+# Hostname
+HOSTNAME=`hostname`
+
+unset SPELL_HOME
+unset SPELL_DATA
+unset SPELL_SYS_DATA
+unset SPELL_CONFIG
+unset SPELL_LOG
+unset SPELL_PROCS
+
+export SPELL_HOME=/home/spell/SPELL
+export SPELL_DATA=$SPELL_HOME/data
+export SPELL_SYS_DATA=$SPELL_DATA
+export SPELL_CONFIG=$SPELL_HOME/config
+export SPELL_LOG=$SPELL_HOME/log/$SATELLITE
+
+echo "SPELL home: $SPELL_HOME"
+echo "Killing processes..."
+CFG_FILE="server_${SATELLITE}_${HOSTNAME}.xml"
+
+PIDS=`pgrep -f "SPELL-Listener -c /home/spell/SPELL/config/server/server_${SATELLITE}_${HOSTNAME}.xml"`
+for PID in $PIDS
+do
+        echo "  - kill listener $PID"
+        kill -9 $PID
+done
+
+PIDS=`pgrep -f "SPELL-Context -n ${SATELLITE}"`
+for PID in $PIDS
+do
+        echo "  - kill context $PID"
+        kill -9 $PID
+done
+
+PIDS=`pgrep -f "SPELL-Executor -c /home/spell/SPELL/config/server/server_${SATELLITE}_${HOSTNAME}.xml"`
+for PID in $PIDS
+do
+        echo "  - kill executor $PID"
+        kill -9 $PID
+done
+

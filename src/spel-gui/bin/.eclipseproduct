@@ -1,0 +1,5 @@
+#Eclipse Product File
+#Mon Nov 17 10:39:54 CET 2008
+version=2.0.0
+name=SPELL GUI Client
+id=com.astra.ses.spell.gui.product

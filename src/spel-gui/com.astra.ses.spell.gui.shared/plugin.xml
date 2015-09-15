@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.gui.commands.handlers"
+         name="Command Handlers for Shared Variables"
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.shared.commands.OpenSharedVariablesView"
+            commandId="com.astra.ses.spell.gui.shared.commands.Open">
+      </handler>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.views"
+         point="org.eclipse.ui.views">
+      <view
+            category="com.astra.ses.spell.gui.views.execution"
+            allowMultiple="false"
+            class="com.astra.ses.spell.gui.shared.views.SharedVariablesView"
+            icon="icons/tile.png"
+            id="com.astra.ses.spell.gui.shared.views.SharedVariablesView"
+            name="Shared Variables"
+            restorable="true">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="com.astra.ses.spell.gui.perspective">
+         <view
+               closeable="true"
+               id="com.astra.ses.spell.gui.shared.views.SharedVariablesView"
+               minimized="false"
+               moveable="true"
+               relationship="stack"
+               relative="com.astra.ses.spell.gui.views.MasterView"
+               showTitle="true"
+               standalone="false"
+               visible="false">
+         </view>
+      </perspectiveExtension>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:com.astra.ses.spell.gui.menu.system?after=com.astra.ses.spell.gui.menu.system.sep1">
+         <command
+               commandId="com.astra.ses.spell.gui.shared.commands.Open"
+               icon="icons/tile.png"
+               label="Shared variables..."
+               style="push">
+         </command>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            id="com.astra.ses.spell.gui.shared.commands.Open"
+            name="Open Shared Variables View">
+      </command>
+   </extension>
+</plugin>

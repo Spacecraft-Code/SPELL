@@ -1,0 +1,80 @@
+<context id="STD">
+
+    <!-- =================================================================== -->
+    <!-- CONTEXT IDENTIFICATION -->
+    <!-- =================================================================== -->
+    <name>Standalone Local</name>
+    <description>Standalone local simulator</description>
+    
+    
+    <!-- =================================================================== -->
+    <!-- SPELL DRIVER TO BE USED -->
+    <!-- =================================================================== -->
+    <driver>standalone</driver>
+    
+    
+    <!-- =================================================================== -->
+    <!-- SPACECRAFT INFORMATION -->
+    <!-- =================================================================== -->
+    <spacecraft>STD</spacecraft>
+    <satname>SpacecraftSTD</satname>
+    <family>PRIME</family>
+    <gcs>N/A</gcs>
+    
+    
+    <!-- =================================================================== -->
+    <!-- PROCEDURE INFORMATION -->
+    <!-- =================================================================== -->
+    <procpath>$SPELL_DATA/Procedures/STD</procpath>
+    <libpath>$SPELL_DATA/UserLib/STD</libpath>
+    <output_dir>$SPELL_DATA/OutputFiles/STD</output_dir>
+    <input_dir>$SPELL_DATA/InputFiles/STD</input_dir>
+    
+    <!-- =================================================================== -->
+    <!-- DRIVER CONFIGURATION -->
+    <!-- =================================================================== -->
+    <driverconfig>
+        <property name="Simulation">simulation001.xml</property>
+    </driverconfig>
+    
+    <!-- =================================================================== -->
+    <!-- EXECUTOR CONFIGURATION -->
+    <!-- =================================================================== -->
+    <executor>
+        <property name="ExecDelay">0</property>
+        <property name="PromptWarningDelay">30</property>
+        <property name="RunInto">True</property>
+        <property name="ByStep">False</property>
+        <property name="BrowsableLib">False</property>
+        <property name="MaxVerbosity">5</property>
+        <!--ON_LINE, ON_DEMAND, ON_STEP, DISABLED -->
+        <property name="SaveStateMode">DISABLED</property>
+        <property name="WatchVariables">DISABLED</property>
+    </executor>
+    
+    
+    <!-- =================================================================== -->
+    <!-- DATABASE CONFIGURATION -->
+    <!-- =================================================================== -->
+    <databases>
+        <location name="SCDB" type="file" ext="DB" >InputFiles/STD/SpacecraftDB</location>
+        <location name="GDB"  type="file" ext="DB" >InputFiles/STD/GroundDB</location>
+        <location name="mmd"  type="file" ext="IMP">InputFiles/STD/ManeuvreMessage</location>
+        <location name="usr"  type="file" ext="IMP">InputFiles/STD/User/</location>
+        <location name="SPB"  type="spb" ext="IMP">InputFiles/STD/SPB_Import/</location>
+        <location name="ar"   type="asrun" ext="ASRUN">OutputFiles/STD/AsRun</location>
+        <location name="ws"   type="file" ext="WS">OutputFiles/STD/Warmstart</location>
+        <location name="svn"  type="svn" ext="SVN">InputFiles/STD/User/</location>
+        <database name="SCDB" location="SCDB">SCDB</database> 
+        <database name="GDB"  location="GDB">GDB</database> 
+    </databases>
+    
+    
+    <!-- =================================================================== -->
+    <!-- LANGUAGE DEFAULTS -->
+    <!-- this section allows overriding SPELL defaults for this context only -->
+    <!-- =================================================================== -->
+    <language>
+    </language>
+
+</context>

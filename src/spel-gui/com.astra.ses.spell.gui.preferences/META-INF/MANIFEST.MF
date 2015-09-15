@@ -1,0 +1,21 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: spel-client-configuration
+Bundle-SymbolicName: com.astra.ses.spell.gui.preferences;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.gui.preferences.Activator
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.ui,
+ com.astra.ses.spell.gui.core,
+ com.astra.ses.spell.gui.types
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Export-Package: com.astra.ses.spell.gui.preferences,
+ com.astra.ses.spell.gui.preferences.initializer,
+ com.astra.ses.spell.gui.preferences.initializer.elements,
+ com.astra.ses.spell.gui.preferences.interfaces,
+ com.astra.ses.spell.gui.preferences.keys,
+ com.astra.ses.spell.gui.preferences.model,
+ com.astra.ses.spell.gui.preferences.utils,
+ com.astra.ses.spell.gui.preferences.values

@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Language Support
+Bundle-SymbolicName: com.astra.ses.spell.language;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.language.Activator
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Require-Bundle: org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Export-Package: com.astra.ses.spell.language,
+ com.astra.ses.spell.language.beautifier,
+ com.astra.ses.spell.language.model,
+ com.astra.ses.spell.language.model.ast

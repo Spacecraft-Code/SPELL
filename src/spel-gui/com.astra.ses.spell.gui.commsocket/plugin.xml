@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.gui.extensions.CommunicationInterface"
+         name="Communications Interface, Socket based"
+         point="com.astra.ses.spell.gui.extensions.CommunicationInterface">
+      <interface
+            class="com.astra.ses.spell.gui.core.comm.socket.ifc.CommInterfaceSocket"
+            description="Socket-based Communication interface"
+            name="Comm Interface Socket">
+      </interface>
+   </extension>
+</plugin>

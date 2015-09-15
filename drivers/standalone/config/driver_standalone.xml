@@ -1,0 +1,9 @@
+<driver id="standalone">
+    <name>Standalone SPELL driver</name>
+    <interfaces>TM,TC,EV,TIME,TASK,RSC,RNG,MEM</interfaces>
+    <maxproc>5</maxproc>
+    <path>$SPELL_HOME/drivers</path>
+    <properties>
+        <property name="SimPath">Simulator/</property>
+    </properties>
+</driver>

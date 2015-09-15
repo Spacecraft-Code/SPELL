@@ -1,0 +1,6 @@
+.svn
+Makefile*
+*.log
+~*
+template*
+create*

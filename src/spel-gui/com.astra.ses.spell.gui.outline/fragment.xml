@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            category="com.astra.ses.spell.gui.views.execution"
+            class="com.astra.ses.spell.gui.views.OutlineView"
+            allowMultiple="false"
+            icon="icons/16x16/book_open.png"
+            id="com.astra.ses.spell.gui.views.tools.OutlineView"
+            name="Outline">
+      </view>
+   </extension>
+
+</fragment>

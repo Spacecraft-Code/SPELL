@@ -1,0 +1,43 @@
+<config>
+    <listener>
+        <property name="Log">ENABLED</property>
+        <property name="ListenerPort">9988</property>
+    </listener>
+    
+    <context>
+        <property name="Log">ENABLED</property>
+        <property name="ProcPropertiesSL">PROCEDURE,NAME,AUTHOR,FILE,REVISION,DATE,DOMAINS,PROFILES,DATABASE,CATEGORY,VALIDATED,APPROVED</property>
+        <property name="ProcPropertiesML">DESCRIPTION</property>
+    </context>
+
+    <executor>
+        <property name="Log">ENABLED</property>
+        <property name="ExecDelay">0.3</property>
+        <property name="ExecDelaySO">0.2</property>
+    </executor>
+    
+    <drivers>
+        <driver name = "STANDALONE">
+            <id>DRIVER_DUMMY</id>
+            <properties>
+                <property name="Key">Value</property>
+            </properties>
+        </driver>
+    </drivers>
+
+    <contexts>
+    
+        <context name= "STD - Standalone">
+            <driver>DRIVER_DUMMY</driver>
+            <spacecraft>STD</spacecraft>
+            <family>PRIME</family>
+            <gcs>N/A</gcs>
+            <procpath>STD_PROC_PATH</procpath>
+            <driverinfo>
+                <property name="Key">Value</property>
+            </driverinfo>
+        </context>
+
+    </contexts>
+    
+</config>

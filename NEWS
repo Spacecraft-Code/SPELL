@@ -1,0 +1,22 @@
+NEWS
+****
+
+2011-07-26 - Note About Building The Software
+=============================================
+
+   The version of Python required to compile SPELL is the 2.5.x series
+with an official patch that comes only as of version 2.7. It is very
+likely that you will install it in an alternate folder such as /opt.
+
+In order to compile SPELL, before running the configure utility or anytime you
+want to compile SPELL, make sure that the PATH environment variable points to
+this folder first. For bash, it would look like the following:
+
+    export PATH=/opt/oldies/bin:$PATH
+
+On the other hand, set the LD_LIBRARY_PATH and LDFLAGS variables to
+the appropriate value:
+
+    export LD_LIBRARY_PATH=/opt/oldies/lib
+    ./configure LDFLAGS=-L/opt/oldies/lib
+

@@ -1,0 +1,1336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension-point id="com.astra.ses.spell.gui.extensions.Presentations" name="Procedure Presentations" schema="schema/com.astra.ses.spell.gui.extensions.presentations.exsd"/>
+
+   <extension
+         id="com.astra.ses.spell.gui.application"
+         name="SPELL Gui application"
+         point="org.eclipse.core.runtime.applications">
+         <application
+               cardinality="1"
+               icon="icons/icon16.png"
+               visible="true">
+            <run
+                 class="com.astra.ses.spell.gui.Application">
+            </run>
+         </application>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.perspective"
+         point="org.eclipse.ui.perspectives">
+          <perspective
+                name="SPELL Client Perspective"
+                class="com.astra.ses.spell.gui.perspectives.Perspective"
+                icon="icons/icon16.png"
+                id="com.astra.ses.spell.gui.perspective">
+          </perspective>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.product"
+         name="SPELL Gui Product"
+         point="org.eclipse.core.runtime.products">
+          <product
+                application="com.astra.ses.spell.gui.application"
+                name="SPELL Execution Environment">
+             <property
+                   name="windowImages"
+                   value="icons/icon16.png,icons/icon32.png">
+             </property>
+             <property
+                   name="aboutText"
+                   value="SES Procedure Execution Language and Library &#x0A;Graphical SPELL Execution Environment Interface&#x0A;&quot;SPELL-GUI&quot;.&#x0A;&#x0A;This is a copyrighted work of SES Engineering in&#x0A;collaboration with GMV Aerospace And Defence S.A.&#x0A;(c) 2015">
+             </property>
+             <property
+                   name="aboutImage"
+                   value="SES.gif">
+             </property>
+             <property
+                   name="startupProgressRect"
+                   value="0,310,380,15">
+             </property>
+             <property
+                   name="appName"
+                   value="SPELL Execution Environment">
+             </property>
+             <property
+                   name="preferenceCustomization"
+                   value="plugin_customization.ini">
+             </property>
+             <property
+                   name="startupForegroundColor"
+                   value="FFFFFF">
+             </property>
+             <property
+                   name="startupMessageRect"
+                   value="7,290,380,20">
+             </property>
+          </product>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.menus"
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+         <menu
+               id="com.astra.ses.spell.gui.menu.system"
+               label="System"
+               mnemonic="SYSTEM"
+               tooltip="System operations">
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ShowConnectionDialog"
+                  icon="icons/drive_network.png"
+                  id="com.astra.ses.spell.gui.menu.system.ShowConnectionDialog"
+                  style="push"
+                  tooltip="Open connection dialog">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menu.system.sep1"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenFileViewer"
+                  icon="icons/database_table.png"
+                  id="com.astra.ses.spell.gui.menu.system.OpenFileViewer"
+                  style="push"
+                  tooltip="Open input file viewer">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenMasterShell"
+                  icon="icons/cog.png"
+                  id="com.astra.ses.spell.gui.menu.system.OpenMasterShell"
+                  style="push"
+                  tooltip="Open master shell dialog">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menu.system.sep2"
+                  visible="true">
+            </separator>
+         </menu>
+         <menu
+               id="com.astra.ses.spell.gui.menu.procedures"
+               label="Procedures"
+               mnemonic="PROCS"
+               tooltip="Procedure operations">
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.RefreshProcedures"
+                  icon="icons/arrow_refresh.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.RefreshProcedures"
+                  style="push"
+                  tooltip="Refresh the list of available procedures">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menus.procedures.separator1"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenProcedure"
+                  icon="icons/16x16/open.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.OpenSelectedProcedure"
+                  style="push"
+                  tooltip="Opens the procedure currently selected">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenProcedureBackground"
+                  icon="icons/16x16/open.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.OpenSelectedProcedureBackground"
+                  style="push"
+                  tooltip="Opens the procedure in background">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenProcedureArgs"
+                  icon="icons/16x16/open.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.OpenSelectedProcedureArgs"
+                  style="push"
+                  tooltip="Opens the selected procedure with arguments">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ScheduleProcedure"
+                  icon="icons/16x16/schedule.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.ScheduleSelectedProcedure"
+                  style="push"
+                  tooltip="Schedule the procedure currently selected in the navigation view">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menus.procedures.separator2"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.CloseProcedure"
+                  icon="icons/16x16/close.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.CloseProcedure"
+                  style="push"
+                  tooltip="Close the currently selected procedure">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ReleaseProcedure"
+                  icon="icons/16x16/release.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.ReleaseProcedure"
+                  style="push"
+                  tooltip="Release the currently selected procedure">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.KillProcedure"
+                  icon="icons/16x16/kill.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.KillProcedure"
+                  style="push"
+                  tooltip="Kill the currently selected procedure">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menus.procedures.separator3"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.GetAsRunFile"
+                  icon="icons/16x16/asrun.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.GetAsRunFile"
+                  style="push"
+                  tooltip="View procedure AS-RUN file">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.GetLogFile"
+                  icon="icons/16x16/asrun.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.GetLogFile"
+                  style="push"
+                  tooltip="View procedure log file">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ExportLogFile"
+                  icon="icons/16x16/log_save.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.ExportLogFile"
+                  style="push"
+                  tooltip="Save procedure log file">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ExportAsRunFile"
+                  icon="icons/16x16/log_save.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.ExportAsRunFile"
+                  style="push"
+                  tooltip="Save procedure ASRUN file">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ShowProperties"
+                  icon="icons/16x16/asrun.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.ShowProperties"
+                  style="push"
+                  tooltip="Show procedure properties">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menus.procedures.separator4"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.OpenProceduresEditor"
+                  icon="icons/16x16/editor.png"
+                  id="com.astra.ses.spell.gui.menu.procedures.OpenProceduresEditor"
+                  style="push"
+                  tooltip="Open the procedures editor">
+               <visibleWhen
+                     checkEnabled="false">
+                  <test
+                        property="com.astra.ses.spell.gui.properties.ProcedureEditorAvailable">
+                  </test>
+               </visibleWhen>
+            </command>
+         </menu>
+         <menu
+               id="com.astra.ses.spell.gui.menu.execution"
+               label="Execution"
+               mnemonic="EXEC"
+               tooltip="Execution configuration">
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ToggleRunInto"
+                  id="com.astra.ses.spell.gui.menu.execution.ToggleRunInto"
+                  style="toggle"
+                  tooltip="Toggle running into functions">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ToggleByStep"
+                  id="com.astra.ses.spell.gui.menu.execution.ToggleByStep"
+                  style="toggle"
+                  tooltip="Toggle running step by step">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ToggleTcConfirm"
+                  id="com.astra.ses.spell.gui.menu.execution.ToggleTcConfirm"
+                  style="toggle"
+                  tooltip="Toggle TC confirmation">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menu.execution.Separator1"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ConfigureExecution"
+                  id="com.astra.ses.spell.gui.menu.execution.ConfigureExecution"
+                  label="Configure execution..."
+                  tooltip="Configure the procedure execution">
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ConfigureDefaults"
+                  id="com.astra.ses.spell.gui.menu.execution.ConfigureDefaults"
+                  label="Configure defaults..."
+                  tooltip="Configure the context execution defaults">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.menu.execution.Separator2"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.EditDictionary"
+                  id="com.astra.ses.spell.gui.menu.execution.EditARGS"
+                  label="Edit Calling Arguments"
+                  tooltip="Edit the calling arguments data container">
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.dict"
+                     value="ARGS">
+               </parameter>
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.canmerge"
+                     value="true">
+               </parameter>
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.EditDictionary"
+                  id="com.astra.ses.spell.gui.menu.execution.EditIVARS"
+                  label="Edit Internal Variables"
+                  tooltip="Edit the internal variables">
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.dict"
+                     value="IVARS">
+               </parameter>
+               <parameter
+                     name="com.astra.ses.spell.gui.commands.EditDictionary.canmerge"
+                     value="false">
+               </parameter>
+            </command>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.EditDictionary"
+                  id="com.astra.ses.spell.gui.menu.execution.EditNoName"
+                  label="Edit dictionary..."
+                  tooltip="Edit other dictionaries or data containers">
+            </command>
+         </menu>
+         <menu
+               id="com.astra.ses.spell.gui.menu.help"
+               label="Help"
+               mnemonic="HELP"
+               tooltip="Application help">
+            <command
+                  commandId="org.eclipse.ui.help.aboutAction"
+                  id="com.astra.ses.spell.gui.commands.AboutAction"
+                  style="push">
+            </command>
+            <separator
+                  name="com.astra.spell.gui.commands.help.separator"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ShowReleaseInfo"
+                  id="com.astra.ses.spell.gui.commands.help.ReleaseInfo"
+                  label="Release information..."
+                  style="push">
+            </command>
+         </menu>
+      </menuContribution>
+      <menuContribution
+            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
+         <toolbar
+               id="com.astra.ses.spell.gui.toolbars.MainToolbar">
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.ShowConnectionDialog"
+                  icon="icons/drive_network.png"
+                  id="com.astra.ses.spell.gui.toolbars.ShowConnectionDialog"
+                  tooltip="Show connection dialog">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.toolbars.separator1"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="com.astra.ses.spell.gui.commands.RefreshProcedures"
+                  icon="icons/arrow_refresh.png"
+                  id="com.astra.ses.spell.gui.toolbars.RefreshProcedures"
+                  tooltip="Refresh procedure list">
+            </command>
+            <separator
+                  name="com.astra.ses.spell.gui.toolbars.separator2"
+                  visible="true">
+            </separator>
+         </toolbar>
+         <toolbar
+               id="com.astra.ses.spell.gui.toolbars.StatusToolbar">
+            <control
+                  class="com.astra.ses.spell.gui.views.controls.status.StatusControlContribution"
+                  id="com.astra.ses.spell.gui.toolbars.StatusControlContribution">
+            </control>
+         </toolbar>
+      </menuContribution>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.commands"
+         point="org.eclipse.ui.commands">
+      <command
+            id="com.astra.ses.spell.gui.commands.ShowConnectionDialog"
+            name="Show connection dialog">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.OpenMasterShell"
+            name="Open master shell dialog">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.RefreshProcedures"
+            name="Refresh procedure list">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ConnectServer"
+            name="Connect to server">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.DisconnectServer"
+            name="Disconnect from server">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.StartContext"
+            name="Start a context">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.StopContext"
+            name="Stop a context">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.AttachContext"
+            name="Attach to a context">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.DetachContext"
+            name="Detach from context">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.CloseProcedure"
+            name="Close selected procedure">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ReleaseProcedure"
+            name="Release selected procedure">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.KillProcedure"
+            name="Kill selected procedure">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.GetAsRunFile"
+            name="View procedure AS-RUN file">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ShowProperties"
+            name="View procedure properties">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.GetLogFile"
+            name="View procedure log file">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.OpenProcedure"
+            name="Open selected procedure">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.OpenProcedureBackground"
+            name="Open selected procedure in background">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ScheduleProcedure"
+            name="Schedule selected procedure">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.OpenProceduresEditor"
+            name="Open editor">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ToggleRunInto"
+            name="Run into functions">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:false"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ToggleByStep"
+            name="Step by step">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:false"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ToggleTcConfirm"
+            name="TC Confirm">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:false"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.OpenProcedureArgs"
+            name="Open with arguments...">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.DestroyContext"
+            name="Destroy context">
+      </command>
+      <category
+            description="Commands for controlling a single procedure"
+            id="com.astra.ses.spell.gui.commands.control"
+            name="Procedure Control">
+      </category>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Clear procedure breakpoints"
+            id="com.astra.ses.spell.gui.commands.ClearBreakpoints"
+            name="Clear breakpoints">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.ClearBreakpoints.id"
+               name="procId"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Add a breakpoint at the given line"
+            id="com.astra.ses.spell.gui.commands.SetBreakpoint"
+            name="Set breakpoint">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SetBreakpoint.id"
+               name="procId"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SetBreakpoint.line"
+               name="Line number"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SetBreakpoint.type"
+               name="Type"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Run a procedure"
+            id="com.astra.ses.spell.gui.commands.RunProcedure"
+            name="Run">
+         <commandParameter
+               id="procId"
+               name="Procedure identifier"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ConfigureExecution"
+            name="Configure Execution">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.ConfigureDefaults"
+            name="Configure Defaults">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Goto allowing to select the user a label or a line"
+            id="com.astra.ses.spell.gui.commands.Goto"
+            name="Goto with dialog">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Go to line"
+            id="com.astra.ses.spell.gui.commands.GotoLine"
+            name="Goto Line">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.GotoLine.id"
+               name="procId"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.GotoLine.line"
+               name="Line number"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Go to label"
+            id="com.astra.ses.spell.gui.commands.GotoLabel"
+            name="Go to label">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.GotoLabel.id"
+               name="procId"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.GotoLabel.label"
+               name="Label"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Step"
+            id="com.astra.ses.spell.gui.commands.Step"
+            name="Step">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Step over one line"
+            id="com.astra.ses.spell.gui.commands.StepOver"
+            name="Step over">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Skip a line"
+            id="com.astra.ses.spell.gui.commands.Skip"
+            name="Skip">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Pause execution"
+            id="com.astra.ses.spell.gui.commands.Pause"
+            name="Pause">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Interrupt driver operation"
+            id="com.astra.ses.spell.gui.commands.Interrupt"
+            name="Interrupt">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Abort execution"
+            id="com.astra.ses.spell.gui.commands.Abort"
+            name="Abort">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Recover procedure"
+            id="com.astra.ses.spell.gui.commands.Recover"
+            name="Recover">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Execute User action"
+            id="com.astra.ses.spell.gui.commands.UserAction"
+            name="User Action">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Reload a procedure"
+            id="com.astra.ses.spell.gui.commands.Reload"
+            name="Reload">
+         <commandParameter
+               id="procId"
+               name="Procedure id"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ShowReleaseInfo"
+            name="Show release info dialog">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.DumpInterpreterInformation"
+            name="Dump interpreter information">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            id="com.astra.ses.spell.gui.commands.SaveInterpreterInfo"
+            name="Save state">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ExportLogFile"
+            name="Export procedure log file">
+      </command>
+      <command
+            id="com.astra.ses.spell.gui.commands.ExportAsRunFile"
+            name="Export procedure ASRUN file">
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Edit a given data container in the procedure execution"
+            id="com.astra.ses.spell.gui.commands.EditDictionary"
+            name="Edit data container">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.EditDictionary.dict"
+               name="Container name"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.EditDictionary.canmerge"
+               name="Can Merge Files"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Save a given data container in the procedure execution"
+            id="com.astra.ses.spell.gui.commands.SaveDictionary"
+            name="Save data container">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SaveDictionary.dict"
+               name="Container name"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SaveDictionary.procId"
+               name="Procedure identifier"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.SaveDictionary.path"
+               name="Path to save"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.control"
+            description="Open the input file viewer dialog"
+            id="com.astra.ses.spell.gui.commands.OpenFileViewer"
+            name="Open input file viewer">
+      </command>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.bindings"
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="com.astra.ses.spell.gui.commands.ShowConnectionDialog"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="ALT+C">
+      </key>
+      <key
+            commandId="com.astra.ses.spell.gui.commands.RefreshProcedures"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="ALT+R">
+      </key>
+      <key
+            commandId="com.astra.ses.spell.gui.commands.GetAsRunFile"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="ALT+F">
+      </key>
+      <key
+            commandId="com.astra.ses.spell.gui.commands.GetLogFile"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="ALT+L">
+      </key>
+      <key
+            commandId="com.astra.ses.spell.gui.commands.ShowProperties"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="ALT+P">
+      </key>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.commands.handlers"
+         name="Command Handlers"
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ShowConnectionDialog"
+            commandId="com.astra.ses.spell.gui.commands.ShowConnectionDialog">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenMasterShell"
+            commandId="com.astra.ses.spell.gui.commands.OpenMasterShell">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.RefreshProcedures"
+            commandId="com.astra.ses.spell.gui.commands.RefreshProcedures">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ContextConnected">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ConnectServer"
+            commandId="com.astra.ses.spell.gui.commands.ConnectServer">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.DisconnectServer"
+            commandId="com.astra.ses.spell.gui.commands.DisconnectServer">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.StartContext"
+            commandId="com.astra.ses.spell.gui.commands.StartContext">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.StopContext"
+            commandId="com.astra.ses.spell.gui.commands.StopContext">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.AttachContext"
+            commandId="com.astra.ses.spell.gui.commands.AttachContext">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.DetachContext"
+            commandId="com.astra.ses.spell.gui.commands.DetachContext">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CloseProcedure"
+            commandId="com.astra.ses.spell.gui.commands.CloseProcedure">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureCloseable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.KillProcedure"
+            commandId="com.astra.ses.spell.gui.commands.KillProcedure">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureCloseable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ReleaseProcedure"
+            commandId="com.astra.ses.spell.gui.commands.ReleaseProcedure">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureCloseable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.GetAsRunFile"
+            commandId="com.astra.ses.spell.gui.commands.GetAsRunFile">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.GetLogFile"
+            commandId="com.astra.ses.spell.gui.commands.GetLogFile">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenProcedure"
+            commandId="com.astra.ses.spell.gui.commands.OpenProcedure">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureOpenable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenProcedureBackground"
+            commandId="com.astra.ses.spell.gui.commands.OpenProcedureBackground">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureOpenable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ScheduleProcedure"
+            commandId="com.astra.ses.spell.gui.commands.ScheduleProcedure">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureOpenable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenProceduresEditor"
+            commandId="com.astra.ses.spell.gui.commands.OpenProceduresEditor">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ToggleRunInto"
+            commandId="com.astra.ses.spell.gui.commands.ToggleRunInto">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ToggleByStep"
+            commandId="com.astra.ses.spell.gui.commands.ToggleByStep">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ToggleTcConfirm"
+            commandId="com.astra.ses.spell.gui.commands.ToggleTcConfirm">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenProcedureArgs"
+            commandId="com.astra.ses.spell.gui.commands.OpenProcedureArgs">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureOpenable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.DestroyContext"
+            commandId="com.astra.ses.spell.gui.commands.DestroyContext">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ShowProperties"
+            commandId="com.astra.ses.spell.gui.commands.ShowProperties">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureSelected">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ClearBreakpoints"
+            commandId="com.astra.ses.spell.gui.commands.ClearBreakpoints">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdGotoLine"
+            commandId="com.astra.ses.spell.gui.commands.GotoLine">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.SetBreakpoint"
+            commandId="com.astra.ses.spell.gui.commands.SetBreakpoint">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdRun"
+            commandId="com.astra.ses.spell.gui.commands.RunProcedure">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdGoto"
+            commandId="com.astra.ses.spell.gui.commands.Goto">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdGotoLabel"
+            commandId="com.astra.ses.spell.gui.commands.GotoLabel">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdStep"
+            commandId="com.astra.ses.spell.gui.commands.Step">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdStepOver"
+            commandId="com.astra.ses.spell.gui.commands.StepOver">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdSkip"
+            commandId="com.astra.ses.spell.gui.commands.Skip">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdPause"
+            commandId="com.astra.ses.spell.gui.commands.Pause">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdInterrupt"
+            commandId="com.astra.ses.spell.gui.commands.Interrupt">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdAbort"
+            commandId="com.astra.ses.spell.gui.commands.Abort">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdRecover"
+            commandId="com.astra.ses.spell.gui.commands.Recover">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdUserAction"
+            commandId="com.astra.ses.spell.gui.commands.UserAction">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.CmdReload"
+            commandId="com.astra.ses.spell.gui.commands.Reload">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ConfigureExecution"
+            commandId="com.astra.ses.spell.gui.commands.ConfigureExecution">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ConfigureDefaults"
+            commandId="com.astra.ses.spell.gui.commands.ConfigureDefaults">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ContextDefaults">
+            </test>
+         </enabledWhen>
+      </handler>      
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ShowReleaseInfo"
+            commandId="com.astra.ses.spell.gui.commands.ShowReleaseInfo">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ExportLogFile"
+            commandId="com.astra.ses.spell.gui.commands.ExportLogFile">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.ExportAsRunFile"
+            commandId="com.astra.ses.spell.gui.commands.ExportAsRunFile">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.EditDictionary"
+            commandId="com.astra.ses.spell.gui.commands.EditDictionary">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurableMon">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.SaveDictionary"
+            commandId="com.astra.ses.spell.gui.commands.SaveDictionary">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.ProcedureConfigurable">
+            </test>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.model.commands.OpenInputFileViewer"
+            commandId="com.astra.ses.spell.gui.commands.OpenFileViewer">
+      </handler>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.views"
+         point="org.eclipse.ui.views">
+      <category
+            id="com.astra.ses.spell.gui.views.execution"
+            name="Execution Views">
+      </category>
+      <category
+            id="com.astra.ses.spell.gui.views.operation"
+            name="Operation Views">
+      </category>
+      <view
+            category="com.astra.ses.spell.gui.views.operation"
+            allowMultiple="false"
+            class="com.astra.ses.spell.gui.views.NavigationView"
+            icon="icons/16x16/packages.png"
+            id="com.astra.ses.spell.gui.views.NavigationView"
+            name="Navigation View"
+            restorable="true">
+      </view>
+      <view
+            category="com.astra.ses.spell.gui.views.operation"
+            allowMultiple="false"
+            class="com.astra.ses.spell.gui.views.MasterView"
+            icon="icons/16x16/master.png"
+            id="com.astra.ses.spell.gui.views.MasterView"
+            name="Master View"
+            restorable="true">
+      </view>
+      <view
+            category="com.astra.ses.spell.gui.views.execution"
+            allowMultiple="true"
+            class="com.astra.ses.spell.gui.views.ProcedureView"
+            icon="icons/cog.png"
+            id="com.astra.ses.spell.gui.views.ProcedureView"
+            name="Procedure View"
+            restorable="true">
+      </view>
+      <view
+            category="com.astra.ses.spell.gui.views.execution"
+            allowMultiple="true"
+            class="com.astra.ses.spell.gui.views.TabbedView"
+            icon="icons/16x16/asrun.png"
+            id="com.astra.ses.spell.gui.views.TabbedView"
+            name="Tabbed View"
+            restorable="true">
+      </view>
+      <view
+            category="com.astra.ses.spell.gui.views.execution"
+            allowMultiple="true"
+            class="com.astra.ses.spell.gui.views.LogFileView"
+            icon="icons/16x16/asrun.png"
+            id="com.astra.ses.spell.gui.views.LogFileView"
+            name="Log File View"
+            restorable="false">
+      </view>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.propertyTesters"
+         point="org.eclipse.core.expressions.propertyTesters">
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ContextConnectedTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ContextConnectedTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ContextConnected"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedureCloseTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedureCloseTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureCloseable"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ContextDefaultsTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ContextDefaultsTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ContextDefaults"
+            type="java.lang.Object">
+      </propertyTester>      
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedureOpenTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedureOpenTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureOpenable"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.AsRunOpenTester"
+            id="com.astra.ses.spell.gui.propertyTesters.AsRunOpenTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="AsRunAvailable"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedureConfigurableTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedureConfigurableTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureConfigurable"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.AnyProcedureSelectedTester"
+            id="com.astra.ses.spell.gui.propertyTesters.AnyProcedureSelectedTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureSelected"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedurePausedTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedurePausedTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedurePaused"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedureConfigurableMonTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedureConfigurableMonTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureConfigurableMon"
+            type="java.lang.Object">
+      </propertyTester>
+      <propertyTester
+            class="com.astra.ses.spell.gui.model.properties.ProcedureEditorAvailableTester"
+            id="com.astra.ses.spell.gui.propertyTesters.ProcedureEditorAvailableTester"
+            namespace="com.astra.ses.spell.gui.properties"
+            properties="ProcedureEditorAvailable"
+            type="java.lang.Object">
+      </propertyTester>
+   </extension>
+   <extension
+         point="org.eclipse.ui.activities">
+      <activity
+            description="Hide contributions made by org.eclipse.search"
+            id="com.astra.ses.spell.gui.activities.hideSearch"
+            name="Hide Search Contributions">
+         <enabledWhen>
+            <test
+                  forcePluginActivation="false"
+                  property="foo.bar"
+                  value="true">
+            </test>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.gui.activities.hideSearch"
+            isEqualityPattern="false"
+            pattern="org.eclipse.search.*">
+      </activityPatternBinding>
+      <activity
+            description="Hide contributions made by org.eclipse.ui.edit"
+            id="com.astra.ses.spell.gui.activities.hideEdit"
+            name="Hide Edit Contributions">
+         <enabledWhen>
+            <test
+                  forcePluginActivation="false"
+                  property="foo.bar"
+                  value="true">
+            </test>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.gui.activities.hideEdit"
+            isEqualityPattern="false"
+            pattern="org.eclipse.ui.edit.*">
+      </activityPatternBinding>
+      <activity
+            description="Hide contributions made by org.eclipse.team"
+            id="com.astra.ses.spell.gui.activities.hideTeam"
+            name="Hide Team Contributions">
+         <enabledWhen>
+            <test
+                  forcePluginActivation="false"
+                  property="foo.bar"
+                  value="true">
+            </test>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.gui.activities.hideTeam"
+            isEqualityPattern="false"
+            pattern="org.eclipse.team.ui.*">
+      </activityPatternBinding>
+      <activity
+            description="Hide contributions made by org.eclipse.ui.ide"
+            id="com.astra.ses.spell.gui.activities.hideIDE"
+            name="Hide IDE Contributions">
+         <enabledWhen>
+            <test
+                  forcePluginActivation="false"
+                  property="foo.bar"
+                  value="true">
+            </test>
+         </enabledWhen>
+      </activity>
+      <activityPatternBinding
+            activityId="com.astra.ses.spell.gui.activities.hideIDE"
+            isEqualityPattern="false"
+            pattern="org.eclipse.ui.ide.*">
+      </activityPatternBinding>
+   </extension>
+   <extension
+         point="org.eclipse.ui.viewActions">
+      <viewContribution
+            id="com.astra.ses.spell.gui.view.tabbedViewContribution"
+            targetID="com.astra.ses.spell.gui.views.TabbedView">
+         <action
+               class="com.astra.ses.spell.gui.views.actions.RefreshTabbedView"
+               icon="icons/arrow_refresh.png"
+               id="com.astra.ses.spell.gui.view.tabbedViewContribution.refresh"
+               label="Refresh view"
+               style="push"
+               toolbarPath="additions"
+               tooltip="Refresh this view">
+         </action>
+      </viewContribution>
+      <viewContribution
+            id="com.astra.ses.spell.gui.view.logViewContribution"
+            targetID="com.astra.ses.spell.gui.views.LogFileView">
+         <action
+               class="com.astra.ses.spell.gui.views.actions.RefreshTabbedView"
+               icon="icons/arrow_refresh.png"
+               id="com.astra.ses.spell.gui.view.tabbedViewContribution.refresh"
+               label="Refresh view"
+               style="push"
+               toolbarPath="additions"
+               tooltip="Refresh this view">
+         </action>
+      </viewContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="com.astra.ses.spell.gui.perspective">
+         <view
+               closeable="true"
+               id="com.astra.ses.spell.gui.views.ProcedureView"
+               minimized="false"
+               moveable="true"
+               relationship="stack"
+               relative="com.astra.ses.spell.gui.views.MasterView"
+               showTitle="true"
+               standalone="false"
+               visible="false">
+         </view>
+         <view
+               closeable="true"
+               id="com.astra.ses.spell.gui.views.TabbedView"
+               minimized="false"
+               moveable="true"
+               relationship="stack"
+               relative="com.astra.ses.spell.gui.views.MasterView"
+               showTitle="true"
+               standalone="false"
+               visible="false">
+         </view>
+      </perspectiveExtension>
+   </extension>
+
+</plugin>

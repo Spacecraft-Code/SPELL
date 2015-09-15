@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.gui.codeview.presentation"
+         name="Code view procedure presentation"
+         point="com.astra.ses.spell.gui.extensions.Presentations">
+      <listener
+            class="com.astra.ses.spell.gui.presentation.code.CodePresentation"
+            description="Code Viewer presentation extension"
+            name="Code Viewer">
+      </listener>
+   </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="com.astra.ses.spell.gui.presentation.code.preferences.CodeViewPreferencePage"
+            id="com.astra.ses.spell.gui.codeview.preferences.CodeViewPreferencePage"
+            name="Code View Preferences">
+      </page>
+   </extension>
+</plugin>

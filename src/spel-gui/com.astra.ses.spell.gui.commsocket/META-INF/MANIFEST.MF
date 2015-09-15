@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Socket Communications interface
+Bundle-SymbolicName: com.astra.ses.spell.gui.commsocket;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.gui.core.comm.socket.Activator
+Bundle-Vendor: SES Engineering, Luxembourg S.A.R.L.
+Require-Bundle: org.eclipse.core.runtime,
+ com.astra.ses.spell.gui.core;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.preferences;bundle-version="1.0.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: lib/trilead-ssh2-build211.jar,
+ .

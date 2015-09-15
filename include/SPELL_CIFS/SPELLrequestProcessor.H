@@ -1,0 +1,207 @@
+// ################################################################################
+// FILE       : SPELLrequestProcessor.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Processing code for client requests
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_REQUEST_PROCESSOR_H__
+#define __SPELL_REQUEST_PROCESSOR_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+// Project includes --------------------------------------------------------
+#include "SPELL_IPC/SPELLipcMessage.H"
+#include "SPELL_SYN/SPELLmutex.H"
+
+/** \addtogroup SPELL_CIFS */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+class SPELLserverCif;
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief IPC request processor for executor
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLrequestProcessor
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLrequestProcessor( SPELLserverCif& cif );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor.
+		**////////////////////////////////////////////////////////////////////
+		~SPELLrequestProcessor();
+
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    friend class SPELLserverCif;
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // STATIC ////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a message regarding a child procedure.
+		 *
+		 * \param msg IN: IPC message to process.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processMessageForChild( const SPELLipcMessage& msg );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to obtain the current configuration.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processGetConfig( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to obtain the current status.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processGetStatus( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to set the current configuration.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processSetConfig( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to toggle a breapoint.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processSetBreakpoint ( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to clear all breakpoints.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processClearBreakpoints ( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to get current variable names.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processGetVariables( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to change a variable value
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processChangeVariable( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to check if variable analysis is enabled
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processCheckVariablesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to get global dictionary contents
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processGetDictionary( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to update global dictionary contents
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processUpdateDictionary( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+private: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // STATIC ////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if an object is a data container
+		 *
+		 * \param dict IN: Python object
+		 *
+		**////////////////////////////////////////////////////////////////////
+		bool isDataContainer(PyObject* dict);
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+		SPELLserverCif& m_cif;
+    	std::vector<std::string> m_valueChunks;
+    	SPELLmutex m_requestLock;
+};
+
+/*@}*/
+#endif

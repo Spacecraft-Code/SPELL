@@ -1,0 +1,23 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Client Procedure Models
+Bundle-SymbolicName: com.astra.ses.spell.gui.procs;singleton:=true
+Bundle-Version: 2.0.0
+Bundle-Activator: com.astra.ses.spell.gui.procs.Activator
+Require-Bundle: org.eclipse.core.runtime,
+ com.astra.ses.spell.gui.core;bundle-version="1.0.0",
+ com.astra.ses.spell.language;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.types;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.preferences;bundle-version="1.0.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Export-Package: com.astra.ses.spell.gui.procs,
+ com.astra.ses.spell.gui.procs.exceptions,
+ com.astra.ses.spell.gui.procs.extensionpoints,
+ com.astra.ses.spell.gui.procs.interfaces,
+ com.astra.ses.spell.gui.procs.interfaces.exceptions,
+ com.astra.ses.spell.gui.procs.interfaces.listeners,
+ com.astra.ses.spell.gui.procs.interfaces.model,
+ com.astra.ses.spell.gui.procs.model,
+ com.astra.ses.spell.gui.procs.services
+Bundle-Vendor: SES Engineering, Luxembourg S.A.R.L.

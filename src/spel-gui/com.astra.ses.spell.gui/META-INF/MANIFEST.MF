@@ -1,0 +1,28 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Client GUI
+Bundle-SymbolicName: com.astra.ses.spell.gui;singleton:=true
+Bundle-Version: 2.0.0
+Bundle-Activator: com.astra.ses.spell.gui.Activator
+Bundle-Vendor: SES Engineering, Luxembourg S.A.R.L.
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.core.expressions,
+ com.astra.ses.spell.gui.core;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.preferences;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.procs;bundle-version="2.0.0",
+ com.astra.ses.spell.gui.types;bundle-version="1.0.0",
+ org.eclipse.nebula.widgets.grid;bundle-version="1.0.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Export-Package: com.astra.ses.spell.gui.advisor,
+ com.astra.ses.spell.gui.extensions,
+ com.astra.ses.spell.gui.interfaces,
+ com.astra.ses.spell.gui.interfaces.listeners,
+ com.astra.ses.spell.gui.model.commands,
+ com.astra.ses.spell.gui.model.commands.args,
+ com.astra.ses.spell.gui.model.commands.helpers,
+ com.astra.ses.spell.gui.model.jobs,
+ com.astra.ses.spell.gui.services,
+ com.astra.ses.spell.gui.views,
+ com.astra.ses.spell.gui.views.controls.generic

@@ -1,0 +1,256 @@
+// ################################################################################
+// FILE       : SPELLprocedureManager.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Procedure manager
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_PROCMANAGER_H__
+#define __SPELL_PROCMANAGER_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_PRD/SPELLprocedure.H"
+#include "SPELL_PRD/SPELLlibrary.H"
+// Project includes --------------------------------------------------------
+#include "SPELL_SYN/SPELLmutex.H"
+
+/** \addtogroup SPELL_PRD */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Procedure manager.
+ **
+ ** \par Description and usage:
+ **
+ ** 	Provides information about all available procedures and their properties.
+ **
+ ** 	Used by the executor when loading subprocedures, and to check if a
+ **     given file is on the procedure path.
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLprocedureManager
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+		/** Shorcut for procedure lists */
+		typedef std::list<std::string> ProcList;
+
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor
+		**////////////////////////////////////////////////////////////////////
+		~SPELLprocedureManager();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the singleton instance.
+		 *
+		 * \return The singleton instance
+		**////////////////////////////////////////////////////////////////////
+		static SPELLprocedureManager& instance();
+
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Setup the procedure manager.
+		 *
+		 * \param ctxName IN: current context name.
+		**////////////////////////////////////////////////////////////////////
+		void setup( const std::string& ctxName );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the configured library path.
+		 *
+		 * \returns The library path.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getLibPath() const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the configured procedure path.
+		 *
+		 * \returns The library path.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProcPath() const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the filename corresponding to the given procedure.
+		 *
+		 * \param procId IN: the procedure identifier.
+		 *
+		 * \returns The file name.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProcFile( const std::string& procId );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the name corresponding to the given procedure.
+		 *
+		 * \param procId IN: the procedure identifier.
+		 *
+		 * \returns The procedure name.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProcName( const std::string& procId );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the identifier corresponding to the given procedure file.
+		 *
+		 * \param filename IN: the procedure file.
+		 *
+		 * \returns The identifier.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProcId( const std::string& filename );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the list of available procedures.
+		 *
+		 * \returns The list of procedure identifiers.
+		**////////////////////////////////////////////////////////////////////
+		const ProcList getProcList();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the source code corresponding to the given procedure.
+		 *
+		 * \param procId IN: the procedure identifier.
+		 *
+		 * \returns The source code.
+		**////////////////////////////////////////////////////////////////////
+		SPELLprocedureSourceCode getSourceCode( const std::string& procId );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the list of procedure properties
+		**////////////////////////////////////////////////////////////////////
+		SPELLprocedure::PropertyKeys getPropertyKeys( const std::string& procId );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the value of a procedure property
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProperty( const std::string& procId, const std::string& key );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Refresh and reload the list of available procedures.
+		**////////////////////////////////////////////////////////////////////
+		void refresh();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get a procedure model
+		**////////////////////////////////////////////////////////////////////
+		SPELLprocedure& getProcedure( const std::string& procId );
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+		/** Shortcut for procedure id-name map */
+		typedef std::map<std::string,std::string> ProcMap;
+		/** Shortcut for procedure id-model map */
+		typedef std::map<std::string,SPELLprocedure*> ProcModels;
+		/** Shortcut for library id-model map */
+		typedef std::map<std::string,SPELLlibrary*> LibModels;
+
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLprocedureManager();
+
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Resolve procedure paths
+		**////////////////////////////////////////////////////////////////////
+		void resolvePaths();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Find all procedures in the given search path. Include only those
+		 * procedures whose associated spacecraft matches the given one.
+		 *
+		 * \param basePath IN: search path
+		 * \param sc IN: spacecraft id.
+		**////////////////////////////////////////////////////////////////////
+		void findProcedures( const std::string& basePath, const std::string& sc );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Find all libraries available in UserLib location path.
+		 *
+		 * \param basePath IN: the path of UserLib location.
+		**////////////////////////////////////////////////////////////////////
+		void findLibraries( const std::string& basePath );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Remove the instance number from the given procedure identifier.
+		 *
+		 * \param procId IN: the identifier to process.
+		 *
+		 * \returns The procedure identifier without instance information.
+		**////////////////////////////////////////////////////////////////////
+		const std::string noInstanceId( const std::string& procId );
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS ///////////////////////////////////////////////////////////
+		/** The current context name */
+		std::string m_ctxName;
+		/** The configured procedure search path */
+		std::string m_procPath;
+		/** The configured library path */
+		std::string m_libPath;
+		/** Map of identifiers to names */
+		ProcMap m_idToName;
+		/** Map of names to identifiers */
+		ProcMap m_nameToId;
+		/** Map of filenames to identifiers */
+		ProcMap m_filenameToId;
+		/** Map of identifiers to filenames */
+		ProcMap m_idToFilename;
+		/** Map of identifiers and procedure models */
+		ProcModels m_procModels;
+		/** Map of identifiers and library models */
+		LibModels m_libModels;
+		/** Synchronization lock */
+		SPELLmutex m_lock;
+};
+
+/*@}*/
+#endif

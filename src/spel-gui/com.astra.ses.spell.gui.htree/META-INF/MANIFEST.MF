@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: History Tree
+Bundle-SymbolicName: com.astra.ses.spell.gui.htree;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.
+Fragment-Host: com.astra.ses.spell.gui.replay;bundle-version="1.0.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ClassPath: .,
+ icons/
+

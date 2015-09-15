@@ -1,0 +1,51 @@
+#!/bin/sh
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Script for creating SPELL driver packages
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+DRIVER_NAME=$1
+DRIVER_DIR=$2
+DRIVER_CFG=$3
+
+[[ "$DRIVER_NAME" == "" ]] && echo "ERROR: must provide the driver name: `basename $0` <driver name> <driver dir> <driver cfg>" && exit 1
+[[ "$DRIVER_DIR" == "" ]] && echo "ERROR: must provide the driver directory: `basename $0` <driver name> <driver dir> <driver cfg>" && exit 1
+[[ "$DRIVER_CFG" == "" ]] && echo "ERROR: must provide the driver config file: `basename $0` <driver name> <driver dir> <driver cfg>" && exit 1
+
+[[ ! -d $DRIVER_DIR ]]    && echo "ERROR: cannot find driver directory ('$DRIVER_DIR')" && exit 1
+[[ ! -f $DRIVER_CFG ]]    && echo "ERROR: cannot find driver config file ('$DRIVER_CFG')" && exit 1
+
+mkdir -p temp_drv/$DRIVER_NAME
+mkdir -p temp_drv/config
+cp -rvf $DRIVER_DIR/* temp_drv/$DRIVER_NAME/.
+cp -vf $DRIVER_CFG temp_drv/config/.
+
+DRIVER_PKG="driver_${DRIVER_NAME}.tar.gz"
+[[ -f $DRIVER_PKG ]] && rm -f $DRIVER_PKG
+
+cd temp_drv
+tar czf ../$DRIVER_PKG *
+cd -
+rm -rf temp_drv
+
+echo "done."
+

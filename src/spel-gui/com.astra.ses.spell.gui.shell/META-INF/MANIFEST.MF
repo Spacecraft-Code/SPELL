@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Shell  Plug-in
+Bundle-SymbolicName: com.astra.ses.spell.gui.shell;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.gui.core.shell.Activator
+Require-Bundle: org.eclipse.core.runtime,
+ com.astra.ses.spell.gui.core;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.procs;bundle-version="1.0.0",
+ com.astra.ses.spell.gui.types;bundle-version="1.0.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-Vendor: SES Engineering, Luxembourg S.a.r.l.

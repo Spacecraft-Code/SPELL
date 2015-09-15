@@ -1,0 +1,335 @@
+// ################################################################################
+// FILE       : SPELLlog.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Executor logging mechanism
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_LOG_H__
+#define __SPELL_LOG_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// Local includes ----------------------------------------------------------
+// Project includes --------------------------------------------------------
+#include "SPELL_SYN/SPELLmutex.H"
+// System includes ---------------------------------------------------------
+
+/** \addtogroup SPELL_UTIL */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Defines the level of log messages.
+ **
+ ** \par Description and usage:
+ **
+ **  	Log level is used to distinguish log messages affecting different
+ **     subsystems of SPELL.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+typedef enum LogLevel_
+{
+    LOG_MAIN,
+    LOG_INIT,
+    LOG_CNFG,
+    LOG_PROC,
+    LOG_LANG,
+    LOG_COMM,
+    LOG_LEV_MAX   // Sentinel, shall be the last one always
+}
+LogLevel;
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Defines the severity of log messages.
+ **
+ ** \par Description and usage:
+ **
+ **  	Log level is used to distinguish log messages of different importance.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+typedef enum LogSeverity_
+{
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_WARN,
+    LOG_ERROR,
+    LOG_SEV_MAX   // Sentinel, shall be the last one always
+}
+LogSeverity;
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Python object linking to the logger class.
+ **
+ ** \par Description and usage:
+ **
+ **  	This structure binds the C++ logger class instance to the Python
+ **   	layer, so that Python objects can access and use it as if it where
+ **     a regular Python instance.
+ **
+ **     This Python object binding is installed on the Python layer via
+ **     the SPELL registry wrapper.
+ **
+ ** \see SPELLregistry, SPELL_WRP
+ **
+ *////////////////////////////////////////////////////////////////////////////
+typedef struct PyLogObject_
+{
+    PyObject_HEAD;
+}
+PyLogObject;
+
+// GLOBALS /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Installs the Python binding for the logger class on the Python
+ **  layer.
+ **
+ ** \par Description and usage:
+ **
+ **  	Used from the main function of SPELL programs that need to provide
+ **     logging access to Python code.
+ **
+ ** \throws SPELLcoreException if the Python type cannot be created
+ *////////////////////////////////////////////////////////////////////////////
+void Log_Install();
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Defines correspondences between log severities and labels used to
+ **  write the log files.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+static const std::string LOG_SEVERITY_STR[] =
+{
+    "[ INFO  ]",
+    "[ DEBUG ]",
+    "[ WARN  ]",
+    "[ ERROR ]"
+};
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Defines correspondences between log severities and constant names
+ **  that are installed on the Python layer.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+static const std::string LOG_SEVERITY_LBL[] =
+{
+    "LOG_INFO",
+    "LOG_DEBUG",
+    "LOG_WARN",
+    "LOG_ERROR"
+};
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Defines correspondences between log levels and labels used to
+ **  write the log files.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+static const std::string LOG_LEVEL_STR[] =
+{
+    "[ MAIN ]",
+    "[ INIT ]",
+    "[ CNFG ]",
+    "[ PROC ]",
+    "[ LANG ]",
+    "[ COMM ]"
+};
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Defines correspondences between log levels and constant names
+ **  that are installed on the Python layer.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+static const std::string LOG_LEVEL_LBL[] =
+{
+    "LOG_MAIN",
+    "LOG_INIT",
+    "LOG_CNFG",
+    "LOG_PROC",
+    "LOG_LANG",
+    "LOG_COMM"
+};
+
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//============================================================================
+// General constants
+//============================================================================
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Maximum length for the origin field in log lines
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_MAX_LEN 35
+
+
+//============================================================================
+// Basic tracing macros
+//============================================================================
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Log an information message.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_INFO(x)  log4cplus::Logger::getRoot().log(log4cplus::INFO_LOG_LEVEL, x, __FILE__, __LINE__ )
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Log a warning message.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_WARN(x)  log4cplus::Logger::getRoot().log(log4cplus::WARN_LOG_LEVEL, x, __FILE__, __LINE__ )
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Log an error message.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_ERROR(x) log4cplus::Logger::getRoot().log(log4cplus::ERROR_LOG_LEVEL, x, __FILE__, __LINE__ )
+//////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Log an information message.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_INFO_PY(x)  log4cplus::Logger::getRoot().log(log4cplus::INFO_LOG_LEVEL, x, "(PYTHON)" )
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Log a warning message.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_WARN_PY(x)  log4cplus::Logger::getRoot().log(log4cplus::WARN_LOG_LEVEL, x, "(PYTHON)" )
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Log an error message.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#define LOG_ERROR_PY(x) log4cplus::Logger::getRoot().log(log4cplus::ERROR_LOG_LEVEL, x, "(PYTHON)" )
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ ** \brief Log a tracing message for debugging. It will be compiled only if
+ ** the \c WITH_DEBUG macro is defined.
+ **
+ *////////////////////////////////////////////////////////////////////////////
+#ifdef WITH_DEBUG
+#define DEBUG(x)     log4cplus::Logger::getRoot().log(log4cplus::DEBUG_LOG_LEVEL, x, __FILE__, __LINE__ )
+#else
+#define DEBUG(x)
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief SPELL logger class.
+ **
+ ** \par Description and usage:
+ **
+ **  	Singleton used via the \c LOG_xx macros that allow logging messages
+ **     from any part of the SPELL code.
+ **
+ ** \see SPELLbase
+ **
+ *////////////////////////////////////////////////////////////////////////////
+class SPELLlog
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor
+		**////////////////////////////////////////////////////////////////////
+		~SPELLlog();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the logger instance.
+		 *
+		 * \return the singleton instance.
+		**////////////////////////////////////////////////////////////////////
+		static SPELLlog& instance();
+
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Initialize and prepare the log file
+		 *
+		 * \param filename IN: should be the procedure id / script name
+		 * \param timestamp IN: the time id for the file name header
+		**////////////////////////////////////////////////////////////////////
+		void setLogFile( const std::string& filename, const std::string timestamp );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the log file name
+		 *
+		 * \return Log file name
+		**////////////////////////////////////////////////////////////////////
+		std::string getLogFile() {
+			return m_logFileName;
+		};
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLlog();
+
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** Holds the log file name */
+		std::string m_logFileName;
+};
+
+/*@}*/
+#endif

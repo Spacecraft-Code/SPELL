@@ -1,0 +1,80 @@
+#!/bin/bash
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Startup script for SPEL Server
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+
+#===============================================================================
+# Setup main environment variables
+#===============================================================================
+
+# SPELL home
+if [[ -z "$SPELL_HOME" ]]
+then
+    echo "ERROR: SPELL_HOME environment variable is not defined"
+    exit 1
+else
+    [[ ! -d $SPELL_HOME ]] && echo "ERROR: cannot find SPELL home directory: $SPELL_HOME" && exit 1
+fi
+echo "SPELL home: $SPELL_HOME" 
+
+SC=$1
+[[ "$SC" == "-w" ]] && SC=$satellite
+[[ -z "$SC" ]] && SC=$satellite
+
+[[ -z "$SC" ]] && echo "Must provide the satellite name: $0 <SAT>" && exit 1
+
+#===============================================================================
+# Setup environment
+#===============================================================================
+SETUP_SCRIPT=$SPELL_HOME/bin/setup-environment.sh
+[[ ! -e $SETUP_SCRIPT ]] && echo "ERROR: cannot find environment setup script: $SETUP_SCRIPT" && exit 1
+source $SETUP_SCRIPT
+ulimit -c unlimited
+
+#===============================================================================
+# Launcher configuration
+#===============================================================================
+APP_PATH=${SPELL_HOME}/bin/SPELL-Listener
+CFG_FILE=server_${SC}_`hostname`.xml
+CFG_PATH=${SPELL_CONFIG}/server/$CFG_FILE
+
+#===============================================================================
+# Prerequisites
+#===============================================================================
+[[ ! -f $CFG_PATH ]] && echo "    ERROR: could not find configuration file: $CFG_PATH" && exit 1
+[[ ! -f $APP_PATH ]] && echo "    ERROR: could not find application: $APP_PATH" && exit 1
+
+#===============================================================================
+# Pre-execution cleanup
+#===============================================================================
+find $SPELL_DATA -name "*.wss" -exec rm -f {} \;
+find $SPELL_DATA -name "*.wsd" -exec rm -f {} \;
+find $SPELL_DATA -name "*.wsp" -exec rm -f {} \;
+
+$SPELL_HOME/bin/Kill-Server $SC
+
+#===============================================================================
+# Execute application
+#===============================================================================
+${APP_PATH} -c ${CFG_PATH} 

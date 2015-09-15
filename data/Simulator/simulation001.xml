@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+<simulator>
+	<!--  TELEMETRY SECTION
+	
+	Item properties:
+	
+	   name: mnemonic of the parameter
+	   
+	   description: description string of the parameter
+	   
+	   raw: SPELL expression providing raw value. If a list is used, the item can iterate 
+	        over it in order to have different values. The condition to use one value or 
+	        the next is given by the update tag.
+	        
+	   eng: SPELL expression providing the calibrated value. If raw contains a list, eng 
+	        shall contain also a list of the same length. The condition to use one value
+	        or the next in the list is given by the update tag.
+	        
+	   update: type of update for the values of the parameter.
+	   
+	   		type timer: the value changes according to the given period. raw and eng
+	   		            shall be lists.
+	   		            
+	   		type none:  the value is constant. period is ignored. raw and eng are single
+	   		            elements (not lists)
+	   		            
+	   		type acq:   the value changes upon TM acquisition. The period gives the
+	   		            number of acquisitions to happen before going to the next
+	   		            value in the list.
+	   		            
+	   if $TIME$ is used in a raw or eng expression, it is evaluated to the current GCS time
+	   by using a SPELL TIME interface.
+	   
+	   if RAISE_EXCEPTION is used on an expression, the TM acquisition will raise a DriverException
+	   upon acquisition.
+	   
+	   if RAW_VALUE(XXX) is used on an expression, it is evaluated to the raw value of another
+	   parameter 'XXX' defined in the simulator 
+
+	   if ENG_VALUE(XXX) is used on an expression, it is evaluated to the eng value of another
+	   parameter 'XXX' defined in the simulator 
+	
+	 -->
+	<telemetry>
+		<item name="FCOUNTER" description="Frame counter">
+			<raw>range(0,16)</raw>
+			<eng>None</eng>
+			<update type="timer" period="1"/>
+		</item>
+		<item name="GCS_TIME" description="Example using TIME expression">
+			<raw>$TIME$</raw>
+			<eng>None</eng>
+			<update type="timer" period="1"/>
+		</item>
+		<item name="PARAM1" description="Constant parameter">
+			<raw>20</raw>
+			<eng>None</eng>
+			<update type="none"/>
+		</item>
+		<item name="PARAM2" description="Sequential parameter">
+			<raw>range(1,3)</raw>
+			<eng>None</eng>
+			<update type="timer" period="1"/>
+		</item>
+		<item name="PARAM3" description="Complex expression">
+			<raw>sin($TIME$)/2+1</raw>
+			<eng>None</eng>
+			<update type="timer" period="1"/>
+		</item>
+		<item name="PARAM4" description="String calibration updating">
+			<raw>[0,1]</raw>
+			<eng>['ON','OFF']</eng>
+			<update type="timer" period="1"/>
+		</item>
+		<item name="PARAM5" description="String calibration on acquisition">
+			<raw>[0,1,2,3]</raw>
+			<eng>['ON','OFF','ENABLE','DISABLE']</eng>
+			<update type="acq" period="1"/>
+		</item>
+		<item name="PARAM6" description="String calibration modified by TC">
+			<raw>[0,1,2,3]</raw>
+			<eng>['ON','OFF','ENABLE','DISABLE']</eng>
+			<update type="none"/>
+		</item>
+		<item name="PARAM7" description="String calibration modified by TC giving errors">
+			<raw>[0,1,RAISE_EXCEPTION,3]</raw>
+			<eng>['ON','OFF',RAISE_EXCEPTION,'DISABLE']</eng>
+			<update type="none"/>
+		</item>
+		<item name="PARAM8" description="Long update period">
+			<raw>[0,1]</raw>
+			<eng>['ON','OFF']</eng>
+			<update type="timer" period="3600"/>
+		</item>
+		<item name="PARAM9" description="Derived parameter">
+			<raw>[RAW_VALUE('GCS_TIME')+10,5,RAW_VALUE('GCS_TIME')-10]</raw>
+			<eng>None</eng>
+			<update type="acq" period="1"/>
+		</item>
+	</telemetry>
+
+	<!--  TELECOMMAND SECTION
+	
+	Item properties:
+	
+	   name: mnemonic of the telecommand
+	   
+	   description: description string of the telecommand
+	   
+	   update: effect of the telecommand on the associated telemetry parameter. The types
+	        of element values are
+	   
+	   		+<numeric value>: will add the value to the TM parameter if raw is a single
+	   		 			expression. If it is a list and the numeric value is integer,
+	   		 			it will change the value of the TM parameter to the next one in
+	   		 			the list. If the current value is the last item in that list,
+	   		 			the first item in the list is taken (cycle)
+	   		 			
+	   		-<numeric value>: analogous to the previous. 
+	   		            
+	   		<numeric value>: set the value of the TM parameter to be the numeric value 
+	   		            given. The telemetry parameter shall be constant.
+	   		            
+	   		RAISE_EXCEPTION: raise a DriverException when the command executes.
+
+		exec_time: amount of seconds needed for the command to finish execution
+		
+		telemetry: associated telemetry mnemonics. More than one mnemonic can be given.	   		
+		
+		arguments: defined arguments for the telecommand if any
+		
+			name: name of the argument
+			default: any SPELL expression providing the default value of the argument
+			
+			if update tag contains ARG(ARGNAME) the associated telemetry parameter will
+			get the value given by the telecommand argument 'ARGNAME'
+	 -->
+	<telecommand>
+		<item name="TC1" description="Modify telemetry value to next">
+			<update>+1</update>
+			<exec_time>1</exec_time>
+			<telemetry>
+				<item name="PARAM7"/>
+			</telemetry>
+		</item>
+		<item name="TC2" description="Modify telemetry value to previous">
+			<update>-1</update>
+			<exec_time>1</exec_time>
+			<telemetry>
+				<item name="PARAM7"/>
+			</telemetry>
+		</item>
+		<item name="TC3" description="Modify telemetry value to constant">
+			<update>0.0</update>
+			<exec_time>1</exec_time>
+			<telemetry>
+				<item name="PARAM1"/>
+			</telemetry>
+		</item>
+		<item name="TC4" description="Add to telemetry value">
+			<arguments>
+				<argument name="ARG1" default="0.5"/>
+				<argument name="ARG2" default="0"/>
+			</arguments>
+			<update>ARG(ARG1)</update>
+			<exec_time>1</exec_time>
+			<telemetry>
+				<item name="PARAM1"/>
+			</telemetry>
+		</item>
+		<item name="TC5" description="Substract from telemetry value">
+			<update>-0.5</update>
+			<exec_time>1</exec_time>
+			<telemetry>
+				<item name="PARAM1"/>
+			</telemetry>
+		</item>
+		<item name="TC6" description="No associated telemetry">
+			<exec_time>1</exec_time>
+		</item>
+		<item name="TC7" description="Generates an error in injection">
+			<update>RAISE_EXCEPTION</update>
+		</item>
+		<item name="TC8" description="Takes long time to execute">
+			<exec_time>3600</exec_time>
+		</item>
+		<item name="TC9" description="Modifies two items">
+			<exec_time>1</exec_time>
+			<update>+1</update>
+			<telemetry>
+				<item name="PARAM1"/>
+				<item name="PARAM4"/>
+			</telemetry>
+		</item>
+	</telecommand>	
+	
+	<!--  GROUND PARAMETERS SECTION
+	These elements behave equally to the telemetry parameters. They are just
+	grouped separately for clarity of the configuration file. 
+	-->
+	<ground>
+		<item name="GROUND1" description="Iteration parameter">
+			<raw>range(0,10)</raw>
+			<eng>None</eng>
+			<update type="timer" period="1"/>
+		</item>
+		<item name="GROUND2" description="Constant parameter">
+			<raw>20</raw>
+			<eng>None</eng>
+			<update type="none"/>
+		</item>
+		<item name="GROUND3" description="Changes upon acquisition">
+			<raw>[0,1,2,3,4,5]</raw>
+			<eng>None</eng>
+			<update type="acq" period="1"/>
+		</item>
+	</ground>
+
+	<!--  GCS RESOURCES SECTION
+	These elements simulate configuration values of the ground control system. 
+	-->
+	<resource>
+		<item name="CONFIG1" value="'ENABLED'"/>
+		<item name="CONFIG2" value="0"/>
+	</resource>
+	
+</simulator>

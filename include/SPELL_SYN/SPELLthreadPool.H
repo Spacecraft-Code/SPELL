@@ -1,0 +1,110 @@
+// ################################################################################
+// FILE       : SPELLthreadPool.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Thread pool mechanism
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_THREAD_POOL_H__
+#define __SPELL_THREAD_POOL_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_SYN/SPELLmutex.H"
+#include "SPELL_SYN/SPELLthreadWorker.H"
+// Project includes --------------------------------------------------------
+#include "SPELL_UTIL/SPELLbase.H"
+
+/** \addtogroup SPELL_SYN */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Encapsulates a thread pool mechanism
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLthreadPool
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLthreadPool( const std::string& id, unsigned int initialSize, unsigned int maxSize );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor
+		**////////////////////////////////////////////////////////////////////
+		virtual ~SPELLthreadPool();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Notify more work to do. The pool will be in charge of deleting
+		 * this work class.
+		**////////////////////////////////////////////////////////////////////
+		void workToDo( SPELLthreadWork* work );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Shutdown the pool
+		**////////////////////////////////////////////////////////////////////
+		void shutdown();
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		SPELLthreadWorker* findFreeThread();
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** Identifier of the pool */
+		std::string m_id;
+		/** Initial size of the pool */
+		unsigned int m_initialSize;
+		/** Maximum size of the pool */
+		unsigned int m_maxSize;
+		/** Holds the worker threads */
+		std::list<SPELLthreadWorker*> m_threads;
+		/** Sync mutex */
+		SPELLmutex m_lock;
+};
+
+/*@}*/
+#endif

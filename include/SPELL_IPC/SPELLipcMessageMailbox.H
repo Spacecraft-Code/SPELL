@@ -1,0 +1,186 @@
+// ################################################################################
+// FILE       : SPELLipcMessageMailbox.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Mailbox for incoming messages
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_IPC_MAILBOX_H__
+#define __SPELL_IPC_MAILBOX_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_IPC/SPELLipcMessage.H"
+// Project includes --------------------------------------------------------
+#include "SPELL_SYN/SPELLmutex.H"
+#include "SPELL_SYN/SPELLqueue.H"
+
+
+/** \addtogroup SPELL_IPC */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Message mailbox
+ **
+ ** \par Description and usage:
+ **
+ ** 	Stores responses for open requests.
+ **
+ ** 	Used by IPC interfaces to organise incoming responses when
+ **  	there are several requests ongoing in parallel.
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLipcMessageMailbox
+{
+public: //--------------------------------------------------------------------
+
+    friend class SPELLipcServerInterface;
+    friend class SPELLipcServerInterfaceSingle;
+    friend class SPELLipcClientInterface;
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLipcMessageMailbox( const std::string& name );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor.
+		**////////////////////////////////////////////////////////////////////
+		~SPELLipcMessageMailbox();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Retrieve the response corresponding to a given request identifier
+		 * (unique). Block the caller until such response arrives, but do not
+		 * wait more than the given timeout (msec).
+		 *
+		 * \param id IN: the request identifier
+		 * \param timeout IN: the maximum time to wait in msec.
+		**////////////////////////////////////////////////////////////////////
+		SPELLipcMessage retrieve( std::string id, unsigned long timeout );
+		//////////////////////////////////////////////////////////////////////
+		/** Retrieve the response corresponding to a given request identifier
+		 * (unique). Block the caller until such response arrives, and wait
+		 * forever.
+		 *
+		 * \param id IN: the request identifier
+		**////////////////////////////////////////////////////////////////////
+		SPELLipcMessage retrieve( std::string id );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Cancel the given request
+		**////////////////////////////////////////////////////////////////////
+		void cancel( std::string id );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Cleanup data and finish work.
+		**////////////////////////////////////////////////////////////////////
+		void shutdown();
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+		/** Shortcut for the message queue */
+		typedef SPELLqueue<SPELLipcMessage> SPELLipcMessageQueue;
+		/** Shortcut for the message queue map */
+		typedef std::map<std::string,SPELLipcMessageQueue*> SPELLipcMessageQueueMap;
+    // STATIC ////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Prepare a queue for the given request identifier.
+		 *
+		 * \param id IN: ongoing request identifier
+		**////////////////////////////////////////////////////////////////////
+		void prepare( std::string id );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Place the response for an ongoing request.
+		 *
+		 * \param id IN: ongoing request id
+		 * \param msg IN: response to the request
+		 *
+		 * \returns True if there was a request waiting for this response
+		**////////////////////////////////////////////////////////////////////
+		bool place( std::string id, const SPELLipcMessage& msg );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Remove the queue for the given request id.
+		 *
+		 * \param id IN: request identifier.
+		**////////////////////////////////////////////////////////////////////
+		void remove( std::string id );
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the queue associated to a given identifier.
+		 *
+		 * \param id IN: ongoing request identifier.
+		**////////////////////////////////////////////////////////////////////
+		SPELLipcMessageQueue* getQueue( std::string id );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Cancell all requests waiting
+		**////////////////////////////////////////////////////////////////////
+		void cancelAll();
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** Holds the map of message queues */
+		SPELLipcMessageQueueMap m_queueMap;
+		/** Synchronization lock */
+		SPELLmutex m_lock;
+		/** True if it is processing */
+		bool m_working;
+		/** Name of the mailbox */
+		std::string m_ifcName;
+};
+
+/*@}*/
+#endif

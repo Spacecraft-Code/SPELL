@@ -1,0 +1,4 @@
+#Mon May 10 10:04:10 UTC 2010
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.exe.debug.2117902686=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="false"/>\n
+environment/project/cdt.managedbuild.config.gnu.exe.release.1336603937=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="true">\n<variable delimiter\=";" name\="SPELL_HOME" operation\="append" value\="${workspace_loc}"/>\n<variable delimiter\=";" name\="SPELL_COTS" operation\="append" value\="/opt/spell_cots"/>\n</environment>\n

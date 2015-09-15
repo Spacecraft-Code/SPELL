@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.gui.presentation.TextView"
+         name="Textual view for procedures"
+         point="com.astra.ses.spell.gui.extensions.Presentations">
+      <listener
+            class="com.astra.ses.spell.gui.presentation.text.TextPresentation"
+            description="Text Viewer presentation extension"
+            name="Text Viewer">
+      </listener>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:com.astra.ses.spell.gui.menu.procedures?after=com.astra.ses.spell.gui.menu.procedures.ExportLogFile">
+         <command
+               commandId="com.astra.ses.spell.gui.commands.ExportText"
+               icon="platform:/plugin/com.astra.ses.spell.gui/icons/16x16/log_save.png"
+               id="com.astra.ses.spell.gui.procedures.ExportText"
+               label="Export procedure text view"
+               style="push"
+               tooltip="Export procedure text view">
+         </command>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            id="com.astra.ses.spell.gui.commands.ExportText"
+            name="Export text view">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.presentation.text.export.ExportText"
+            commandId="com.astra.ses.spell.gui.commands.ExportText">
+         <enabledWhen>
+            <test
+                  property="com.astra.ses.spell.gui.properties.AsRunAvailable">
+            </test>
+         </enabledWhen>
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="com.astra.ses.spell.gui.presentation.text.preferences.TextViewPreferencePage"
+            id="com.astra.ses.spell.gui.textview.preferences.TextViewPreferencePage"
+            name="Text View Preferences">
+      </page>
+   </extension>
+
+</plugin>

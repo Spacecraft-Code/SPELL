@@ -1,0 +1,9 @@
+
+   <plugin
+         id="TEMPLATE_PLUGIN"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>

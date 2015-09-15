@@ -1,0 +1,4 @@
+#Tue Feb 23 14:42:00 CET 2010
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.so.debug.1384100406=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="false"/>\n
+environment/project/cdt.managedbuild.config.gnu.so.release.339711132=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="false">\n<variable delimiter\=";" name\="SPELL_HOME" operation\="append" value\="${workspace_loc}"/>\n</environment>\n

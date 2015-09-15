@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.gui.commands.handlers"
+         name="Command Handlers for Replay"
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.replay.commands.OpenProcedureReplay"
+            commandId="com.astra.ses.spell.gui.commands.OpenProcedureReplay">
+      </handler>
+      <handler
+            class="com.astra.ses.spell.gui.replay.commands.ShowExecutionSelectionDialog"
+            commandId="com.astra.ses.spell.gui.commands.ShowExecutionSelectionDialog">
+      </handler>
+   </extension>
+   <extension
+         id="com.astra.ses.spell.gui.views"
+         point="org.eclipse.ui.views">
+      <view
+            category="com.astra.ses.spell.gui.views.execution"
+            allowMultiple="true"
+            class="com.astra.ses.spell.gui.replay.views.ReplayProcedureView"
+            icon="icons/cd.png"
+            id="com.astra.ses.spell.gui.replay.views.ReplayProcedureView"
+            name="Replay Procedure View"
+            restorable="true">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="com.astra.ses.spell.gui.perspective">
+         <view
+               closeable="true"
+               id="com.astra.ses.spell.gui.replay.views.ReplayProcedureView"
+               minimized="false"
+               moveable="true"
+               relationship="stack"
+               relative="com.astra.ses.spell.gui.views.MasterView"
+               showTitle="true"
+               standalone="false"
+               visible="false">
+         </view>
+      </perspectiveExtension>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:com.astra.ses.spell.gui.menu.procedures?after=com.astra.ses.spell.gui.menus.procedures.separator4">
+         <command
+               commandId="com.astra.ses.spell.gui.commands.ShowExecutionSelectionDialog"
+               icon="icons/cd.png"
+               label="Replay execution"
+               style="push"
+               tooltip="Replay a procedure execution">
+         </command>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="com.astra.ses.spell.gui.commands.replay"
+            name="Replay Commands">
+      </category>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.replay"
+            description="Replay the execution of a procedure"
+            id="com.astra.ses.spell.gui.commands.OpenProcedureReplay"
+            name="Replay procedure execution">
+         <commandParameter
+               id="com.astra.ses.spell.gui.commands.OpenProcedureReplay.id"
+               name="Instance identifier"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            categoryId="com.astra.ses.spell.gui.commands.replay"
+            description="Show the execution selection dialog"
+            id="com.astra.ses.spell.gui.commands.ShowExecutionSelectionDialog"
+            name="Show the execution selection dialog">
+      </command>
+   </extension>
+
+</plugin>

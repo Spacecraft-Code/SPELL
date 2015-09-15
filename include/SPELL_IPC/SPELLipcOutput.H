@@ -1,0 +1,155 @@
+// ################################################################################
+// FILE       : SPELLipcOutput.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Data writer
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_IPC_OUTPUT_H__
+#define __SPELL_IPC_OUTPUT_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_IPC/SPELLipcMessage.H"
+#include "SPELL_IPC/SPELLsocket.H"
+// Project includes --------------------------------------------------------
+#include "SPELL_SYN/SPELLmutex.H"
+#include "SPELL_SYN/SPELLthread.H"
+#include "SPELL_UTIL/SPELLtime.H"
+
+
+/** \addtogroup SPELL_IPC */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+class SPELLipcChannel;
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Output device
+ **
+ ** \par Description and usage:
+ **
+ ** 	This class is in charge of sending messages data through
+ ** 	the associated socket. Used by IPC interfaces. There is one output
+ ** 	interface per connected peer.
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLipcOutput : public SPELLthread
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		 *
+		 * \param name IN: identifier
+		 * \param skt IN: socket to write to
+		 * \param myKey IN: key of this side of the communication
+		 * \param ifc IN: reference to the IPC interface
+		**////////////////////////////////////////////////////////////////////
+		SPELLipcOutput( const std::string& name, SPELLsocket& skt, int myKey, SPELLipcChannel& chan );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor.
+		**////////////////////////////////////////////////////////////////////
+		virtual ~SPELLipcOutput();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Send a message to the peer.
+		 *
+		 * \param msg IN: message to be sent
+		**////////////////////////////////////////////////////////////////////
+		void send( SPELLipcMessage& msg );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Disconnect this interface.
+		 *
+		 * \param send_eoc IN: if true, send an end-of-conversation message
+		 * before actually disconnecting.
+		**////////////////////////////////////////////////////////////////////
+		void disconnect( bool send_eoc );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Thread work method
+		**////////////////////////////////////////////////////////////////////
+		void run();
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // STATIC ////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Write the given data to the socket.
+		 *
+		 * \param data IN: data to be sent.
+		**////////////////////////////////////////////////////////////////////
+		virtual void writeData( std::string data );
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** Holds the interface identifier */
+		std::string m_ifcName;
+		/** Holds the ipc key */
+		int m_key;
+		/** Holds the socket file descriptor */
+		SPELLsocket& m_socket;
+		/** IPC channel */
+		SPELLipcChannel& m_channel;
+		/** Synchronization lock */
+		SPELLmutex m_lock;
+		/** True if it is processing */
+		bool m_connected;
+		/** Time of the last message sent */
+		SPELLtime m_lastSentTime;
+		/** Ping message */
+		SPELLipcMessage m_ping;
+};
+
+/*@}*/
+#endif

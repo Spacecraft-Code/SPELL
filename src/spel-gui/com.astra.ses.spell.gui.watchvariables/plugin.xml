@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            class="com.astra.ses.spell.gui.watchvariables.views.WatchVariablesView"
+            icon="icons/16x16/variable.png"
+            id="com.astra.ses.spell.gui.views.tools.WatchVariables"
+            name="Variables"
+            restorable="true">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            description="Set a new value to a variable"
+            id="com.astra.ses.spell.gui.commands.ChangeVariable"
+            name="Change variable">
+         <commandParameter
+               id="procedureIdentifier"
+               name="Procedure"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="variableName"
+               name="Variable name"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="variableValue"
+               name="Value expression"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="variableGlobal"
+               name="Variable is global"
+               optional="false">
+         </commandParameter>
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.watchvariables.commands.ChangeVariable"
+            commandId="com.astra.ses.spell.gui.commands.ChangeVariable">
+      </handler>
+   </extension>
+
+</plugin>

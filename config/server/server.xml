@@ -1,0 +1,67 @@
+<config>
+
+    <!-- =================================================================== -->
+    <!-- GENERAL PROPERTIES -->
+    <!-- =================================================================== -->
+    <common>
+        <property name="Log">ENABLED</property>
+        <property name="LogDetail">PROC</property>
+        <!-- Default: 9, Slashes: 1, Dots: 0 -->
+        <property name="TdsTimeFormat">9</property>
+    </common>
+
+    <!-- =================================================================== -->
+    <!-- LANGUAGE CONFIGURATION FILE -->
+    <!-- =================================================================== -->
+    <language>
+        <file>language.xml</file>
+    </language>
+
+    <!-- =================================================================== -->
+    <!-- LISTENER CONFIGURATION -->
+    <!-- =================================================================== -->
+    <listener>
+        <property name="ListenerPort">9980</property>
+        <property name="ContextListenerPort">9981</property>
+    </listener>
+
+    <context>
+        <property name="ExecutorProgram">$SPELL_HOME/bin/SPELL-Executor</property>
+        <property name="UseDriverTime">false</property>
+    </context>
+
+    <!-- =================================================================== -->
+    <!-- EXECUTOR CONFIGURATION COMMON TO ALL CONTEXTS -->
+    <!-- =================================================================== -->
+    <executor>
+        <property name="ExecDelay">0</property>
+        <property name="RunInto">True</property>
+        <property name="ByStep">False</property>
+        <property name="BrowsableLib">True</property>
+        <property name="MaxVerbosity">5</property>
+        <property name="SaveStateMode">ON_LINE</property>
+        <property name="WatchVariables">ENABLED</property>
+    </executor>
+
+    <!-- =================================================================== -->
+    <!-- AVAILABLE DRIVERS -->
+    <!-- =================================================================== -->
+    <drivers>
+        <driver>driver_standalone.xml</driver>
+    </drivers>
+    
+    <!-- =================================================================== -->
+    <!-- AVAILABLE CONTEXTS -->
+    <!-- =================================================================== -->
+    <contexts>
+        <context>context_STD.xml</context>
+    </contexts>
+
+    <!-- =================================================================== -->
+    <!-- SATELLITE FAMILIES -->
+    <!-- =================================================================== -->
+    <families>
+        <family name="STD">STD2</family>
+    </families>
+    
+</config>

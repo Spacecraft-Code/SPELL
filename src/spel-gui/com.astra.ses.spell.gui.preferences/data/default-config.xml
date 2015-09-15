@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+
+<configuration>
+    <property name="AppName">SPELL</property>
+    <property name="UseTraces">YES</property>
+    <property name="ShowDebug">YES</property>
+    <property name="DebugLevel">PROC</property>
+    <property name="ConnectAtStartup">YES</property>
+    <property name="InitialServer">LOCAL</property>
+    <property name="InitialContext">STD</property>
+    <property name="ResponseTimeout">8000</property>
+    <property name="OpenTimeout">22000</property>
+    <property name="ProceduresEditor"></property>
+    <property name="IpcPingPeriod">5</property>
+    <property name="PromptSoundFile"></property>
+    <property name="PromptSoundDelay">60</property>
+
+    <presentations>
+        <presentation name="Tabular" default="yes"/>
+        <presentation name="Text"/>
+        <presentation name="Shell"/>
+    </presentations>
+
+    <appearance>
+        <fonts>
+            <font id='MASTERC' face="Courier New" size="10" style="norm"/>
+            <font id='CODE' face="Courier New" size="9" style="norm"/>
+            <font id='TEXT' face="Courier New" size="9" style="norm"/>
+            <font id='HEADER' face="header" size="12" style="norm"/>
+            <font id='BANNER' face="Arial" size="25" style="bold"/>
+            <font id='GUI_BOLD' face="dialog" size="9" style="bold"/>
+            <font id='GUI_NORM' face="dialog" size="9" style="norm"/>
+        </fonts>
+        <styles>
+            <style id="PROC"   font="TEXT" color="0:0:0"    style="norm"/>
+            <style id="SYS"    font="TEXT" color="90:90:90" style="norm"/>
+            <style id="PROMPT" font="TEXT" color="0:0:0"    style="norm"/>
+            <style id="CFG"    font="TEXT" color="0:0:0"    style="norm"/>
+            <style id="STEP"   font="TEXT" color="0:0:0"    style="bold"/>
+            <style id="OTHER"  font="TEXT" color="0:0:0"    style="norm"/>
+        </styles>
+        <colors>
+            <statuscolors>
+                <color id="SUCCESS">60:220:100</color>
+                <color id="WARNING">245:230:20</color>
+                <color id="SUPERSEDED">60:220:100</color>
+                <color id="ERROR">255:115:115</color>
+                <color id="FAILED">255:115:115</color>
+                <color id="IN PROGRESS">0:128:200</color>
+                <color id="SKIPPED">245:230:20</color>
+                <color id="TIMEOUT">245:230:20</color>
+                <color id="CANCELLED">245:230:20</color>
+                <color id="WAITING">245:230:20</color>
+                <color id="UNKNOWN">255:255:255</color>
+            </statuscolors>
+            <guicolors>
+                <color id="TEXTVIEW_FG">0:0:0</color>
+                <color id="TEXTVIEW_BG">225:235:240</color>
+                <color id="CONSOLE_FG">255:255:255</color>
+                <color id="CONSOLE_BG">0:0:0</color>
+                <color id="CONTEXT_ON">245:230:20</color>
+                <color id="CONTEXT_ERROR">255:115:115</color>
+                <color id="TABLE_BG">255:255:255</color>
+                <color id="TABLE_BG2">230:240:230</color>
+                <color id="ITEMS">0:0:0</color>
+                <color id="HIGHLIGHT">80:165:255</color>
+            </guicolors>
+            <proccolors>
+                <color id="LOADED">235:235:235</color>
+                <color id="RUNNING">185:255:215</color>
+                <color id="PAUSED">225:255:185</color>
+                <color id="STEPPING">185:255:215</color>
+                <color id="ABORTED">255:185:185</color>
+                <color id="ERROR">255:185:185</color>
+                <color id="FINISHED">220:185:255</color>
+                <color id="WAITING">255:255:179</color>
+                <color id="INTERRUPTED">255:255:179</color>
+                <color id="RELOADING">225:255:185</color>
+                <color id="UNINIT">255:255:255</color>
+                <color id="UNKNOWN">255:255:255</color>
+            </proccolors>
+        </colors>
+    </appearance>
+
+    <!--
+    ######################################
+    SERVERS SECTION
+    ######################################
+    Each server is defined by its unique name
+    Take care not to define a new server with an existing name
+    -->
+    <servers>
+        <server>
+            <name>LOCAL</name>
+            <host>localhost</host>
+            <port>9988</port>
+            <role>COMMANDING</role>
+        </server>
+    </servers>
+</configuration>
+                

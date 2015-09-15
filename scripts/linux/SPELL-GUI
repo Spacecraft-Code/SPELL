@@ -1,0 +1,69 @@
+#!/bin/bash
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Startup script for SPEL GUI
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+#===============================================================================
+# Setup main environment variables
+#===============================================================================
+
+# SPELL home
+if [[ -z "$SPELL_HOME" ]]
+then
+    echo "ERROR: SPELL_HOME environment variable is not defined"
+    exit 1
+else
+    [[ ! -d $SPELL_HOME ]] && echo "ERROR: cannot find SPELL home directory: $SPELL_HOME" && exit 1
+fi
+echo "SPELL home: $SPELL_HOME"
+
+#===============================================================================
+# Setup environment
+#===============================================================================
+SETUP_SCRIPT=$SPELL_HOME/bin/setup-environment.sh
+[[ ! -e $SETUP_SCRIPT ]] && echo "ERROR: cannot find environment setup script: $SETUP_SCRIPT" && exit 1
+source $SETUP_SCRIPT
+
+#===============================================================================
+# Launcher configuration
+#===============================================================================
+CFG_PATH="${SPELL_CONFIG}/gui/config.xml"
+RCP_HOME=$SPELL_HOME/rcp/plugins
+LAUNCHER=$RCP_HOME/equinox-launcher.jar
+SPELL_GUI=$SPELL_HOME/spel-gui
+GUI_RCP_CONFIG=$SPELL_GUI/configuration
+rm -f $GUI_RCP_CONFIG/*.log
+rm -rf $GUI_RCP_CONFIG/org*
+
+[[ ! -d $RCP_HOME ]] && echo "Cannot find RCP core plugins: $RCP_HOME" && exit 1
+[[ ! -r $GUI_RCP_CONFIG/config.ini ]] && echo "Cannot find RCP configuration: $GUI_RCP_CONFIG/config.ini" && exit 1
+[[ ! -r $LAUNCHER ]] && echo "Cannot find RCP launcher: $LAUNCHER" && exit 1
+
+#===============================================================================
+# Execute application
+#===============================================================================
+$JAVA -Xms256m -Xmx512m -XX:MaxPermSize=256m -jar $LAUNCHER -showsplash $SPELL_GUI/splash.bmp \
+     -configuration $GUI_RCP_CONFIG \
+     -os linux -arch x86 -ws gtk -data @none \
+     -config $SPELL_CONFIG/gui/config.xml
+

@@ -1,0 +1,62 @@
+#!/bin/sh
+###############################################################################
+#  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+# This file is part of SPELL.
+#
+# SPELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SPELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+# FILE: Installation script for SPELL driver packages
+#
+# DATE: 24/11/2008
+#
+###############################################################################
+
+DRIVER_PKG=$1
+SPELL_HOME=$2
+
+[[ "$DRIVER_PKG" == "" ]] && echo "ERROR: must provide the driver package: `basename $0` <package file> <SPELL home>" && exit 1
+[[ "$SPELL_HOME" == "" ]] && echo "ERROR: must provide the SPELL home directory: `basename $0` <package file> <SPELL home>" && exit 1
+
+[[ ! -d $SPELL_HOME ]] && echo "ERROR: cannot find SPELL home directory: '$2'" && exit 1
+[[ ! -d $SPELL_HOME/drivers ]] && echo "ERROR: '$SPELL_HOME' does not seem to be a SPELL installation" && exit 1
+[[ ! -d $SPELL_HOME/config/spell ]] && echo "ERROR: '$SPELL_HOME' does not seem to be a SPELL installation" && exit 1
+
+[[ -d $DRIVER_PKG ]]    && echo "ERROR: cannot use a directory as driver package '$1'" && exit 1
+[[ ! -f $DRIVER_PKG ]]    && echo "ERROR: cannot find driver package '$1'" && exit 1
+CHECK=`file $DRIVER_PKG | grep "gzip compressed data"`
+[[ -z "$CHECK" ]] && echo "ERROR: driver package shall be a regular tar.gz file" && exit 1
+
+[[ "`dirname $DRIVER_PKG`" == "." ]] && DRIVER_PKG="`pwd`/$DRIVER_PKG" || DRIVER_PKG="`dirname $DRIVER_PKG`/`basename $DRIVER_PKG`"
+
+echo "extracting driver from '$DRIVER_PKG'..."
+mkdir -p temp_drv
+cd temp_drv &> /dev/null
+tar xzf $DRIVER_PKG
+cd -
+
+if [[ ! -d temp_drv/config ]]
+then
+	echo "ERROR: driver package structure incorrect. Missing config directory"
+	rm -rf temp_drv
+	exit 1
+fi
+
+mv temp_drv/config/* $SPELL_HOME/config/spell/.
+rm -rf temp_drv/config
+rsync -av temp_drv/* $SPELL_HOME/drivers
+rm -rf temp_drv
+
+echo "done."
+

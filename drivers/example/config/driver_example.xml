@@ -1,0 +1,9 @@
+<driver id="example">
+    <name>Example SPELL driver</name>
+    <interfaces>TM,TC,EV,TIME,TASK,RSC,USR</interfaces>
+    <maxproc>5</maxproc>
+    <path>$SPELL_HOME/drivers</path>
+    <properties>
+        <property name="Foo">Bar</property>
+    </properties>
+</driver>

@@ -1,0 +1,61 @@
+=================================================================================
+TestMain Class - com.engineering.ses.spell.clientstubj.test.TestMain
+=================================================================================
+
+The TestMain class uses the following plugin jar files from SPELL client:
+
+- com.astra.ses.spell.gui.core
+- com.astra.ses.spell.gui.commsocket
+- com.astra.ses.spell.gui.types
+
+This is the minimum set required in order to communicate with a SPELL server.
+
+This example (TestMain) uses the low level IPC interface to exchange messages
+with a SPELL execution environment. The current example just uses thse messages, 
+but it contains no procedure models, and obliges the user to instantiate and 
+process all IPC exchanged data. In order to have procedure models and to avoid
+doing all the low level processing, the com.astra.ses.spell.gui.procs jar file
+can be also included. Then more complex programs can be built (and on an easier
+way) by using the classes ServerProxy (to communicate with listener), 
+ContextProxy (to communicate with context) and ProcedureManager (and its 
+associated models IProcedure, etc). 
+
+There is no limit or restriction on the usage of the classes of the SPELL client
+plugins. Any of the types and classes defined in these plugin jar files could
+be utilized in this program.
+
+=================================================================================
+CommandClient Class - com.engineering.ses.spell.clientstubj.cmdclient.CommandClient
+=================================================================================
+
+This application is quite similar to the TestMain application, it just elaborates
+a bit more in order to provide a command utility tool for interacting with a
+SPELL execution environment from command line. The process to create a runnable
+jar file described below is similar, but just using a Run Configuration for
+the CommandClient class.
+
+=================================================================================
+CREATING A RUNNABLE JAR FILE
+=================================================================================
+
+The easiest way to make this program work is to start running it from within
+Eclipse for the first time. The projects corresponding to the SPELL GUI plugins
+mentioned above need also to be open in the workspace.  
+
+Once this java project is imported and open, the Build Path needs to be configured
+(see Configure Build Path in Java projects in Eclipse documentation) in order to
+add as external references the three PDE projects (core, commmsocket, types). This
+should make the compilation succeed.
+
+To test the program use "Run as Java program" on the TestMain.java. A new "Run
+Configuration" will be created in eclipse. Note that a SPELL server on the 
+right port (see TestMain code) needs to be started on the local machine. The run
+configuration (i.e. starting in debug mode from within Eclipse) shall work fine
+in order to continue.
+
+Once a Run Configuration has been created, just use "Export/Java/Runnable Jar File"
+option in order to generate a jar file containing all the needed code an libraries.
+In the appearing dialog, select the Run Configuration that you used to test the
+program. Also select "Package required libraries into generated jar". This process
+should generate a final jar file that can be started from command line with the
+command "java -jar <jarfilename>.jar".

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            description="Open external file whose absolute path is given as a parameter"
+            id="com.astra.ses.spell.gui.commands.OpenFile"
+            name="Open external file">
+         <commandParameter
+               id="filepath"
+               name="File path"
+               optional="false">
+         </commandParameter>
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.astra.ses.spell.gui.commands.OpenFile"
+            commandId="com.astra.ses.spell.gui.commands.OpenFile">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:com.astra.ses.spell.gui.menu.help">
+         <separator
+               name="com.astra.ses.spell.gui.doc.separator"
+               visible="true">
+         </separator>
+         <command
+               commandId="com.astra.ses.spell.gui.commands.OpenFile"
+               id="com.astra.ses.spell.gui.documentation.showlanguagemanual"
+               label="SPELL Language manual"
+               mnemonic="&amp;lmp;y"
+               style="push">
+            <parameter
+                  name="filepath"
+                  value="$SPELL_HOME$/doc/SPELL_Language_Manual.pdf">
+            </parameter>
+         </command>
+         <command
+               commandId="com.astra.ses.spell.gui.commands.OpenFile"
+               id="com.astra.ses.spell.gui.documentation.showguimanual"
+               label="SPELL GUI manual"
+               mnemonic="&amp;lmp;g"
+               style="push">
+            <parameter
+                  name="filepath"
+                  value="$SPELL_HOME$/doc/SPELL_GUI_Manual.pdf">
+            </parameter>
+         </command>
+      </menuContribution>
+   </extension>
+
+</fragment>

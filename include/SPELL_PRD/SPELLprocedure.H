@@ -1,0 +1,245 @@
+// ################################################################################
+// FILE       : SPELLprocedure.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Procedure model
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_PROCEDURE_H__
+#define __SPELL_PROCEDURE_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_PRD/SPELLprocedureSourceCode.H"
+// Project includes --------------------------------------------------------
+
+/** \defgroup SPELL_PRD Procedure management (SPELL_PRD)
+ *
+ * This module provides mechanisms for reading procedure files and libraries,
+ * getting their source code and properties, etc.
+ *
+ * */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Model of a spell procedure.
+ **
+ ** \par Description and usage:
+ **
+ ** 	Used by the procedure manager to keep track of all available
+ **     procedures and their related information.
+ **
+ **   	The SPELLprocedureManager creates one model per procedure found in
+ **   	the procedure search path.
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLprocedure
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+
+		typedef std::map<std::string,std::string> Properties;
+		typedef std::list<std::string> PropertyKeys;
+
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor
+		 *
+		 * \param procPath IN: procedure path
+		 * \param file IN: file name.
+		**////////////////////////////////////////////////////////////////////
+		SPELLprocedure( const std::string& procPath, const std::string& file );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor
+		**////////////////////////////////////////////////////////////////////
+		~SPELLprocedure();
+
+    // STATIC ////////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the procedure identifier.
+		 *
+		 * \returns The procedure identifier.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProcId() const     {
+			return m_procId;
+		} ;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the procedure name.
+		 *
+		 * \returns The procedure name.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getName() const       {
+			return m_name;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the procedure file MD5 checksum.
+		 *
+		 * \returns The checksum.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getMD5() const       {
+			return m_md5;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the procedure file name and path.
+		 *
+		 * \returns The procedure file name and path.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getFilename() const   {
+			return m_source.getFilename();
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given spacecraft matches the procedure spec
+		**////////////////////////////////////////////////////////////////////
+		bool forSpacecraft( const std::string& sc ) const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the desired procedure property.
+		 *
+		 * \param key IN: property name.
+		 *
+		 * \returns The property value or an empty string.
+		**////////////////////////////////////////////////////////////////////
+		const std::string getProperty( const std::string& key );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the list of existing properties
+		 *
+		 * \returns The list of property keys
+		**////////////////////////////////////////////////////////////////////
+		PropertyKeys getPropertyKeys();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the procedure source code.
+		 *
+		 * \returns The procedure source code.
+		**////////////////////////////////////////////////////////////////////
+		SPELLprocedureSourceCode getSourceCode() const {
+			return m_source;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Refresh the procedure data.
+		**////////////////////////////////////////////////////////////////////
+		void refresh() {
+			parseFile(m_source.getFilename());
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the procedure header text
+		**////////////////////////////////////////////////////////////////////
+		std::string getHeader();
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+protected: //-----------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Parse the procedure file and extract all properties found.
+		 *
+		 * \param path IN: the path to the procedure file.
+		**////////////////////////////////////////////////////////////////////
+		void parseFile( const std::string& path );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line contains a property definition.
+		 *
+		 * \param line IN: source code line to be checked.
+		 *
+		 * \returns True if the line contains a property.
+		**////////////////////////////////////////////////////////////////////
+		const bool isPropertyLine( const std::string& line );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line is a header limit line.
+		 *
+		 * \param line IN: source code line to be checked.
+		 *
+		 * \returns True if the line delimits a header.
+		**////////////////////////////////////////////////////////////////////
+		const bool isLimitLine( const std::string& line );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the given line contains a multi-line property definition.
+		 *
+		 * \param line IN: source code line to be checked.
+		 *
+		 * \returns True if the line contains a multi-line property.
+		**////////////////////////////////////////////////////////////////////
+		const bool isPropertyContinued( const std::string& line );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Calculate de MD5 checksum of the procedure file.
+		**////////////////////////////////////////////////////////////////////
+		std::string obtainChecksum( const std::string& filename );
+
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+
+private: //-------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+    // DATA MEMBERS //////////////////////////////////////////////////////////
+		/** Procedure identifier */
+		std::string m_procId;
+		/** Procedure name */
+		std::string m_name;
+		/** MD5 checksum */
+		std::string m_md5;
+		/** Procedure file */
+		std::string m_file;
+		/** Procedure source code */
+		SPELLprocedureSourceCode m_source;
+		/** Procedure properties */
+		Properties m_properties;
+		/** Holds the procedure header raw text */
+		std::string m_header;
+};
+
+/*@}*/
+#endif

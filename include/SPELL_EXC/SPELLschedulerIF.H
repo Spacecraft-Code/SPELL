@@ -1,0 +1,178 @@
+// ################################################################################
+// FILE       : SPELLschedulerIF.H
+// DATE       : Mar 17, 2011
+// PROJECT    : SPELL
+// DESCRIPTION: Defines the interface of the executor scheduler
+// --------------------------------------------------------------------------------
+//
+//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//
+//  This file is part of SPELL.
+//
+// SPELL is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// SPELL is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+//
+// ################################################################################
+
+#ifndef __SPELL_SCHEDULER_IF_H__
+#define __SPELL_SCHEDULER_IF_H__
+
+// FILES TO INCLUDE ////////////////////////////////////////////////////////
+// System includes ---------------------------------------------------------
+// Local includes ----------------------------------------------------------
+#include "SPELL_EXC/SPELLscheduleCondition.H"
+// Project includes --------------------------------------------------------
+#include "SPELL_UTIL/SPELLbase.H"
+
+
+/** \addtogroup SPELL_EXC */
+/*@{*/
+
+
+// FORWARD REFERENCES //////////////////////////////////////////////////////
+// TYPES ///////////////////////////////////////////////////////////////////
+// DEFINES /////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////////////
+/**
+ ** \brief Execution scheduler interface
+ **
+ ** \par Description:
+ **
+ ** \par Usage:
+ **
+ ** \par Synchronization:
+ **
+**////////////////////////////////////////////////////////////////////////////
+class SPELLschedulerIF
+{
+public: //--------------------------------------------------------------------
+
+    // EXCEPTIONS ////////////////////////////////////////////////////////////
+    // ENUMS /////////////////////////////////////////////////////////////////
+    // TYPES /////////////////////////////////////////////////////////////////
+    // LIFECYCLE /////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Destructor.
+		**////////////////////////////////////////////////////////////////////
+		virtual ~SPELLschedulerIF() {;};
+
+    // STATIC ////////////////////////////////////////////////////////////////
+    // METHODS ///////////////////////////////////////////////////////////////
+
+		//////////////////////////////////////////////////////////////////////
+		/** Starts a wait state with condition check.
+		 *
+		 * \param condition IN: condition for the wait state.
+		**////////////////////////////////////////////////////////////////////
+		virtual void startWait( const SPELLscheduleCondition& condition ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Starts a prompt state
+		 *
+		 * timeoutSec IN: Time before raising a warning if the prompt is not answered
+		**////////////////////////////////////////////////////////////////////
+		virtual void startPrompt( const SPELLtime& timeout, bool headless ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Cancels a prompt state
+		**////////////////////////////////////////////////////////////////////
+		virtual void cancelPrompt() = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Aborts a condition check timer if it was interrupted previously.
+		 * This is called each time STEP or RUN commands are issued in a line
+		 * after wait condition was paused previously.
+		 *
+		 * \param setStatus IN: if true, the status of the SPELLcontroller is reset.
+		**////////////////////////////////////////////////////////////////////
+		virtual bool abortWait( bool setStatus ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Restarts a condition check timer if it was interrupted previously.
+		 * This is called each time STEP or RUN commands are issued in a line
+		 * after wait condition was paused previously.
+		**////////////////////////////////////////////////////////////////////
+		virtual void restartWait() = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Cancels a condition checking timer. This is executed each time
+		 * there is a timer ongoing and the PAUSE command is received
+		 * (see controller::pause method). It can be restarted afterwards
+		 * with STEP command.
+		 *
+		 * \return True if there was actually an interruption of a wait state.
+		**////////////////////////////////////////////////////////////////////
+		virtual bool interruptWait() = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Finish a wait condition
+		 *
+		 * \param setStatus IN: if true, reset the SPELLcontroller status.
+		 * \param keepLock IN: if true, keep the language lock so that the
+		 * execution remains in the same point altough the wait state has
+		 * finished.
+		**////////////////////////////////////////////////////////////////////
+		virtual void finishWait( bool setStatus, bool keepLock ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Finish a prompt state
+		**////////////////////////////////////////////////////////////////////
+		virtual void finishPrompt() = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Wait the scheduling event
+		**////////////////////////////////////////////////////////////////////
+		virtual void wait() = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the scheduler is waiting
+		**////////////////////////////////////////////////////////////////////
+		virtual bool waiting() { return false; }
+
+		//////////////////////////////////////////////////////////////////////
+		/** Check if the scheduler is in prompt
+		**////////////////////////////////////////////////////////////////////
+		virtual bool inPrompt() { return false; }
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the schedule result
+		 *
+		 * \return The schedule result
+		**////////////////////////////////////////////////////////////////////
+		virtual const SPELLscheduleResult& result() const = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Wait a given condition to be fullfilled
+		 *
+		 * \param condition IN: the condition to check
+		**////////////////////////////////////////////////////////////////////
+		virtual bool waitCondition( std::string condition ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Timer callback.
+		 *
+		 * \see SPELLtimer
+		**////////////////////////////////////////////////////////////////////
+		virtual bool timerCallback( unsigned long elapsed ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set default delay for prompt warnings
+		**////////////////////////////////////////////////////////////////////
+		virtual void setPromptWarningDelay( unsigned int secs ) = 0;
+};
+
+/*@}*/
+#endif

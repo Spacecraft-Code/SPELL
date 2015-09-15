@@ -1,0 +1,29 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SPELL Core Plug-in
+Bundle-SymbolicName: com.astra.ses.spell.gui.core;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Activator: com.astra.ses.spell.gui.core.Activator
+Bundle-Vendor: SES Engineering, Luxembourg S.A.R.L.
+Require-Bundle: org.eclipse.core.runtime,
+ com.astra.ses.spell.gui.types;bundle-version="1.0.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: lib/slf4j-api-1.7.6.jar,
+ lib/log4j-slf4j-impl-2.0-rc1.jar,
+ lib/log4j-api-2.0-rc1.jar,
+ lib/log4j-core-2.0-rc1.jar,
+ .
+Export-Package: com.astra.ses.spell.gui.core,
+ com.astra.ses.spell.gui.core.comm.commands,
+ com.astra.ses.spell.gui.core.comm.messages,
+ com.astra.ses.spell.gui.core.exceptions,
+ com.astra.ses.spell.gui.core.interfaces,
+ com.astra.ses.spell.gui.core.interfaces.listeners,
+ com.astra.ses.spell.gui.core.model.files,
+ com.astra.ses.spell.gui.core.model.notification,
+ com.astra.ses.spell.gui.core.model.server,
+ com.astra.ses.spell.gui.core.model.types,
+ com.astra.ses.spell.gui.core.utils
+Import-Package: org.eclipse.jface.util
+

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         id="com.astra.ses.spell.gui.presentation.SampleeView"
+         name="Sample view procedure presentation"
+         point="com.astra.ses.spell.gui.extensions.Presentations">
+      <listener
+            class="com.astra.ses.spell.gui.presentation.sample.SamplePresentation"
+            description="Sample presentation extension"
+            name="Sample">
+      </listener>
+   </extension>
+
+</plugin>

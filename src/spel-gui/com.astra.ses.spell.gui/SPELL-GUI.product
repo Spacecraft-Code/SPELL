@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?pde version="3.5"?>
+
+<product name="SPELL Execution Environment" id="com.astra.ses.spell.gui.product" application="com.astra.ses.spell.gui.application" version="2.2" useFeatures="false" includeLaunchers="true">
+
+   <aboutInfo>
+      <image path="SES.gif"/>
+      <text>
+         SES Procedure Execution Language and Library 
+
+SPELL Execution Environment Interface &quot;SPELL-GUI&quot;.
+
+This is a copyrighted work of SES Engineering in
+collaboration with GMV Aerospace And Defence S.A.
+(c) 2008,2009,2010,2011,2012
+      </text>
+   </aboutInfo>
+
+   <configIni use="default">
+      <linux>/spel-gui-bin/configuration/config.ini</linux>
+      <macosx>/spel-gui-bin/configuration/config.ini</macosx>
+      <solaris>/spel-gui-bin/configuration/config.ini</solaris>
+      <win32>/spel-gui-bin/configuration/config.ini</win32>
+   </configIni>
+
+   <launcherArgs>
+      <programArgs>-config ${workspace_loc}/config/gui/config.xml</programArgs>
+      <vmArgsMac>-XstartOnFirstThread -Dorg.eclipse.swt.internal.carbon.smallFonts</vmArgsMac>
+   </launcherArgs>
+
+   <windowImages i16="icons/icon16.png" i32="icons/icon32.png"/>
+
+   <splash
+      location="com.astra.ses.spell.gui"
+      startupProgressRect="0,310,380,15"
+      startupMessageRect="7,290,380,20"
+      startupForegroundColor="FFFFFF" />
+   <launcher name="spel-gui">
+      <linux icon="/spel-client-gui/icons/icon32.xpm"/>
+      <solaris/>
+      <win useIco="false">
+         <bmp/>
+      </win>
+   </launcher>
+
+
+   <vm>
+   </vm>
+
+   <plugins>
+      <plugin id="com.astra.ses.spell.gui"/>
+      <plugin id="com.astra.ses.spell.gui.types"/>
+      <plugin id="com.astra.ses.spell.gui.callstack" fragment="true"/>
+      <plugin id="com.astra.ses.spell.gui.codeview"/>
+      <plugin id="com.astra.ses.spell.gui.commsocket"/>
+      <plugin id="com.astra.ses.spell.gui.core"/>
+      <plugin id="com.astra.ses.spell.gui.hifly"/>
+      <plugin id="com.astra.ses.spell.gui.outline" fragment="true"/>
+      <plugin id="com.astra.ses.spell.gui.preferences"/>
+      <plugin id="com.astra.ses.spell.gui.preferences.ui" fragment="true"/>
+      <plugin id="com.astra.ses.spell.gui.procs"/>
+      <plugin id="com.astra.ses.spell.gui.sampleview"/>
+      <plugin id="com.astra.ses.spell.gui.shell"/>
+      <plugin id="com.astra.ses.spell.gui.shellview"/>
+      <plugin id="com.astra.ses.spell.gui.textview"/>
+      <plugin id="com.astra.ses.spell.gui.watchvariables"/>
+      <plugin id="com.astra.ses.spell.language"/>
+      <plugin id="com.astra.ses.spell.print"/>
+      <plugin id="com.ibm.icu"/>
+      <plugin id="javax.servlet"/>
+      <plugin id="org.eclipse.core.commands"/>
+      <plugin id="org.eclipse.core.contenttype"/>
+      <plugin id="org.eclipse.core.databinding"/>
+      <plugin id="org.eclipse.core.databinding.observable"/>
+      <plugin id="org.eclipse.core.databinding.property"/>
+      <plugin id="org.eclipse.core.expressions"/>
+      <plugin id="org.eclipse.core.filesystem"/>
+      <plugin id="org.eclipse.core.filesystem.linux.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.filesystem.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.jobs"/>
+      <plugin id="org.eclipse.core.net"/>
+      <plugin id="org.eclipse.core.net.linux.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.net.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.resources"/>
+      <plugin id="org.eclipse.core.resources.compatibility" fragment="true"/>
+      <plugin id="org.eclipse.core.resources.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.runtime"/>
+      <plugin id="org.eclipse.core.runtime.compatibility.auth"/>
+      <plugin id="org.eclipse.core.runtime.compatibility.registry" fragment="true"/>
+      <plugin id="org.eclipse.core.variables"/>
+      <plugin id="org.eclipse.ecf"/>
+      <plugin id="org.eclipse.ecf.filetransfer"/>
+      <plugin id="org.eclipse.ecf.identity"/>
+      <plugin id="org.eclipse.ecf.ssl" fragment="true"/>
+      <plugin id="org.eclipse.equinox.app"/>
+      <plugin id="org.eclipse.equinox.common"/>
+      <plugin id="org.eclipse.equinox.p2.artifact.repository"/>
+      <plugin id="org.eclipse.equinox.p2.core"/>
+      <plugin id="org.eclipse.equinox.p2.engine"/>
+      <plugin id="org.eclipse.equinox.p2.jarprocessor"/>
+      <plugin id="org.eclipse.equinox.p2.metadata"/>
+      <plugin id="org.eclipse.equinox.p2.metadata.repository"/>
+      <plugin id="org.eclipse.equinox.p2.repository"/>
+      <plugin id="org.eclipse.equinox.preferences"/>
+      <plugin id="org.eclipse.equinox.registry"/>
+      <plugin id="org.eclipse.equinox.security"/>
+      <plugin id="org.eclipse.equinox.security.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.help"/>
+      <plugin id="org.eclipse.jface"/>
+      <plugin id="org.eclipse.jface.databinding"/>
+      <plugin id="org.eclipse.jface.text"/>
+      <plugin id="org.eclipse.osgi"/>
+      <plugin id="org.eclipse.osgi.services"/>
+      <plugin id="org.eclipse.swt"/>
+      <plugin id="org.eclipse.swt.gtk.linux.x86" fragment="true"/>
+      <plugin id="org.eclipse.swt.win32.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.text"/>
+      <plugin id="org.eclipse.ui"/>
+      <plugin id="org.eclipse.ui.forms"/>
+      <plugin id="org.eclipse.ui.ide"/>
+      <plugin id="org.eclipse.ui.views"/>
+      <plugin id="org.eclipse.ui.views.log"/>
+      <plugin id="org.eclipse.ui.win32" fragment="true"/>
+      <plugin id="org.eclipse.ui.workbench"/>
+      <plugin id="org.eclipse.update.configurator"/>
+      <plugin id="org.eclipse.update.core"/>
+      <plugin id="org.eclipse.update.core.linux" fragment="true"/>
+      <plugin id="org.eclipse.update.core.win32" fragment="true"/>
+   </plugins>
+
+
+</product>
