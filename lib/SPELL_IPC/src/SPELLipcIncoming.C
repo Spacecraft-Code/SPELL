@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the incoming message handler
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -49,10 +49,11 @@ SPELLipcIncomingBase::SPELLipcIncomingBase( const std::string& id, const std::st
       m_processingFinishEvent(false),
       m_processingStartEvent(false),
       m_key(msg.getKey()),
-      m_finished(false),
-      m_started(false)
+	  m_started(false),
+	  m_finished(false)
+
 {
-    DEBUG( NAME + "Created");
+    //DEBUG( NAME + "Created");
     DEBUG( NAME + "Using message " + m_message.getId());
 	m_processingFinishEvent.clear();
 	m_processingStartEvent.clear();
@@ -63,7 +64,7 @@ SPELLipcIncomingBase::SPELLipcIncomingBase( const std::string& id, const std::st
 //=============================================================================
 SPELLipcIncomingBase::~SPELLipcIncomingBase()
 {
-    DEBUG("Destroyed");
+    //DEBUG("Destroyed");
     m_finished = true;
 }
 
@@ -128,7 +129,6 @@ void SPELLipcIncomingBase::setFinished()
 //=============================================================================
 bool SPELLipcIncomingBase::isFinished()
 {
-	SPELLmonitor m(m_dataLock);
 	return m_finished;
 }
 
@@ -164,16 +164,16 @@ int SPELLipcIncomingBase::getKey()
 //=============================================================================
 bool SPELLipcIncomingBase::wait( long timeoutMsec )
 {
-	DEBUG( NAME + "Wait finish " + getMessage().getSequenceStr());
+	//DEBUG( NAME + "Wait finish " + getMessage().getSequenceStr());
 	bool timedout = m_processingFinishEvent.wait( timeoutMsec );
 	if (timedout)
 	{
-		DEBUG( NAME + "Finish timeout (" + ISTR(timeoutMsec) + ") " + getMessage().getSequenceStr());
-		DEBUG( "MESSAGE " + getMessage().dataStr());
+		//DEBUG( NAME + "Finish timeout (" + ISTR(timeoutMsec) + ") " + getMessage().getSequenceStr());
+		//DEBUG( "MESSAGE " + getMessage().dataStr());
 	}
 	else
 	{
-		DEBUG( NAME + "Wait finish done " + getMessage().getSequenceStr());
+		//DEBUG( NAME + "Wait finish done " + getMessage().getSequenceStr());
 	}
     return timedout;
 }
@@ -187,6 +187,7 @@ void SPELLipcIncomingBase::finish()
 	if (m_finished) return;
 	m_processingFinishEvent.set();
 	m_finished = true;
+	m_message.clear();
 }
 
 //=============================================================================
@@ -222,11 +223,11 @@ SPELLipcIncomingMessage::~SPELLipcIncomingMessage()
 //=============================================================================
 void SPELLipcIncomingMessage::run()
 {
-	DEBUG( NAME + "Incoming message starting");
+	//DEBUG( NAME + "Incoming message starting");
 	setStarted();
 	getListener().processMessage(getMessage());
 	finish();
-	DEBUG( NAME + "Incoming message finished");
+	//DEBUG( NAME + "Incoming message finished");
 }
 
 //=============================================================================
@@ -235,11 +236,12 @@ void SPELLipcIncomingMessage::run()
 SPELLipcIncomingRequest::SPELLipcIncomingRequest( const std::string& requestId,
 											      const std::string& ifcName,
 											      SPELLipcMessage msg,
-											      SPELLipcOutput& writer,
+												  SPELLmutex& mutex,
+												  SPELLipcChannel** channel,
 											      SPELLipcInterfaceListener& listener)
 
 : SPELLipcIncomingBase(requestId,ifcName,msg,listener),
-  m_writer(writer)
+  m_channel(channel),m_mutex(mutex)
 {
 }
 
@@ -248,7 +250,7 @@ SPELLipcIncomingRequest::SPELLipcIncomingRequest( const std::string& requestId,
 //=============================================================================
 SPELLipcIncomingRequest::~SPELLipcIncomingRequest()
 {
-	DEBUG( NAME + "Incoming request destroyed");
+	//DEBUG( NAME + "Incoming request destroyed");
 }
 
 //=============================================================================
@@ -282,7 +284,12 @@ void SPELLipcIncomingRequest::run()
         try
         {
 			DEBUG( NAME + "Sending response (" + copy.getSequenceStr() + ")");
-			m_writer.send(response);
+			{
+				SPELLmonitor m(m_mutex);
+				if (*m_channel != NULL){
+					(*m_channel)->getWriter().send(response);
+				}
+			}
 			DEBUG( NAME + "Response sent (" + copy.getSequenceStr() + ")");
         }
         catch(...)

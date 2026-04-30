@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Hook for the C++ data containers
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,9 +33,13 @@ import sys
 _dta_failed = True
 
 try:
-    import libSPELL_DTA
+    if sys.version_info > (3, 0):
+        import libSPELL_DTA_v3 as libSPELL_DTA
+    else:
+        import libSPELL_DTA_v2 as libSPELL_DTA
+        
     _dta_failed=False
-except ImportError,ex:
+except ImportError as ex:
     sys.stderr.write("FATAL: unable to import DTA interface\n")
 
 #*******************************************************************************

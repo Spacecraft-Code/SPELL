@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Python helper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -39,7 +39,12 @@
 #include "Python-ast.h"
 #include "opcode.h"
 #include "traceback.h"
-
+#include "pystate.h"
+#if PY_MAJOR_VERSION >= 3
+#    include "code.h"
+#    include "frameobject.h"
+#    include "structmember.h"
+#endif
 // See setNewLine method
 #undef MIN
 #undef MAX
@@ -63,7 +68,7 @@ static PyObject * objargs_mktuple(va_list va)
     int i, n = 0;
     va_list countva;
     PyObject *result, *tmp;
-    countva = va;
+    va_copy(countva, va);
     while ( ( (PyObject *) va_arg(countva, PyObject *)) != NULL)
     {
             ++n;
@@ -139,7 +144,7 @@ void SPELLpythonHelper::importAllFrom( const std::string& package )
         moduleDict = PyModule_GetDict( module );
     }
 
-    PyObject* mainModule = PyImport_AddModule("__main__");
+    PyObject* mainModule = PyImport_ImportModule(BUILTINS);
     if (mainModule == NULL)
     {
         THROW_EXCEPTION("Cannot import " + package, "Unable to access main module", SPELL_ERROR_PYTHON_API );
@@ -152,18 +157,59 @@ void SPELLpythonHelper::importAllFrom( const std::string& package )
     PyDict_Merge(main_dict, moduleDict, 0);
     DEBUG("[PYH] Imported all from module " + package);
 }
+void SPELLpythonHelper::updateBuiltinsWith( const std::string& package )
+{
+    LOG_INFO("Import all from " + package);
+    PyObject* dict = PyDict_New();
+    PyObject* module = PyImport_ImportModuleEx( const_cast<char*>(package.c_str()), dict, dict, NULL);
+    if ( module == NULL )
+    {
+        SPELLcoreException* ex = SPELLerror::instance().errorToException();
+        throw *ex;
+    }
 
+    // Borrowed
+    PyObject* moduleDict = PyModule_GetDict( module );
+
+    std::vector<std::string> tokens = SPELLutils::tokenize( package, "." );
+
+    std::vector<std::string>::iterator it;
+    for( it = tokens.begin(); it != tokens.end(); it++ )
+    {
+        // Skip the first token
+        if (it == tokens.begin()) continue;
+        // Get the submodule
+        // Borrowed reference
+        module = PyDict_GetItemString( moduleDict, (*it).c_str() );
+        moduleDict = PyModule_GetDict( module );
+    }
+
+    PyObject* mainModule = PyImport_ImportModule(BUILTINS);
+    if (mainModule == NULL)
+    {
+        THROW_EXCEPTION("Cannot import " + package, "Unable to access "BUILTINS" module", SPELL_ERROR_PYTHON_API );
+    }
+    PyObject* main_dict = PyModule_GetDict(mainModule);
+    if (main_dict== NULL)
+    {
+        THROW_EXCEPTION("Cannot import " + package, "Unable to access "BUILTINS" module dictionary", SPELL_ERROR_PYTHON_API );
+    }
+    PyDict_Merge(main_dict, moduleDict, 0);
+    DEBUG("[PYH] Imported all from module " + package);
+}
 //============================================================================
 // METROD    : SPELLpythonHelper::importUserLibraries
 //============================================================================
-void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
+bool SPELLpythonHelper::importUserLibraries( const std::string& libraryPath, std::string& errors )
 {
+	bool success = true;
+
     if (libraryPath != "" && libraryPath != "None" )
     {
         if (SPELLutils::isDirectory(libraryPath))
         {
             // Import the main module first
-            PyObject* mainModule = PyImport_AddModule("__main__");
+            PyObject* mainModule = PyImport_ImportModule(BUILTINS);
             if (mainModule == NULL)
             {
                 THROW_EXCEPTION("Cannot import user libraries", "Unable to access main module", SPELL_ERROR_PYTHON_API );
@@ -179,7 +225,7 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
             if (PyDict_Contains( main_dict, flag.get()) )
             {
                 LOG_WARN("[PYH] No need to re-import user libraries");
-                return;
+                return true;
             }
 
             LOG_INFO("Loading user libraries in " + libraryPath);
@@ -205,11 +251,11 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
                 }
                 catch(SPELLcoreException& ex)
                 {
-                    LOG_ERROR("Failed to import user library " + filename + ": " + ex.what());
-                    PyErr_Clear();
+                	success = false;
+                	if (errors != "") errors += "\n - ";
+                	errors += "When importing library " + filename + ": " + ex.what();
                 }
             }
-
 
             // Now ensure that all libraries contain all imported names as well
             for( it = files.begin(); it != end; it++)
@@ -228,8 +274,9 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
                 }
                 catch(SPELLcoreException& ex)
                 {
-                    LOG_ERROR("Failed to update user library " + filename + ": " + ex.what());
-                    PyErr_Clear();
+                	success = false;
+                	if (errors != "") errors += "\n - ";
+                	errors += "When updating library " + filename + ": " + ex.what();
                 }
             }
 
@@ -238,9 +285,12 @@ void SPELLpythonHelper::importUserLibraries( const std::string& libraryPath )
         }
         else
         {
-            THROW_EXCEPTION("Unable to load USER libraries", "Library path '" + libraryPath + "' is not a directory", SPELL_ERROR_FILESYSTEM);
+        	success = false;
+        	if (errors != "") errors += "\n - ";
+        	errors += "Path '" + libraryPath + "' is not a directory";
         }
     }
+    return success;
 }
 
 //============================================================================
@@ -320,7 +370,7 @@ void SPELLpythonHelper::importUserLibrary( PyObject* main_dict, const std::strin
 //============================================================================
 PyObject* SPELLpythonHelper::getMainDict()
 {
-    PyObject* mainModule = PyImport_AddModule("__main__");
+    PyObject* mainModule = PyImport_AddModule(BUILTINS);
     if (mainModule == NULL)
     {
         THROW_EXCEPTION("Cannot access main dictionary", "Unable to access main module", SPELL_ERROR_PYTHON_API );
@@ -335,7 +385,7 @@ PyObject* SPELLpythonHelper::getMainDict()
 void SPELLpythonHelper::install( PyObject* object, const std::string& name )
 {
     DEBUG("[PYH] Installing object in globals: " + name);
-    install(object,name,"__main__");
+    install(object,name,BUILTINS);
 }
 
 //============================================================================
@@ -343,7 +393,7 @@ void SPELLpythonHelper::install( PyObject* object, const std::string& name )
 //============================================================================
 void SPELLpythonHelper::install( PyObject* object, const std::string& name, const std::string& module )
 {
-    PyObject* moduleObj = PyImport_AddModule( module.c_str() );
+    PyObject* moduleObj = PyImport_ImportModule( module.c_str() );
     if (moduleObj == NULL)
     {
         THROW_EXCEPTION("Cannot install " + name, "Unable to access module " + module, SPELL_ERROR_PYTHON_API );
@@ -365,9 +415,8 @@ void SPELLpythonHelper::install( PyObject* object, const std::string& name, cons
 //=============================================================================
 PyObject* SPELLpythonHelper::callMethod( PyObject* obj, const std::string& method, ... )
 {
-    DEBUG("[PYH] Call method " + method + " on " + PYREPR(obj));
-
     SPELLsafePythonOperations ops("SPELLpythonHelper::callMethod " + method);
+    DEBUG("[PYH] Call method " + method + " on " + PYREPR(obj));
 
 
     // Returns new reference
@@ -487,8 +536,10 @@ PyObject* SPELLpythonHelper::getModule( const std::string& module )
     moduleObj = PyImport_ImportModule( module.c_str() );
     if (moduleObj == NULL || moduleObj == Py_None )
     {
+        checkError();
         THROW_EXCEPTION("Unable to get module " + module, "Import failed", SPELL_ERROR_PYTHON_API );
     }
+    Py_INCREF(moduleObj);
     DEBUG("[PYH] Get module done");
     return moduleObj;
 }
@@ -498,7 +549,8 @@ PyObject* SPELLpythonHelper::getModule( const std::string& module )
 //=============================================================================
 void SPELLpythonHelper::initialize()
 {
-    m_initialized = false;
+    if (m_initialized)
+        return;
 
     LOG_INFO("[PYH] Initializing Python");
     // Initialize python, builtins, main module, etc.
@@ -531,11 +583,16 @@ void SPELLpythonHelper::initialize()
     }
 
     // Initialize the system arguments to empty list (no script is executed)
-    char** argv = new char*[1];
-    argv[0] = (char*) "";
-    PySys_SetArgv(1,argv);
+
+    CHAR** argv = new CHAR*[1];
+    argv[0] = (CHAR*) L"";
+    PySys_SetArgv(-1,argv);
 
     m_initialized = true;
+    Py_BEGIN_ALLOW_THREADS};
+//    PyEval_ReleaseThread(PyThreadState_Get());
+//    PyEval_ReleaseLock();
+
 }
 
 //=============================================================================
@@ -543,13 +600,13 @@ void SPELLpythonHelper::initialize()
 //=============================================================================
 void SPELLpythonHelper::loadFramework()
 {
-    importAllFrom("spell.lang.functions");
-    importAllFrom("spell.lang.constants");
-    importAllFrom("spell.lang.modifiers");
-    importAllFrom("spell.lang.user");
-    importAllFrom("spell.lib.adapter.utctime");
-    importAllFrom("spell.lib.adapter.file");
-    importAllFrom("math");
+    updateBuiltinsWith("spell.lang.functions");
+    updateBuiltinsWith("spell.lang.constants");
+    updateBuiltinsWith("spell.lang.modifiers");
+    updateBuiltinsWith("spell.lang.user");
+    updateBuiltinsWith("spell.lib.adapter.utctime");
+    updateBuiltinsWith("spell.lib.adapter.file");
+    updateBuiltinsWith("math");
 }
 
 //=============================================================================
@@ -569,7 +626,7 @@ void SPELLpythonHelper::finalize()
 void SPELLpythonHelper::addToPath( const std::string& path )
 {
     LOG_INFO("[PYH] Append to python path: " + path);
-
+    SPELLsafePythonOperations ops("SPELLpythonHelper::addToPath");
     // Retrieve first the current path
     std::string libs = "";
     PyObject* sys = PySys_GetObject( (char*) "path" );
@@ -582,8 +639,11 @@ void SPELLpythonHelper::addToPath( const std::string& path )
     }
 	if (!libs.empty()) libs += ":";
 	libs += path;
-
+#if PY_MAJOR_VERSION >= 3
+	PySys_SetPath( const_cast<CHAR*>(std::wstring(libs.begin(),libs.end()).c_str()) );
+#else
     PySys_SetPath( const_cast<char*>(libs.c_str()) );
+#endif
 }
 
 //=============================================================================
@@ -663,36 +723,60 @@ SPELLtime SPELLpythonHelper::evalTime( PyObject* expression )
     if (isTime(expression))
     {
         SPELLpyHandle isRel = callMethod(expression,"isRel",NULL);
+        long secs = 0;
+        unsigned int msecs = 0;
+        unsigned int usecs = 0;
+        SPELLpyHandle h = callMethod(expression,"millisecond",NULL);
+        msecs = PyLong_AsLong(h.get());
+        h = callMethod(expression,"microsecond",NULL);
+        usecs = PyLong_AsLong(h.get());
         if (isRel.get() == Py_True)
         {
             SPELLpyHandle pySecs = callMethod(expression,"rel",NULL);
-            long secs = PyLong_AsLong(pySecs.get());
-            DEBUG("[PYH] Evaluate time from python object done");
-            return SPELLtime( secs, 0, true );
-        }
-        else
-        {
-            // New reference
-            SPELLpyHandle pySecs = callMethod(expression,"abs",NULL);
-            int seconds = 0;
             if (PyFloat_Check(pySecs.get()))
             {
                 double fsecs = PyFloat_AsDouble(pySecs.get());
                 // New reference
                 SPELLpyHandle pyDoub = PyLong_FromDouble(fsecs);
-                seconds = PyLong_AsLong(pyDoub.get());
+                secs = PyLong_AsLong(pyDoub.get());
             }
             else
             {
-                seconds = PyLong_AsLong(pySecs.get());
+                secs = PyLong_AsLong(pySecs.get());
             }
             DEBUG("[PYH] Evaluate time from python object done");
-            return SPELLtime( seconds, 0, false );
+            //DEBUG("@@@@ Initialized rel values:");
+            //DEBUG("  - secs: " + ISTR(secs) );
+            //DEBUG("  - msecs: " + ISTR(msecs) );
+            //DEBUG("  - usecs: " + ISTR(usecs) );
+            return SPELLtime( secs, msecs, usecs, true );
+        }
+        else
+        {
+            // New reference
+            SPELLpyHandle pySecs = callMethod(expression,"abs",NULL);
+            if (PyFloat_Check(pySecs.get()))
+            {
+                double fsecs = PyFloat_AsDouble(pySecs.get());
+                // New reference
+                SPELLpyHandle pyDoub = PyLong_FromDouble(fsecs);
+                secs = PyLong_AsLong(pyDoub.get());
+            }
+            else
+            {
+                secs = PyLong_AsLong(pySecs.get());
+            }
+            DEBUG("[PYH] Evaluate time from python object done");
+            //DEBUG("@@@@ Initialized abs values:");
+            //DEBUG("  - secs: " + ISTR(secs) );
+            //DEBUG("  - msecs: " + ISTR(msecs) );
+            //DEBUG("  - usecs: " + ISTR(usecs) );
+            return SPELLtime( secs, msecs, usecs, false );
         }
     }
     else
     {
-        THROW_FATAL_EXCEPTION("Unable to evaluate time", "Not a TIME instance", SPELL_ERROR_PYTHON_API );
+    	return evalTime(PYSSTR(expression));
     }
     // Just to avoid warnings...
     return SPELLtime();
@@ -764,12 +848,26 @@ PyObject* SPELLpythonHelper::pythonTime( const SPELLtime& time )
 //=============================================================================
 PyThreadState* SPELLpythonHelper::beginSafeAllowThreads()
 {
+    // Don't call PyEval_SaveThread if this thread doesn't hold the GIL! This would cause weird CPython crashes.
+    PyThreadState *hasGIL = PyGILState_GetThisThreadState();
+    if (hasGIL == NULL)
+        return NULL;
+#if PY_MAJOR_VERSION >= 3
+    // Need to check whether we hold the python lock in py3 as well.
+    if (!PyGILState_Check())
+	    return NULL;
+#endif
     PyThreadState *tstate = PyThreadState_GET();
+
     if (tstate != NULL)
     {
-//        std::cerr << "BEGIN ALLOW THREADS ##########################################################" << std::endl;
-        tstate = PyEval_SaveThread();
-//        std::cerr << "FRAME: " << PSTR(tstate->frame) << std::endl;
+        //std::cerr << "BEGIN ALLOW THREADS ##########################################################" << std::endl;
+        // Make sure this thread is holding the GIL when trying to call PyEval_SaveThread which requires the GIL
+        if (hasGIL == tstate)
+            tstate = PyEval_SaveThread();
+        else
+            return NULL;
+        //std::cerr << "FRAME: " << PSTR(tstate->frame) << std::endl;
     }
     return tstate;
 }
@@ -781,8 +879,8 @@ void SPELLpythonHelper::endSafeAllowThreads( PyThreadState* tstate )
 {
     if (tstate != NULL)
     {
-//        std::cerr << "END ALLOW THREADS ############################################################" << std::endl;
-//        std::cerr << "FRAME: " << PSTR(tstate->frame) << std::endl;
+        //std::cerr << "END ALLOW THREADS ############################################################" << std::endl;
+        //std::cerr << "FRAME: " << PSTR(tstate->frame) << std::endl;
         PyEval_RestoreThread(tstate);
     }
 }
@@ -792,10 +890,10 @@ void SPELLpythonHelper::endSafeAllowThreads( PyThreadState* tstate )
 //=============================================================================
 PyGILState_STATE SPELLpythonHelper::acquireGIL()
 {
-//    std::cerr << "ACQUIRE GIL ##################################################################" << std::endl;
+    //std::cerr << "ACQUIRE GIL ##################################################################" << std::endl;
     PyGILState_STATE state = PyGILState_Ensure();
-//    std::cerr << "FRAME: " << PSTR(PyEval_GetFrame()) << std::endl;
-//    std::cerr << "STATE: " << state << std::endl;
+    //std::cerr << "FRAME: " << PSTR(PyEval_GetFrame()) << std::endl;
+    //std::cerr << "STATE: " << state << std::endl;
     return state;
 }
 
@@ -804,9 +902,9 @@ PyGILState_STATE SPELLpythonHelper::acquireGIL()
 //=============================================================================
 void SPELLpythonHelper::releaseGIL( PyGILState_STATE state )
 {
-//    std::cerr << "RELEASE GIL ##################################################################" << std::endl;
-//    std::cerr << "FRAME: " << PSTR(PyEval_GetFrame()) << std::endl;
-//    std::cerr << "STATE: " << state << std::endl;
+    //std::cerr << "RELEASE GIL ##################################################################" << std::endl;
+    //std::cerr << "FRAME: " << PSTR(PyEval_GetFrame()) << std::endl;
+    //std::cerr << "STATE: " << state << std::endl;
     PyGILState_Release(state);
 }
 
@@ -858,7 +956,7 @@ std::string SPELLpythonHelper::readProcedureFile( const std::string& filename )
 //=============================================================================
 PyCodeObject* SPELLpythonHelper::compile( const std::string& filePath )
 {
-    DEBUG("[PYH] Compiling procedure " + filePath)
+    DEBUG("[PYH] Compiling procedure " + filePath);
 
     // Will hold the AST preprocessed bytecode
     mod_ty ast;
@@ -1001,13 +1099,424 @@ PyCodeObject* SPELLpythonHelper::compileScript( const std::string& source )
     return code;
 }
 
+
+#if PY_MAJOR_VERSION >= 3
+
+#define OFF(x) offsetof(PyFrameObject, x)
+
+/* Setter for f_lineno - you can set f_lineno from within a trace function in
+ * order to jump to a given line of code, subject to some restrictions.  Most
+ * lines are OK to jump to because they don't make any assumptions about the
+ * state of the stack (obvious because you could remove the line and the code
+ * would still work without any stack errors), but there are some constructs
+ * that limit jumping:
+ *
+ *  o Lines with an 'except' statement on them can't be jumped to, because
+ *    they expect an exception to be on the top of the stack.
+ *  o Lines that live in a 'finally' block can't be jumped from or to, since
+ *    the END_FINALLY expects to clean up the stack after the 'try' block.
+ *  o 'try'/'for'/'while' blocks can't be jumped into because the blockstack
+ *    needs to be set up before their code runs, and for 'for' loops the
+ *    iterator needs to be on the stack.
+ *  o Jumps cannot be made from within a trace function invoked with a
+ *    'return' or 'exception' event since the eval loop has been exited at
+ *    that time.
+ */
+static int
+frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno, void *Py_UNUSED(ignored))
+{
+    int new_lineno = 0;                 /* The new value of f_lineno */
+    long l_new_lineno;
+    int overflow;
+    int new_lasti = 0;                  /* The new value of f_lasti */
+    int new_iblock = 0;                 /* The new value of f_iblock */
+    unsigned char *code = NULL;         /* The bytecode for the frame... */
+    Py_ssize_t code_len = 0;            /* ...and its length */
+    unsigned char *lnotab = NULL;       /* Iterating over co_lnotab */
+    Py_ssize_t lnotab_len = 0;          /* (ditto) */
+    int offset = 0;                     /* (ditto) */
+    int line = 0;                       /* (ditto) */
+    int addr = 0;                       /* (ditto) */
+    int min_addr = 0;                   /* Scanning the SETUPs and POPs */
+    int max_addr = 0;                   /* (ditto) */
+    int delta_iblock = 0;               /* (ditto) */
+    int min_delta_iblock = 0;           /* (ditto) */
+    int min_iblock = 0;                 /* (ditto) */
+    int f_lasti_setup_addr = 0;         /* Policing no-jump-into-finally */
+    int new_lasti_setup_addr = 0;       /* (ditto) */
+    int blockstack[CO_MAXBLOCKS];       /* Walking the 'finally' blocks */
+    int in_finally[CO_MAXBLOCKS];       /* (ditto) */
+    int blockstack_top = 0;             /* (ditto) */
+    unsigned char setup_op = 0;         /* (ditto) */
+
+    if (p_new_lineno == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "cannot delete attribute");
+        return -1;
+    }
+    /* f_lineno must be an integer. */
+    if (!PyLong_CheckExact(p_new_lineno)) {
+        PyErr_SetString(PyExc_ValueError,
+                        "lineno must be an integer");
+        return -1;
+    }
+
+    /* Upon the 'call' trace event of a new frame, f->f_lasti is -1 and
+     * f->f_trace is NULL, check first on the first condition.
+     * Forbidding jumps from the 'call' event of a new frame is a side effect
+     * of allowing to set f_lineno only from trace functions. */
+    if (f->f_lasti == -1) {
+        PyErr_Format(PyExc_ValueError,
+                     "can't jump from the 'call' trace event of a new frame");
+        return -1;
+    }
+
+    /* You can only do this from within a trace function, not via
+     * _getframe or similar hackery. */
+//    if (!f->f_trace) {
+//        PyErr_Format(PyExc_ValueError,
+//                     "f_lineno can only be set by a trace function");
+//        return -1;
+//    }
+
+    /* Forbid jumps upon a 'return' trace event (except after executing a
+     * YIELD_VALUE or YIELD_FROM opcode, f_stacktop is not NULL in that case)
+     * and upon an 'exception' trace event.
+     * Jumps from 'call' trace events have already been forbidden above for new
+     * frames, so this check does not change anything for 'call' events. */
+    if (f->f_stacktop == NULL) {
+        PyErr_SetString(PyExc_ValueError,
+                "can only jump from a 'line' trace event");
+        return -1;
+    }
+
+    /* Fail if the line comes before the start of the code block. */
+    l_new_lineno = PyLong_AsLongAndOverflow(p_new_lineno, &overflow);
+    if (overflow
+#if SIZEOF_LONG > SIZEOF_INT
+        || l_new_lineno > INT_MAX
+        || l_new_lineno < INT_MIN
+#endif
+       ) {
+        PyErr_SetString(PyExc_ValueError,
+                        "lineno out of range");
+        return -1;
+    }
+    new_lineno = (int)l_new_lineno;
+
+    if (new_lineno < f->f_code->co_firstlineno) {
+        PyErr_Format(PyExc_ValueError,
+                     "line %d comes before the current code block",
+                     new_lineno);
+        return -1;
+    }
+    else if (new_lineno == f->f_code->co_firstlineno) {
+        new_lasti = 0;
+        new_lineno = f->f_code->co_firstlineno;
+    }
+    else {
+        /* Find the bytecode offset for the start of the given
+         * line, or the first code-owning line after it. */
+        char *tmp;
+        PyBytes_AsStringAndSize(f->f_code->co_lnotab,
+                                &tmp, &lnotab_len);
+        lnotab = (unsigned char *) tmp;
+        addr = 0;
+        line = f->f_code->co_firstlineno;
+        new_lasti = -1;
+        for (offset = 0; offset < lnotab_len; offset += 2) {
+            addr += lnotab[offset];
+            line += (signed char)lnotab[offset+1];
+            if (line >= new_lineno) {
+                new_lasti = addr;
+                new_lineno = line;
+                break;
+            }
+        }
+    }
+
+    /* If we didn't reach the requested line, return an error. */
+    if (new_lasti == -1) {
+        PyErr_Format(PyExc_ValueError,
+                     "line %d comes after the current code block",
+                     new_lineno);
+        return -1;
+    }
+
+    /* We're now ready to look at the bytecode. */
+    PyBytes_AsStringAndSize(f->f_code->co_code, (char **)&code, &code_len);
+
+    /* The trace function is called with a 'return' trace event after the
+     * execution of a yield statement. */
+    assert(f->f_lasti != -1);
+    if (code[f->f_lasti] == YIELD_VALUE || code[f->f_lasti] == YIELD_FROM) {
+        PyErr_SetString(PyExc_ValueError,
+                "can't jump from a yield statement");
+        return -1;
+    }
+
+    min_addr = Py_MIN(new_lasti, f->f_lasti);
+    max_addr = Py_MAX(new_lasti, f->f_lasti);
+
+    /* You can't jump onto a line with an 'except' statement on it -
+     * they expect to have an exception on the top of the stack, which
+     * won't be true if you jump to them.  They always start with code
+     * that either pops the exception using POP_TOP (plain 'except:'
+     * lines do this) or duplicates the exception on the stack using
+     * DUP_TOP (if there's an exception type specified).  See compile.c,
+     * 'com_try_except' for the full details.  There aren't any other
+     * cases (AFAIK) where a line's code can start with DUP_TOP or
+     * POP_TOP, but if any ever appear, they'll be subject to the same
+     * restriction (but with a different error message). */
+    if (code[new_lasti] == DUP_TOP || code[new_lasti] == POP_TOP) {
+        PyErr_SetString(PyExc_ValueError,
+            "can't jump to 'except' line as there's no exception");
+        return -1;
+    }
+
+    /* You can't jump into or out of a 'finally' block because the 'try'
+     * block leaves something on the stack for the END_FINALLY to clean
+     * up.      So we walk the bytecode, maintaining a simulated blockstack.
+     * When we reach the old or new address and it's in a 'finally' block
+     * we note the address of the corresponding SETUP_FINALLY.  The jump
+     * is only legal if neither address is in a 'finally' block or
+     * they're both in the same one.  'blockstack' is a stack of the
+     * bytecode addresses of the SETUP_X opcodes, and 'in_finally' tracks
+     * whether we're in a 'finally' block at each blockstack level. */
+    f_lasti_setup_addr = -1;
+    new_lasti_setup_addr = -1;
+    memset(blockstack, '\0', sizeof(blockstack));
+    memset(in_finally, '\0', sizeof(in_finally));
+    blockstack_top = 0;
+    for (addr = 0; addr < code_len; addr += sizeof(_Py_CODEUNIT)) {
+        unsigned char op = code[addr];
+        switch (op) {
+        case SETUP_LOOP:
+        case SETUP_EXCEPT:
+        case SETUP_FINALLY:
+        case SETUP_WITH:
+        case SETUP_ASYNC_WITH:
+            blockstack[blockstack_top++] = addr;
+            in_finally[blockstack_top-1] = 0;
+            break;
+
+        case POP_BLOCK:
+            assert(blockstack_top > 0);
+            setup_op = code[blockstack[blockstack_top-1]];
+            if (setup_op == SETUP_FINALLY || setup_op == SETUP_WITH
+                                    || setup_op == SETUP_ASYNC_WITH) {
+                in_finally[blockstack_top-1] = 1;
+            }
+            else {
+                blockstack_top--;
+            }
+            break;
+
+        case END_FINALLY:
+            /* Ignore END_FINALLYs for SETUP_EXCEPTs - they exist
+             * in the bytecode but don't correspond to an actual
+             * 'finally' block.  (If blockstack_top is 0, we must
+             * be seeing such an END_FINALLY.) */
+            if (blockstack_top > 0) {
+                setup_op = code[blockstack[blockstack_top-1]];
+                if (setup_op == SETUP_FINALLY || setup_op == SETUP_WITH
+                                    || setup_op == SETUP_ASYNC_WITH) {
+                    blockstack_top--;
+                }
+            }
+            break;
+        }
+
+        /* For the addresses we're interested in, see whether they're
+         * within a 'finally' block and if so, remember the address
+         * of the SETUP_FINALLY. */
+        if (addr == new_lasti || addr == f->f_lasti) {
+            int i = 0;
+            int setup_addr = -1;
+            for (i = blockstack_top-1; i >= 0; i--) {
+                if (in_finally[i]) {
+                    setup_addr = blockstack[i];
+                    break;
+                }
+            }
+
+            if (setup_addr != -1) {
+                if (addr == new_lasti) {
+                    new_lasti_setup_addr = setup_addr;
+                }
+
+                if (addr == f->f_lasti) {
+                    f_lasti_setup_addr = setup_addr;
+                }
+            }
+        }
+    }
+
+    /* Verify that the blockstack tracking code didn't get lost. */
+    //assert(blockstack_top == 0);
+    if (blockstack_top != 0) {
+        PyErr_SetString(PyExc_ValueError,
+                    "can't jump blockstack_top pointer got lost");
+        return -1;
+    }
+
+    /* After all that, are we jumping into / out of a 'finally' block? */
+    if (new_lasti_setup_addr != f_lasti_setup_addr) {
+        PyErr_SetString(PyExc_ValueError,
+                    "can't jump into or out of a 'finally' block");
+        return -1;
+    }
+
+
+    /* Police block-jumping (you can't jump into the middle of a block)
+     * and ensure that the blockstack finishes up in a sensible state (by
+     * popping any blocks we're jumping out of).  We look at all the
+     * blockstack operations between the current position and the new
+     * one, and keep track of how many blocks we drop out of on the way.
+     * By also keeping track of the lowest blockstack position we see, we
+     * can tell whether the jump goes into any blocks without coming out
+     * again - in that case we raise an exception below. */
+    delta_iblock = 0;
+    for (addr = min_addr; addr < max_addr; addr += sizeof(_Py_CODEUNIT)) {
+        unsigned char op = code[addr];
+        switch (op) {
+        case SETUP_LOOP:
+        case SETUP_EXCEPT:
+        case SETUP_FINALLY:
+        case SETUP_WITH:
+        case SETUP_ASYNC_WITH:
+            delta_iblock++;
+            break;
+
+        case POP_BLOCK:
+            delta_iblock--;
+            break;
+        }
+
+        min_delta_iblock = Py_MIN(min_delta_iblock, delta_iblock);
+    }
+
+    /* Derive the absolute iblock values from the deltas. */
+    min_iblock = f->f_iblock + min_delta_iblock;
+    if (new_lasti > f->f_lasti) {
+        /* Forwards jump. */
+        new_iblock = f->f_iblock + delta_iblock;
+    }
+    else {
+        /* Backwards jump. */
+        new_iblock = f->f_iblock - delta_iblock;
+    }
+
+    /* Are we jumping into a block? */
+    if (new_iblock > min_iblock) {
+        PyErr_SetString(PyExc_ValueError,
+                        "can't jump into the middle of a block");
+        return -1;
+    }
+
+    /* Pop any blocks that we're jumping out of. */
+    while (f->f_iblock > new_iblock) {
+        PyTryBlock *b = &f->f_blockstack[--f->f_iblock];
+        while ((f->f_stacktop - f->f_valuestack) > b->b_level) {
+            PyObject *v = (*--f->f_stacktop);
+            Py_DECREF(v);
+        }
+        if (b->b_type == SETUP_FINALLY &&
+            code[b->b_handler] == WITH_CLEANUP_START)
+        {
+            /* Pop the exit function. */
+            PyObject *v = (*--f->f_stacktop);
+            Py_DECREF(v);
+        }
+    }
+
+    /* Finally set the new f_lineno and f_lasti and return OK. */
+    f->f_lineno = new_lineno;
+    f->f_lasti = new_lasti;
+    return 0;
+}
+
+
+#endif
+
 //=============================================================================
 // METHOD    : SPELLpythonHelper::setNewLine();
 //=============================================================================
 bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno, const int& new_lasti )
 {
     LOG_WARN("[PYH] Changing line number on frame " + PYCREPR(frame));
+    LOG_WARN("[PYH] new_lineno = " + ISTR(new_lineno) + " new_lasti = " + ISTR(new_lasti));
 
+#if PY_MAJOR_VERSION >= 3
+    PyObject* line = PyLong_FromLong(new_lineno);
+    int success = -1;
+    // In case frame->f_stacktop is NULL and frame->f_back is not NULL,
+    // (case when just returned from a function call)
+    // set current frame to the previous frame
+    // Otherwise, keep using current frame
+    // (case of a return into the root frame for example)
+    if (frame->f_stacktop == NULL && frame->f_back != NULL)
+    	frame = frame->f_back;
+    success = frame_setlineno(frame, line, NULL);
+
+    PyObject* err = PyErr_Occurred();
+	if (err != NULL)
+	{
+		std::cerr << std::endl << "===============================" << std::endl;
+		//PyErr_Print();
+		PyObject* ptype;
+		PyObject* pvalue;
+		PyObject* ptraceback;
+		PyErr_Fetch( &ptype, &pvalue, &ptraceback );
+		std::cerr << "TYPE : " << PYREPR(ptype) << std::endl;
+		std::cerr << "VALUE: " << PYREPR(pvalue) << std::endl;
+		if (ptraceback)
+		{
+			std::cerr << "Traceback: " << std::endl;
+			PyTracebackObject* traceback = (PyTracebackObject*) ptraceback;
+			while(traceback != NULL)
+			{
+				std::cerr << "at " << PYREPR(traceback->tb_frame->f_code->co_filename) << ":" << traceback->tb_lineno << std::endl;
+				traceback = traceback->tb_next;
+			}
+		}
+
+		std::cerr << "===============================" << std::endl << std::endl;
+		// Parse the exception to give better information about the error on python side
+		PyObject* spellException = SPELLpythonHelper::instance().getObject("spell.lib.exception", "SpellException");
+		std::string excType = PYREPR(ptype);
+		if (PyObject_IsInstance( pvalue, spellException ))
+		{
+			PyObject* msg = PyObject_GetAttrString( pvalue, "message" );
+			PyObject* rea = PyObject_GetAttrString( pvalue, "reason" );
+			std::string message = "<unknown error>";
+			std::string reason  = "";
+			if (msg != NULL)
+			{
+				message = PYSSTR(msg);
+			}
+			if (rea != NULL )
+			{
+				reason = PYSSTR(rea);
+			}
+			/** \todo decide the fatal flag value */
+			std::cerr << "RAISING INTERNAL DRIVER EXCEPTION" << std::endl;
+			PyErr_Clear();
+			THROW_EXCEPTION("Cannot set new line", reason, SPELL_DRIVER_ERROR );
+		}
+		else if ( PYREPR(pvalue) == "EXECUTION ABORTED" || PYREPR(pvalue) == "EXECUTION TERMINATED" )
+		{
+			// Do not raise exceptions if the detected exception is an aborted or finished internal exception
+			PyErr_Clear();
+			return false;
+		}
+		else
+		{
+			std::cerr << "RAISING PYTHON ERROR EXCEPTION" << std::endl;
+			PyErr_Clear();
+			THROW_EXCEPTION("Cannot set new line", PYSSTR(pvalue), SPELL_ERROR_PYTHON_API );
+		}
+	}
+#else
     /////////////////////////////////////////////////////////
     // THIS IS NASTY: copied from Python 2.5 implementation
     /////////////////////////////////////////////////////////
@@ -1051,10 +1560,10 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
      * cases (AFAIK) where a line's code can start with DUP_TOP or
      * POP_TOP, but if any ever appear, they'll be subject to the same
      * restriction (but with a different error message). */
-    if (code[new_lasti] == DUP_TOP || code[new_lasti] == POP_TOP)
-    {
-    	THROW_EXCEPTION("Cannot set new line", "Cannot go inside a try/except block", SPELL_ERROR_PYTHON_API);
-    }
+    //if (code[new_lasti] == DUP_TOP || code[new_lasti] == POP_TOP)
+    //{
+    //	THROW_EXCEPTION("Cannot set new line", "Cannot go inside a try/except block", SPELL_ERROR_PYTHON_API);
+    //}
 
     /* You can't jump into or out of a 'finally' block because the 'try'
      * block leaves something on the stack for the END_FINALLY to clean
@@ -1215,6 +1724,7 @@ bool SPELLpythonHelper::setNewLine( PyFrameObject* frame, const int& new_lineno,
     /* Finally set the new f_lineno and f_lasti and return OK. */
     frame->f_lineno = new_lineno;
     frame->f_lasti = new_lasti;
+#endif
     LOG_WARN("[PYH] Set frame lineno " + ISTR(new_lineno) + ":" + ISTR(new_lasti));
     return true;
 }
@@ -1229,6 +1739,7 @@ PyFrameObject* SPELLpythonHelper::createFrame( const std::string& filename, PyCo
     PyFrameObject* frame = NULL;
 
     PyObject* mainModule = PyImport_AddModule("__main__");
+
 
     if (mainModule == NULL)
     {
@@ -1256,9 +1767,30 @@ PyFrameObject* SPELLpythonHelper::createFrame( const std::string& filename, PyCo
             return NULL;
         }
     }
+
     DEBUG("[PYH] Frame creation");
-    frame = PyFrame_New( PyThreadState_Get(), code, mainDict, mainDict );
+
+    frame = PyFrame_New( PyThreadState_Get(), code,mainDict , NULL );
     Py_INCREF(frame);
+    return frame;
+}
+//=============================================================================
+// METHOD    : SPELLpythonHelper::createFrame();
+//=============================================================================
+PyFrameObject* SPELLpythonHelper::createFrameFromFunction( const std::string& filename, PyObject* func )
+{
+    DEBUG("[PYH] Creating frame for code " + PYCREPR(func));
+
+    PyFrameObject* frame = NULL;
+
+    PyCodeObject* code = (PyCodeObject*)PyFunction_GetCode(func);
+    PyObject* globals = PyFunction_GetGlobals(func);
+    Py_INCREF(globals);
+    Py_INCREF(code);
+    frame = PyFrame_New( PyThreadState_Get(), code,globals , NULL);
+
+    Py_INCREF(frame);
+    checkError();
     return frame;
 }
 
@@ -1290,6 +1822,7 @@ void SPELLpythonHelper::checkError()
                 traceback = traceback->tb_next;
             }
         }
+
         std::cerr << "===============================" << std::endl << std::endl;
         // Parse the exception to give better information about the error on python side
         PyObject* spellException = SPELLpythonHelper::instance().getObject("spell.lib.exception", "SpellException");

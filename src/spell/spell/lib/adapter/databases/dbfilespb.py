@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Database based on local SPB files
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -26,68 +26,69 @@
 ##
 ###################################################################################
 
-from dbfile import *
+from .dbfile import *
 import re
 
 ################################################################################
 class DatabaseFileSPB(DatabaseFile):
-    
+
     #===========================================================================
     def __init__(self, name, path, defaultExt = None):
         super(DatabaseFileSPB, self).__init__(name,path,defaultExt)
-    
+
     #===========================================================================
     def _readData(self):
         # Load the file contents
-        lines = file(self._filename).readlines()
-        self._vkeys = []
-        self._types = {}
-        self._properties = {}
-        # Will hold the line to be imported
-        for line in lines:
-
-            # Ignore blank lines
-            if (line is None) or (len(line)==0): continue
-            # Process lines with "$ :=" only
-            if (not line.startswith("$")) or (not ":=" in line): continue
-
-            key,orig_value = line.split(":=")
-            key = key.strip()
-            orig_value = orig_value.strip()
-            
-            if (re.search("[0-5][0-9]:[0-5][0-9]:[0-5][0-9]", orig_value) is not None):
-                # ensure it is not an absolute date, this is just for relative times
-                if('-' not in orig_value) and ('/' not in orig_value):
-                    orig_value = "+" + orig_value
-                
-            value,vtype = ImportValue(orig_value)
-            
-            # Warn about duplicated data
-            if self._properties.has_key(key):
-                LOG("WARNING: duplicated database key: " + repr(key))
-            else:
-                self[key] = value
-                if vtype:
-                    self._types[key] = vtype
-        # End for
+        with open(self._filename) as f:
+            lines = f.readlines()
+            self._vkeys = []
+            self._types = {}
+            self._properties = {}
+            # Will hold the line to be imported
+            for line in lines:
+    
+                # Ignore blank lines
+                if (line is None) or (len(line)==0): continue
+                # Process lines with "$ :=" only
+                if (not line.startswith("$")) or (not ":=" in line): continue
+    
+                key,orig_value = line.split(":=")
+                key = key.strip()
+                orig_value = orig_value.strip()
+    
+                if (re.search("[0-5][0-9]:[0-5][0-9]:[0-5][0-9]", orig_value) is not None):
+                    # ensure it is not an absolute date, this is just for relative times
+                    if('-' not in orig_value) and ('/' not in orig_value):
+                        orig_value = "+" + orig_value
+    
+                value,vtype = ImportValue(orig_value)
+    
+                # Warn about duplicated data
+                if key in self._properties:
+                    LOG("WARNING: duplicated database key: " + repr(key))
+                else:
+                    self[key] = value
+                    if vtype:
+                        self._types[key] = vtype
+            # End for
 
     #===========================================================================
     def _writeData(self, theFile):
         for key in self._vkeys:
             value = self._properties.get(key)
             if key.startswith("$"):
-                os.write( theFile, key + ' := ')
+                os.write( theFile, (key + ' := ').encode())
             else:
-                os.write( theFile, "$" + key + ' := ')
-            if self._types.has_key(key):
+                os.write( theFile, ("$" + key + ' := ').encode())
+            if key in self._types:
                 vtype = self._types.get(key)
                 value = ExportValue(value,vtype)
-                os.write( theFile, value )                    
+                os.write( theFile, value.encode() )
             else:
                 if type(value)==str:
-                    os.write( theFile, '"' + value + '"' )
+                    os.write( theFile, ('"' + value + '"').encode() )
                 else:
-                    os.write( theFile, str(value))
+                    os.write( theFile, str(value).encode())
             # End if
-            os.write( theFile, '\n' )
+            os.write( theFile, b'\n' )
         # End for

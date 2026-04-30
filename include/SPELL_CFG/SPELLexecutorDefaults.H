@@ -5,7 +5,7 @@
 // DESCRIPTION: Context default values for Executors
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -32,7 +32,7 @@
 // Project includes ----------------------------------------------------------
 #include "SPELL_WRP/SPELLconstants.H"
 #include "SPELL_CFG/SPELLbrowsableLibMode.H"
-
+#include "SPELL_UTIL/SPELLutils.H"
 
 /** \addtogroup SPELL_CFG */
 /*@{*/
@@ -59,7 +59,20 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Constructor.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorDefaults() {};
+		SPELLexecutorDefaults()
+		{
+			m_browsableLib = OFF;
+			m_byStep = false;
+			m_execDelay = 0;
+			m_watchVariables = false;
+			m_resourcesDisplay = false;
+			m_localResourceSupport = false;
+			m_forcePromptConfirm = false;
+			m_forceTcConfirm = false;
+			m_maxVerbosity = 0;
+			m_runInto = false;
+			m_promptWarningDelay = 0;
+		};
 
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
@@ -74,58 +87,71 @@ public: //--------------------------------------------------------------------
 	// METHODS ///////////////////////////////////////////////////////////////
 
 		// Member variables getters
-		int getExecDelay()
+		int getExecDelay() const
 		{
 			return m_execDelay;
 		}
 
-		int getPromptWarningDelay()
+		int getPromptWarningDelay() const
 		{
 			return m_promptWarningDelay;
 		}
 
-		bool isRunInto()
+		bool isRunInto() const
 		{
 			return m_runInto;
 		}
 
-		bool isByStep()
+		bool isByStep() const
 		{
 			return m_byStep;
 		}
 
-		SPELLbrowsableLibMode getBrowsableLib()
+		SPELLbrowsableLibMode getBrowsableLib() const
 		{
 			return m_browsableLib;
 		}
 
-		std::string getBrowsableLibStr()
+		std::string getBrowsableLibStr() const
 		{
 			return browsableLibModeToString(m_browsableLib);
 		}
 
-		int getMaxVerbosity()
+		int getMaxVerbosity() const
 		{
 			return m_maxVerbosity;
 		}
 
-		bool isForceTcConfirm()
+		bool isForceTcConfirm() const
 		{
 			return m_forceTcConfirm;
 		}
-
-		std::string getSaveStateMode()
+		bool isForcePromptConfirm() const
+		{
+			return m_forcePromptConfirm;
+		}
+		std::string getSaveStateMode() const
 		{
 			return m_saveStateMode;
 		} //getSaveStateMode
 
 
-		bool isWatchVariables()
+		bool isWatchVariables() const
 		{
 			return m_watchVariables;
 		}
 
-		std::string getCtxName()
+		bool isResourcesDisplay() const
+		{
+			return m_resourcesDisplay;
+		}
+
+		bool isLocalResourcesSupported() const
+		{
+			return m_localResourceSupport;
+		}
+
+		std::string getCtxName() const
 		{
 			return m_ctxName;
 		}
@@ -173,7 +199,10 @@ public: //--------------------------------------------------------------------
 		{
 			m_forceTcConfirm = forceTcConfirm;
 		}
-
+		void setForcePromptConfirm(bool	forcePromptConfirm)
+		{
+			m_forcePromptConfirm = forcePromptConfirm;
+		}
 		void setSaveStateMode(std::string saveModeStr)
 		{
 			m_saveStateMode = saveModeStr;
@@ -182,6 +211,16 @@ public: //--------------------------------------------------------------------
 		void setWatchVariables(bool	watchVariables)
 		{
 			m_watchVariables = watchVariables;
+		}
+
+		void setResourcesDisplay(bool resourcesDisplay)
+		{
+			m_resourcesDisplay = resourcesDisplay;
+		}
+
+		void setLocalResourcesSupported(bool localResourceSupport)
+		{
+			m_localResourceSupport = localResourceSupport;
 		}
 
 		void setCtxName( std::string ctxName)
@@ -199,7 +238,10 @@ public: //--------------------------------------------------------------------
 			str.append("BrowsableLib: ").append( browsableLibModeToString(m_browsableLib) ).append("\n");
 			str.append("MaxVerbosity: ").append(ISTR(m_maxVerbosity)).append("\n");
 			str.append("ForceTcConfirm: ").append(BSTR(m_forceTcConfirm)).append("\n");
+			str.append("ForcePromptConfirm: ").append(BSTR(m_forcePromptConfirm)).append("\n");
 			str.append("WatchVariables: ").append(BSTR(m_watchVariables)).append("\n");
+			str.append("ResourcesDisplay: ").append(BSTR(m_resourcesDisplay)).append("\n");
+			str.append("LocalResourcesSupported: ").append(BSTR(m_localResourceSupport)).append("\n");
 			str.append("SaveStateMode: ").append(m_saveStateMode).append("\n");
 
 			return str;
@@ -218,15 +260,18 @@ private: //-------------------------------------------------------------------
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 
 		int					m_execDelay;
-		int					m_promptWarningDelay;
+		int		      		m_promptWarningDelay;
 		bool				m_runInto;
 		bool				m_byStep;
 		//bool				m_browsableLib;
 		SPELLbrowsableLibMode m_browsableLib;
 		int					m_maxVerbosity;
 		bool				m_forceTcConfirm;
+		bool				m_forcePromptConfirm;
 		std::string			m_saveStateMode;
 		bool				m_watchVariables;
+		bool				m_resourcesDisplay;
+		bool				m_localResourceSupport;
 		std::string 		m_ctxName;
 };
 

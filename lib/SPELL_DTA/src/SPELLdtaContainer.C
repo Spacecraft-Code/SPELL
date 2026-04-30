@@ -5,7 +5,7 @@
 // DESCRIPTION: Data variable container implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -181,7 +181,7 @@ void SPELLdtaContainer::setValue( PyObject* key, PyObject* value )
 		{
 			DEBUG("[DTAC] Creating a new variable to contain the value");
 
-			PyObject* varClass = SPELLpythonHelper::instance().getObject("libSPELL_DTA", "Var");
+			PyObject* varClass = SPELLpythonHelper::instance().getObject(MOD_NAME(libSPELL_DTA), "Var");
 			Py_INCREF(varClass);
 			assert(varClass != NULL);
 			PyObject* dict = PyDict_New();
@@ -233,7 +233,7 @@ PyObject* SPELLdtaContainer::getValue( PyObject* key )
 	if (!PyDict_Contains(m_dict, key))
 	{
 		DEBUG("[DTAC] Variable is missing, asking for a value");
-		PyObject* varClass = SPELLpythonHelper::instance().getObject("libSPELL_DTA", "Var");
+		PyObject* varClass = SPELLpythonHelper::instance().getObject(MOD_NAME(libSPELL_DTA), "Var");
 		Py_XINCREF(varClass);
 		PyObject* instance = SPELLpythonHelper::instance().newInstance(varClass, NULL, NULL);
 		Py_XINCREF(instance);

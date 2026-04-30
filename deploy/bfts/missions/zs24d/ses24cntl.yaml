@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zs24dsim
+  labels:
+    app.kubernetes.io/name: spell-cws-scorpio-zs24dsim
+    app.kubernetes.io/instance: spell
+spec:
+  type: ExternalName
+  externalName: cws-lb.scorpio-zs24d.svc.cluster.local
+

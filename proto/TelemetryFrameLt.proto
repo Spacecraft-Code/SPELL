@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+message TelemetryFrame {
+  uint32 msgType = 1;
+  uint32 scID = 2;
+
+  enum STREAMID {
+    STREAM1 = 0;
+    STREAM2 = 1;
+  }
+
+  STREAMID streamID = 3;
+  uint32 frameCounter = 4;
+  uint64 groundTS = 5;
+  uint32 familyID = 6;
+}

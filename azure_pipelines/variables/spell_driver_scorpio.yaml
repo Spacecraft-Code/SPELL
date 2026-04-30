@@ -1,0 +1,5 @@
+variables:
+  DOCKER_FILEPATH: docker/drivers/scorpio
+  DOCKER_IMAGE: spell/spell-driver-ubuntu-scorpio
+  NEXUS_APPLICATION: spell-scorpio-driver
+  DOCKER_BUILD_CONTEXT: "/../"

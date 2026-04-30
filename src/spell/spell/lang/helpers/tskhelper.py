@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for task management
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -39,7 +39,7 @@ from spell.lib.registry import *
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from basehelper import *
+from .basehelper import *
 
 #*******************************************************************************
 # System Imports
@@ -52,19 +52,18 @@ class StartTask_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the StartTask wrapper.
-    """    
-    
+    """
+
     # Name of the process to be started
     _process = None
     _args = ""
-    
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TASK")
         self._process = None
         self._args = ""
-        self._opName = "Start task" 
+        self._opName = "Start task"
 
     #===========================================================================
     def _doStartTask(self):
@@ -75,47 +74,47 @@ class StartTask_Helper(WrapperHelper):
 
         result = REGISTRY['TASK'].startTask( self._process, self._args, self.getConfig())
 
-        if not result:        
+        if not result:
             self._notifyValue( self._process, "", NOTIF_STATUS_FL, "Unable to start" )
         else:
             self._notifyValue( self._process, "", NOTIF_STATUS_OK, "Started" )
-            
+
         return result
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         """
         DESCRIPTION:
             Start the given task with the given config
-        
+
         ARGUMENTS:
             Expected arguments are:
                 - Process name or command
                 - Argument list
-                
+
         RETURNS:
             True if success
-            
+
         RAISES:
             DriverException if there is a problem in the driver layer
             SyntaxException if the process name is not given.
         """
         if len(args)==0:
             raise SyntaxException("No arguments given")
-        
+
         # Get the process name
         self._process = args[0]
         if type(self._process)!=str:
             raise SyntaxException("Expected a string")
-        
+
         if len(args)==2:
             # Get the process arguments
             self._args = args[1]
         else:
             self._args = ""
-        
+
         result = self._doStartTask()
-            
+
         return [False, result,None,None]
 
     #===========================================================================
@@ -129,60 +128,60 @@ class StartTask_Helper(WrapperHelper):
         self._notifyValue( self.__process, "", NOTIF_STATUS_SP, "Skipped")
         self._write("Skip start " + self._process, {Severity:WARNING})
         return [False, None]
-    
+
 ################################################################################
 class StopTask_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the StopTask wrapper.
-    """    
-    
+    """
+
     # Name of the process to be started
     _process = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TASK")
         self._process = None
-        self._opName = "Stop task" 
-    
+        self._opName = "Stop task"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         """
         DESCRIPTION:
             Start the given task with the given config
-        
+
         ARGUMENTS:
             Expected arguments are:
                 - Process name or command
-                
+
         RETURNS:
             True if success
-            
+
         RAISES:
             DriverException if there is a problem in the driver layer
             SyntaxException if the process name is not given.
         """
-        
+
         if len(args)==0:
             raise SyntaxException("No arguments given")
-        
+
         # Get the process name
         self._process = args[0]
         if type(self._process)!=str:
             raise SyntaxException("Expected a display name string")
-        
+
         # Set in progress
         self._notifyValue( self._process, "", NOTIF_STATUS_PR, "Stopping" )
 
         result = REGISTRY['TASK'].stopTask( self._process, self.getConfig())
 
-        if not result:        
+        if not result:
             self._notifyValue( self._process, "", NOTIF_STATUS_FL, "Cannot stop" )
         else:
             self._notifyValue( self._process, "", NOTIF_STATUS_OK, "Stopped" )
-        
+
         return [False, True,None,None]
 
     #===========================================================================
@@ -203,15 +202,15 @@ class OpenDisplay_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the OpenDisplay wrapper.
-    """    
+    """
     __display = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TASK")
         self.__display = None
-        self._opName = "Open display" 
-    
+        self._opName = "Open display"
+
     #===========================================================================
     def _doOpenDisplay(self):
         # Set in progress
@@ -221,17 +220,17 @@ class OpenDisplay_Helper(WrapperHelper):
 
         result = REGISTRY['TASK'].openDisplay( self.__display, self.getConfig())
 
-        if not result:        
+        if not result:
             self._notifyValue( self.__display, "", NOTIF_STATUS_FL, "Unable to open" )
         else:
             self._notifyValue( self.__display, "", NOTIF_STATUS_OK, "Open" )
-            
+
         return result
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No arguments given")
         elif len(args)==1:
@@ -243,10 +242,20 @@ class OpenDisplay_Helper(WrapperHelper):
             raise SyntaxException("Expected a display name string")
 
         #TODO: more processing, this is demo only !!!
-        
+
         result = self._doOpenDisplay()
-        
+
         return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry opening display", {Severity:WARNING} )
+        return [True, True]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip opening display", {Severity:WARNING} )
+        return [False, True]
 
 ################################################################################
 class CloseDisplay_Helper(WrapperHelper):
@@ -254,15 +263,15 @@ class CloseDisplay_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the CloseDisplay wrapper.
-    """    
+    """
     __display = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TASK")
         self.__display = None
-        self._opName = "Close display" 
-    
+        self._opName = "Close display"
+
     #===========================================================================
     def _doCloseDisplay(self):
         # Set in progress
@@ -277,13 +286,13 @@ class CloseDisplay_Helper(WrapperHelper):
             raise DriverException("Could not start the task to close the display")
         else:
             self._notifyValue( self.__display, "", NOTIF_STATUS_OK, "Close" )
-            
+
         return result
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No arguments given")
         elif len(args)==1:
@@ -295,9 +304,9 @@ class CloseDisplay_Helper(WrapperHelper):
             raise SyntaxException("Expected a display name string")
 
         #TODO: more processing, this is demo only !!!
-        
+
         result = self._doCloseDisplay()
-        
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -316,12 +325,12 @@ class StartProc_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the StartProc wrapper.
-    """    
+    """
     __procId = None
     __arguments = {}
     __result = False
     __status = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TASK")
@@ -352,11 +361,11 @@ class StartProc_Helper(WrapperHelper):
                     raise SyntaxException("Wrong argument format, expected a list of 2 elements")
                 argName = argument[0]
                 argValue = argument[1]
-                self.__arguments[argName] = argValue 
-    
+                self.__arguments[argName] = argValue
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip starting procedure " + repr(self.__procId) + " and return success (True)")
         self._setActionString( ACTION_CANCEL ,  "Skip starting procedure " + repr(self.__procId) + " and return failure  (False)")
         self._setActionString( ACTION_REPEAT ,  "Try to start the procedure again")
@@ -364,18 +373,18 @@ class StartProc_Helper(WrapperHelper):
         automatic = self.getConfig(Automatic)
         blocking = self.getConfig(Blocking)
         visible = self.getConfig(Visible)
-        
+
         msg = "Starting procedure " + self.__procId + " (Automatic:"\
               + str(automatic) + ", Blocking:" + str(blocking) \
               + ", Visible: " + str(visible) + ")"
         self._write(msg)
-       
-        LOG("Starting subprocedure") 
+
+        LOG("Starting subprocedure")
         self._notifyValue("Procedure", self.__procId, NOTIF_STATUS_PR, "Loading procedure")
-        
-        # Open the procedure (will raise exception on failure)    
+
+        # Open the procedure (will raise exception on failure)
         self.__result = REGISTRY['EXEC'].openSubProcedure(self.__procId,
-                                          self.__arguments, 
+                                          self.__arguments,
                                           config = self.getConfig() )
 
         self.__status = REGISTRY['EXEC'].getChildStatus()
@@ -386,11 +395,11 @@ class StartProc_Helper(WrapperHelper):
             error,reason = REGISTRY['EXEC'].getChildError()
             LOG("Initial child status is error: " + repr([error,reason]), LOG_ERROR)
             raise DriverException(error,reason)
-        
+
         loadedStatus = NOTIF_STATUS_OK
-        if blocking: 
+        if blocking:
             loadedStatus = NOTIF_STATUS_PR
-        
+
         self._notifyValue("Procedure", self.__procId, loadedStatus, "Procedure loaded")
 
         # If the child procedure is started in blocking mode we shall monitor
@@ -412,7 +421,7 @@ class StartProc_Helper(WrapperHelper):
             error,reason = REGISTRY['EXEC'].getChildError()
             LOG("Subprocedure failed: " + repr([error,reason]), LOG_ERROR)
             raise DriverException(error,reason)
-                  
+
         return [False,self.__result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -432,22 +441,22 @@ class StartProc_Helper(WrapperHelper):
         self._notifyValue( "Procedure", self.__procId, NOTIF_STATUS_SP, "Cancelled")
         REGISTRY['EXEC'].killSubProcedure()
         return [False, False]
-        
+
 ################################################################################
 class PrintDisplay_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the PrintDisplay wrapper.
-    """    
+    """
     __display = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__display = None
-        self._opName = "Print display" 
-    
+        self._opName = "Print display"
+
     #===========================================================================
     def _doPrintDisplay(self):
         # Set in progress
@@ -457,17 +466,17 @@ class PrintDisplay_Helper(WrapperHelper):
 
         result = REGISTRY['TASK'].printDisplay( self.__display, self.getConfig())
 
-        if not result:        
+        if not result:
             self._notifyValue( self.__display, "", NOTIF_STATUS_FL, "Unable to print" )
         else:
             self._notifyValue( self.__display, "", NOTIF_STATUS_OK, "Printed" )
-            
+
         return result
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No arguments given")
         elif len(args)==1:
@@ -479,7 +488,7 @@ class PrintDisplay_Helper(WrapperHelper):
             raise SyntaxException("Expected a display name string")
 
         #TODO: more processing, this is demo only !!!
-        
+
         result = self._doPrintDisplay()
-        
+
         return [False,result,NOTIF_STATUS_OK,""]

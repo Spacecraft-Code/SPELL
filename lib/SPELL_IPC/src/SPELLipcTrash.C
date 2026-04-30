@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the request cleaner
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -137,7 +137,7 @@ void SPELLipcTrash::run()
     while(isWorking())
     {
         if (haveData()) clearData();
-        usleep(350000);
+        usleep(50000);
     }
     if (haveData()) clearData();
     m_trashFinishEvent.set();
@@ -167,7 +167,7 @@ bool SPELLipcTrash::haveData()
 //=============================================================================
 unsigned int SPELLipcTrash::size()
 {
-    SPELLmonitor m(m_dataLock);
+	SPELLmonitor m(m_dataLock);
     return m_messages.size();
 }
 
@@ -181,22 +181,26 @@ void SPELLipcTrash::clearData()
 
     for( it = m_messages.begin(); it != m_messages.end(); it++)
     {
-        DEBUG( NAME + "Waiting for " + (*it)->getSequence() );
+        //DEBUG( NAME + "Waiting for " + (*it)->getSequence() );
         if ((*it)->isStarted())
 		{
-			bool timedout = (*it)->wait(500); // milliseconds
+			bool timedout = (*it)->wait(25); // milliseconds
 			if (!timedout)
 			{
-				DEBUG( NAME + "Joining " + (*it)->getSequence() );
-				(*it)->join();
-				DEBUG( NAME + "************ Deleting " + (*it)->getSequence() );
-				delete (*it);
-				it = m_messages.erase(it);
-				DEBUG( NAME + "Deleted");
+				if (!*it) {
+					it = m_messages.erase(it);
+				} else {
+					//DEBUG( NAME + "Joining " + (*it)->getSequence() );
+					(*it)->join();
+					//DEBUG( NAME + "************ Deleting " + (*it)->getSequence() );
+					delete (*it);
+					it = m_messages.erase(it);
+					//DEBUG( NAME + "Deleted");
+				}
 			}
 			else
 			{
-				DEBUG( NAME + "Did not delete " + (*it)->getSequence() );
+				//DEBUG( NAME + "Did not delete " + (*it)->getSequence() );
 			}
 		}
     }

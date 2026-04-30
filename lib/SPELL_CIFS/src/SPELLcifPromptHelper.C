@@ -5,7 +5,7 @@
 // DESCRIPTION: Helper for prompt processing
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -38,7 +38,7 @@ std::string SPELLcifPromptHelper::completeOptions( const SPELLpromptDefinition& 
 {
 	std::string msgToShow = origMsgToShow;
 
-	msgToShow += "\nAvailable options:\n";
+	msgToShow += "Available options:\n";
 
     int keyCount = 0;
     std::string optionStr = "";

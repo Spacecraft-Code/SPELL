@@ -1,0 +1,77 @@
+#!/bin/bash
+################################################################################
+#
+#  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+#  This file is part of SPELL.
+#
+#  SPELL is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  SPELL is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+
+function terminate_gracefully() {
+    PID=$1
+    TRIES=10
+    echo "Terminating process $PID"
+    # terminate
+    kill $PID > /dev/null 2>&1
+    for i in $(seq 1 $TRIES); do
+        sleep 1
+        if ps -p $PID > /dev/null; then
+            echo "Process $PID is still running (attempt #$i out of $TRIES)"
+        else
+            echo "Process $PID exited gracefully"
+            break
+        fi
+    done
+    # kill it
+    if ps -p $PID > /dev/null; then
+        echo "Could not terminate process $PID gracefully, killing it"
+        kill -9 $PID > /dev/null 2>&1
+    fi
+}
+
+# Satellite
+SATELLITE=$1
+[ -z $SATELLITE ] && echo "Must provide the spacecraft: $0 <sat>" && exit 1
+
+# SPELL home
+if [ -z $SPELL_HOME ]; then
+    export SPELL_HOME=/home/spell/SPELL
+fi
+[ ! -d $SPELL_HOME ] && echo "ERROR: cannot find SPELL home directory: $SPELL_HOME" && exit 1
+
+# Set the server configuration file to be used
+if [ -z $SPELL_CONFIG ]; then
+    SPELL_CONFIG=/home/spell/SPELL_CONFIG
+fi
+CFG_FILE=$SPELL_CONFIG/server/server_$SATELLITE.xml
+[ ! -f $CFG_FILE ] && echo "ERROR: cannot find configuration file: $CFG_FILE" && exit 1
+
+echo "Terminating SPELL processes started with config ${CFG_FILE}"
+
+PROCESSES="SPELL-Executor SPELL-ExecutorCmd SPELL-Shell SPELL-Executor_v3 SPELL-ExecutorCmd_v3 SPELL-Shell_v3 SPELL-Context SPELL-Listener"
+if [[ "$2" != "skipservice" ]]; then
+    PROCESSES="SPELL-Service $PROCESSES"
+fi
+for P in $PROCESSES; do
+    PIDS=(`pgrep -u $USER -f "$P .*-c ${CFG_FILE}.*"`)
+    if [ ${#PIDS[@]} == 0 ]; then
+        continue
+    fi
+    echo "Terminating ${#PIDS[@]} $P instance(s)"
+    for PID in ${PIDS[@]}; do
+        terminate_gracefully $PID
+    done
+done

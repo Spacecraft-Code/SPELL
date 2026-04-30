@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor interface definition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -38,6 +38,7 @@
 #include "SPELL_EXC/SPELLcallstackIF.H"
 #include "SPELL_EXC/SPELLbreakpointType.H"
 #include "SPELL_EXC/SPELLvariableManager.H"
+#include "SPELL_EXC/SPELLresourceManager.H"
 #include "SPELL_EXC/SPELLdispatchListener.H"
 
 
@@ -136,6 +137,7 @@ public: //--------------------------------------------------------------------
 		 * \returns The controller reference
 		**////////////////////////////////////////////////////////////////////
 		virtual SPELLcontrollerIF& getController() const = 0;
+		virtual bool hasController() const { return true;};
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the scheduler reference
@@ -156,7 +158,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The configuration object.
 		**////////////////////////////////////////////////////////////////////
-		virtual SPELLexecutorConfig& getConfiguration() const = 0;
+		virtual SPELLexecutorConfig& getConfiguration() = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain variable manager.
@@ -164,6 +166,13 @@ public: //--------------------------------------------------------------------
 		 * \returns The variable manager object.
 		**////////////////////////////////////////////////////////////////////
 		virtual SPELLvariableManager& getVariableManager() const = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain resource manager.
+		 *
+		 * \returns The resource manager object.
+		**////////////////////////////////////////////////////////////////////
+		virtual SPELLresourceManager& getResourceManager() const = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain execution frame.
@@ -374,7 +383,7 @@ public: //--------------------------------------------------------------------
 		 * \param force IN: the flag value
 		**////////////////////////////////////////////////////////////////////
 		virtual void setForceTcConfirm( const bool force ) = 0;
-
+		virtual void setForcePromptConfirm( const bool force ) = 0;
     // *******************************************************************
     // LANGUAGE INTERLOCK
     // *******************************************************************
@@ -515,6 +524,7 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		virtual void displayStage( const std::string& id, const std::string& title ) = 0;
 
+		virtual void refreshStatus() {;};
 };
 
 /*@}*/

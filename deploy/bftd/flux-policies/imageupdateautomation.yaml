@@ -1,0 +1,43 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: spell-repo
+  namespace: spell
+spec:
+  interval: 1m0s
+  sourceRef:
+    kind: GitRepository
+    name: spell-repo
+    namespace: flux-system
+  git:
+    checkout:
+      ref:
+        branch: jgall/container-updates
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.internal.ses.com
+        name: fluxcdbot
+      messageTemplate: |
+        Automated image update
+
+        Automation name: {{ .AutomationObject }}
+
+        Files:
+        {{ range $filename, $_ := .Updated.Files -}}
+        - {{ $filename }}
+        {{ end -}}
+
+        Objects:
+        {{ range $resource, $_ := .Updated.Objects -}}
+        - {{ $resource.Kind }} {{ $resource.Name }}
+        {{ end -}}
+
+        Images:
+        {{ range .Updated.Images -}}
+        - {{.}}
+        {{ end -}}        
+    push:
+      branch: flux-image-version-update
+  update:
+    path: ./deploy/bfts
+    strategy: Setters

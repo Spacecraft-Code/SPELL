@@ -1,0 +1,7 @@
+[bzenginst1]
+name=YUM repo on bzenginst1.idmz.eng.ses
+baseurl=http://10.35.66.136/centos/$releasever/$basearch
+enabled=1
+gpgcheck=0
+proxy=_none_
+

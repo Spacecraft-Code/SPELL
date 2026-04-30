@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ServiceAccount
+
+metadata:
+  name: spell-registry-sa
+  labels:
+    app.kubernetes.io/name: spell-registry-sa
+    app.kubernetes.io/instance: spell
+    app.kubernetes.io/version: "1.0.0"
+
+imagePullSecrets:
+- name: bzengnexus-secret 
+- name: prengnexus-secret 

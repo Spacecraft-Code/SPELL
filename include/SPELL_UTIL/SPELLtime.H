@@ -5,7 +5,7 @@
 // DESCRIPTION: Time utility class
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -82,6 +82,16 @@ public: //--------------------------------------------------------------------
 		 * \param delta IN: true if relative time
 		**////////////////////////////////////////////////////////////////////
 		SPELLtime( unsigned long secs, unsigned int msecs, bool delta );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Constructor.
+		 *
+		 * \param secs IN: time in seconds
+		 * \param msecs IN: mseconds
+		 * \param usecs IN: useconds
+		 * \param delta IN: true if relative time
+		**////////////////////////////////////////////////////////////////////
+		SPELLtime( unsigned long secs, unsigned int msecs, unsigned int usecs, bool delta );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Copy constructor.
@@ -251,7 +261,7 @@ public: //--------------------------------------------------------------------
 		void setCurrent();
 
 		//////////////////////////////////////////////////////////////////////
-		/** Set time to the given time seconds.
+		/** Set to the given time.
 		 *
 		 * \param secs IN: time in seconds
 		 * \param msecs IN: mseconds
@@ -263,9 +273,19 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \param secs IN: time in seconds
 		 * \param msecs IN: mseconds
+		 * \param usecs IN: useconds
+		**////////////////////////////////////////////////////////////////////
+		void set( unsigned long secs, unsigned int msecs, unsigned int usecs );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set to the given time.
+		 *
+		 * \param secs IN: time in seconds
+		 * \param msecs IN: mseconds
+		 * \param usecs IN: useconds
 		 * \param delta IN: true if relative time
 		**////////////////////////////////////////////////////////////////////
-		void set( unsigned long secs, unsigned int msecs, bool delta );
+		void set( unsigned long secs, unsigned int msecs, unsigned int usecs, bool delta );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Get the seconds.
@@ -283,6 +303,15 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		unsigned int getMilliseconds() const {
 			return m_msecs;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the microseconds.
+		 *
+		 * \return The microseconds.
+		**////////////////////////////////////////////////////////////////////
+		unsigned int getMicroseconds() const {
+			return m_usecs;
 		};
 
 		//////////////////////////////////////////////////////////////////////
@@ -310,12 +339,22 @@ private: //-------------------------------------------------------------------
     // TYPES /////////////////////////////////////////////////////////////////
     // LIFECYCLE /////////////////////////////////////////////////////////////
     // METHODS ///////////////////////////////////////////////////////////////
+
+        //////////////////////////////////////////////////////////////////////
+        /** Get the milliseconds+microseconds suffix.
+         *
+         * \return The suffix or "" if m_msec and m_usec are not set
+         **////////////////////////////////////////////////////////////////////
+        std::string getMicrosecondsSuffix() const;
+
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 		/** Holds the seconds from the epoc */
 		unsigned long m_secs;
 		/** Holds the mseconds */
 		unsigned int m_msecs;
+		/** Holds the useconds */
+		unsigned int m_usecs;
 		/** True if delta time */
 		bool m_delta;
 };

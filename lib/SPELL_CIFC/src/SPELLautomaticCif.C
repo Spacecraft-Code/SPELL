@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the automatic (non-interactive) CIF
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -96,12 +96,17 @@ void SPELLautomaticCif::specificSetup( const SPELLcifStartupInfo& info )
 	getExecutorConfig().setPromptWarningDelay( STRI((ctx.getExecutorParameter(ExecutorConstants::PromptDelay))) );
 	getExecutorConfig().setBrowsableLib(  stringToBrowsableLibMode(ctx.getExecutorParameter(ExecutorConstants::BrowsableLib) ) );
 	getExecutorConfig().setForceTcConfirm( (ctx.getExecutorParameter(ExecutorConstants::ForceTcConfirm) == PythonConstants::True) );
+	getExecutorConfig().setForcePromptConfirm( (ctx.getExecutorParameter(ExecutorConstants::ForcePromptConfirm) == PythonConstants::True) );
 	std::string saveMode = ctx.getExecutorParameter(ExecutorConstants::SaveStateMode);
 	getExecutorConfig().setSaveStateMode( saveMode );
 
 	std::string wvMode = ctx.getExecutorParameter(ExecutorConstants::WatchVariables);
 	bool wvEnabled = wvMode == ExecutorConstants::ENABLED;
 	getExecutorConfig().setWatchEnabled( wvEnabled );
+	std::string rdMode = ctx.getExecutorParameter(ExecutorConstants::ResourcesDisplay);
+	bool rdEnabled = rdMode == ExecutorConstants::ENABLED;
+	getExecutorConfig().setResourcesDisplayEnabled( rdEnabled );
+	getExecutorConfig().setLocalResourcesSupported( (ctx.getExecutorParameter(ExecutorConstants::LocalResourcesSupported) == PythonConstants::True) );
 }
 
 //=============================================================================
@@ -320,6 +325,22 @@ void SPELLautomaticCif::specificNotifyVariableScopeChange( const std::string& sc
 		                                        const std::vector<SPELLvarInfo>& locals )
 {
 	std::cout << "[  NOTIFY VARIABLE SCOPE CHANGE  ] " << "Variable Scope Change" << std::endl;
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyResourceChange()
+//=============================================================================
+void SPELLautomaticCif::specificNotifyResourceChange( const std::vector<SPELLresourceInfo>& changed )
+{
+	std::cout << "[  NOTIFY RESOURCE CHANGE  ] " << "Resource Change" << std::endl;
+}
+
+//=============================================================================
+// METHOD: SPELLautomaticCif::specificNotifyResourceList()
+//=============================================================================
+void SPELLautomaticCif::specificNotifyResourceList( const std::vector<SPELLresourceInfo>& resources )
+{
+	std::cout << "[  NOTIFY RESOURCE LIST  ] " << "Resource List" << std::endl;
 }
 
 //=============================================================================

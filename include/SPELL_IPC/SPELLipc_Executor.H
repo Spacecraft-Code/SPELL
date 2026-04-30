@@ -5,7 +5,7 @@
 // DESCRIPTION: Inter process communication, data definitions for executor process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -80,6 +80,9 @@ namespace MessageId
 	/** Message for enabling or disabling variable analysis */
 	static const std::string MSG_ID_WVARIABLES_ENABLE("MSG_WVARIABLES_ENABLE");
 	static const std::string MSG_ID_WVARIABLES_DISABLE("MSG_WVARIABLES_DISABLE");
+	/** Message for enabling or disabling resource analysis */
+	static const std::string MSG_ID_DRESOURCES_ENABLE("MSG_DRESOURCES_ENABLE");
+	static const std::string MSG_ID_DRESOURCES_DISABLE("MSG_DRESOURCES_DISABLE");
 };
 
 /** Defines message fields */
@@ -200,6 +203,31 @@ namespace MessageField
 	static const std::string FIELD_VARIABLE_SCOPE("VarScope");
 	/** Variable analysis enabled */
 	static const std::string FIELD_WVARIABLES_ENABLED("WVarEnabled");
+
+	//################################################################################
+	//# DISPLAY OF RESOURCES
+	//################################################################################
+
+	/** Resource names */
+	static const std::string FIELD_RESOURCE_NAME("ResourceName");
+	/** Resource global values */
+	static const std::string FIELD_RESOURCE_GLOBAL_VALUE("ResourceGlobalValue");
+	/** Resource local values */
+	static const std::string FIELD_RESOURCE_LOCAL_VALUE("ResourceLocalValue");
+	/** Resource types */
+	static const std::string FIELD_RESOURCE_TYPE("ResourceType");
+	/** Resource value range */
+	static const std::string FIELD_RESOURCE_VALUE_RANGE("ResourceValueRange");
+	/** Resource gcs value range */
+	static const std::string FIELD_RESOURCE_GCS_VALUE_RANGE("ResourceGCSValueRange");
+	/** Resource GCS names */
+	static const std::string FIELD_RESOURCE_GCS_NAME("ResourceGCSName");
+	/** Resource deleted flags */
+	static const std::string FIELD_RESOURCE_DELETE("ResourceDelete");
+	/** Resource added flags */
+	static const std::string FIELD_RESOURCE_ADDED("ResourceAdded");
+	/** Resource analysis enabled */
+	static const std::string FIELD_DRESOURCES_ENABLED("DResourcesEnabled");
 
 	//################################################################################
 	//# DICTIONARY EDITING
@@ -400,6 +428,23 @@ namespace ExecutorMessages
 	static const std::string RSP_WVARIABLES_ENABLED("RSP_WVARIABLES_ENABLED");
 
 	//################################################################################
+	//# DISPLAY OF RESOURCES
+	//################################################################################
+
+	/** Request for retrieving resource names */
+	static const std::string REQ_GET_RESOURCES("REQ_GET_RESOURCES");
+	/** Response */
+	static const std::string RSP_GET_RESOURCES("RSP_GET_RESOURCES");
+	/** Request for changing resources */
+	static const std::string REQ_CHANGE_RESOURCE("REQ_CHANGE_RESOURCE");
+	/** Response */
+	static const std::string RSP_CHANGE_RESOURCE("RSP_CHANGE_RESOURCE");
+	/** Request to check if resource analysis is enabled */
+	static const std::string REQ_DRESOURCES_ENABLED("REQ_DRESOURCES_ENABLED");
+	/** Response */
+	static const std::string RSP_DRESOURCES_ENABLED("RSP_DRESOURCES_ENABLED");
+
+	//################################################################################
 	//# DICTIONARY EDITING
 	//################################################################################
 
@@ -422,6 +467,9 @@ namespace ExecutorMessages
 
 	/** Oneway message for variable scope change notifications */
 	static const std::string MSG_SCOPE_CHANGE("MSG_SCOPE_CHANGE");
+
+	/** Oneway message for resource change notifications */
+	static const std::string MSG_RESOURCE_CHANGE("MSG_RESOURCE_CHANGE");
 
 	//################################################################################
 	//# REQUESTS TO CONTEXT

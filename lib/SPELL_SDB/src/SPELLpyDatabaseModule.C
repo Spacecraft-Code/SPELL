@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of Python database module
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -78,8 +78,8 @@ DATABASE_DEFINITION( SPELLpyDatabaseFileSPB_Type, "spell.adapter.databases.Datab
 //////////////////////////////////////////////////////////////////////////////
 // PYTHON MODULE INITIALIZATION
 //////////////////////////////////////////////////////////////////////////////
-PyMODINIT_FUNC
-initlibSPELL_SDB(void)
+
+MOD_INIT(libSPELL_SDB)
 {
     // Will hold the Python module
     PyObject* module;
@@ -90,10 +90,12 @@ initlibSPELL_SDB(void)
     DATABASE_TYPE_READY(SPELLpyDatabaseFileSPB_Type);
 
     // Initialize the module
-    module = Py_InitModule3("libSPELL_SDB", NULL, "Module for SPELL databases");
+    MOD_DEF(module,MOD_NAME(libSPELL_SDB),"Module for SPELL databases",NULL)
 
     // Add the classes to the module dictionary
     DATABASE_TYPE_LOAD(module, SPELLpyDatabase_Type, "Database" );
     DATABASE_TYPE_LOAD(module, SPELLpyDatabaseFile_Type, "DatabaseFile" );
     DATABASE_TYPE_LOAD(module, SPELLpyDatabaseFileSPB_Type, "DatabaseFileSPB" );
+
+    return MOD_SUCCESS_VAL(module);
 }

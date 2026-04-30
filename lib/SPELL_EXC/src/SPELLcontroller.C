@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor controller
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -34,6 +34,7 @@
 #include "SPELL_WRP/SPELLconstants.H"
 #include "SPELL_WRP/SPELLregistry.H"
 #include "SPELL_WRP/SPELLdriverManager.H"
+#include "SPELL_WRP/SPELLpyHandle.H"
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutor.H"
 #include "SPELL_EXC/SPELLcontroller.H"
@@ -112,6 +113,15 @@ void SPELLcontroller::command( const ExecutorCommand& cmd, const bool queueIt, c
 		executeCommand(cmd);
 	}
 }
+void SPELLcontroller::refreshStatus() {
+	LOG_INFO("Procedure status: " + SPELLexecutorUtils::statusToString(m_status));
+	SPELLstatusInfo info(m_status);
+	info.condition = getCondition();
+	info.actionLabel = SPELLexecutor::instance().getUserAction().getLabel();
+	info.actionEnabled = SPELLexecutor::instance().getUserAction().isEnabled();
+
+	SPELLexecutor::instance().getCIF().notifyStatus( info );
+}
 
 //=============================================================================
 // METHOD    : SPELLcontroller::setStatus
@@ -119,6 +129,19 @@ void SPELLcontroller::command( const ExecutorCommand& cmd, const bool queueIt, c
 void SPELLcontroller::setStatus( const SPELLexecutorStatus& st )
 {
 	DEBUG("[C] Attempt to set status " + SPELLexecutorUtils::statusToString(st));
+
+	// Do not allow a status change (this may be manually invoked) in a final status
+	switch(m_status)
+	{
+	case STATUS_FINISHED:
+	case STATUS_ERROR:
+	case STATUS_ABORTED:
+		DEBUG("[C] In final status status " + SPELLexecutorUtils::statusToString(m_status) + " do not change status now. Check code.");
+		return;
+	default:
+		break;
+	}
+
     bool newStatus = (st != m_status);
 
 	if (newStatus) notifyBeforeStatusChange(m_status);
@@ -311,8 +334,6 @@ void SPELLcontroller::executeCommand( const ExecutorCommand& cmd )
 
     startCommandProcessing();
 
-	notifyCommandToCore( cmd.id );
-
     if (cmd.id == CMD_ABORT)
     {
         doAbort();
@@ -390,10 +411,16 @@ void SPELLcontroller::executeCommand( const ExecutorCommand& cmd )
     {
         doRecover();
     }
+    else if (cmd.id == CMD_RESOURCES)
+    {
+        SPELLexecutor::instance().getResourceManager().callResourceMonitorFromClient( cmd.arg );
+    }
     else
     {
         LOG_ERROR("[C] UNRECOGNISED COMMAND: " + cmd.id);
     }
+    notifyCommandToCore( cmd.id );
+
 	m_mailbox.commandProcessed();
 
 	// The command has finished, release the dispatcher
@@ -761,7 +788,11 @@ void SPELLcontroller::doSkip()
         	/** \todo Should try to go to upper frame instead of stepping.
             // This is the issue that obligues us to put a return statement
             // at the end of each function. */
-            doStep(false);
+            //doStep(false);
+            // For now just send a warning
+            SPELLexecutor::instance().getCIF().warning("Cannot execute 'Skip' on this line. Use 'Step' or 'Goto line number' instead."
+                                                        "(This may happen for 'return' and 'try' block).", 
+                                                        LanguageConstants::SCOPE_SYS );
         }
     }
 }
@@ -1233,4 +1264,13 @@ void SPELLcontroller::notifyAfterDriverOperation()
 		DEBUG( "   - notify " + (*it)->getId() );
 		(*it)->callbackAfterDriverOperation();
 	}
+}
+
+
+//=============================================================================
+// METHOD    : SPELLscheduler::raiseInformationEventToGCS()
+//=============================================================================
+void SPELLcontroller::raiseInformationEventToGCS( const std::string& message ) {
+    SPELLsafePythonOperations ops("SPELLcontroller::raiseInformationEventToGCS()");
+    raiseEvent(message);
 }

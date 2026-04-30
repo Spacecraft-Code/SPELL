@@ -1,0 +1,5 @@
+variables:
+  DOCKER_FILEPATH: docker/ssh-server
+  DOCKER_IMAGE: spell/ssh-server-ubuntu
+  NEXUS_APPLICATION: spell-ssh-server
+  DOCKER_BUILD_CONTEXT: ""

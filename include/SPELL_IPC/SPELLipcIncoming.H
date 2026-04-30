@@ -5,7 +5,7 @@
 // DESCRIPTION: Handler for incoming IPC messages
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -30,12 +30,12 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // System includes ---------------------------------------------------------
 // Local includes ----------------------------------------------------------
+#include "SPELL_IPC/SPELLipcChannel.H"
 #include "SPELL_IPC/SPELLipcInterfaceListener.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLthread.H"
 #include "SPELL_SYN/SPELLevent.H"
 #include "SPELL_SYN/SPELLthreadWork.H"
-
 
 /** \addtogroup SPELL_IPC */
 /*@{*/
@@ -44,6 +44,7 @@
 // FORWARD REFERENCES //////////////////////////////////////////////////////
 class SPELLipcInterface;
 class SPELLipcOutput;
+
 // TYPES ///////////////////////////////////////////////////////////////////
 // DEFINES /////////////////////////////////////////////////////////////////
 
@@ -201,7 +202,7 @@ private: //-------------------------------------------------------------------
 		/** Holds the listener to be notified */
 		SPELLipcInterfaceListener& m_listener;
 		/** The message to be processed */
-		const SPELLipcMessage m_message;
+		SPELLipcMessage m_message;
 		/** Event set when the processing finishes */
 		SPELLevent m_processingFinishEvent;
 		/** Event set when the processing starts */
@@ -294,7 +295,8 @@ public: //--------------------------------------------------------------------
 		SPELLipcIncomingRequest( const std::string& requestId,
 								 const std::string& ifcName,
 								 SPELLipcMessage msg,
-								 SPELLipcOutput& writer,
+								 SPELLmutex& mutex,
+								 SPELLipcChannel** channel,
 								 SPELLipcInterfaceListener& listener );
 
 		//////////////////////////////////////////////////////////////////////
@@ -322,7 +324,8 @@ private: //-------------------------------------------------------------------
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 		/** Holds the writer to use to send the response */
-		SPELLipcOutput& m_writer;
+		SPELLipcChannel** m_channel;
+		SPELLmutex& m_mutex;
 };
 
 /*@}*/

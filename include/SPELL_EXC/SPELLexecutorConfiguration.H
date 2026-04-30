@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor configuration parameters
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -218,7 +218,14 @@ public: //--------------------------------------------------------------------
 		bool isForceTcConfirm() const {
 			return m_forceTcConfirm;
 		};
-
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the force Prompt confirmation flag
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		bool isForcePromptConfirm() const {
+			return m_forcePromptConfirm;
+		};
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the executor condition.
 		 *
@@ -253,6 +260,43 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		const bool isWatchEnabled() const {
 			return m_watchVariables;
+		};
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** set resources display is enablement.
+		 *
+		 * \returns The status.
+		**////////////////////////////////////////////////////////////////////
+		void setResourcesDisplayEnabled( bool enabled ) {
+			m_resourcesDisplay = enabled;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Chekc if resource display is enabled or not.
+		 *
+		 * \returns The status.
+		**////////////////////////////////////////////////////////////////////
+		const bool isResourcesDisplayEnabled() const {
+			return m_resourcesDisplay;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the local resource support flag flag.
+		 *
+		 * \returns The flag value
+		**////////////////////////////////////////////////////////////////////
+		const bool isLocalResourcesSupported() const {
+			return m_localResourceSupport;
+		};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Set the local resource support flag.
+		 *
+		 * \param enabled IN: the flag value.
+		**////////////////////////////////////////////////////////////////////
+		void setLocalResourcesSupported( const bool enabled ) {
+			m_localResourceSupport = enabled;
 		};
 
 
@@ -373,6 +417,9 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setForceTcConfirm( bool force ) {
 			m_forceTcConfirm = force;
+		};
+		void setForcePromptConfirm( bool force ) {
+			m_forcePromptConfirm = force;
 		};
 
 		//////////////////////////////////////////////////////////////////////
@@ -544,8 +591,11 @@ private: //-------------------------------------------------------------------
 		SPELLwsWorkingMode			 m_saveStateMode;
 		/** True if watch variables is enabled */
 		bool                         m_watchVariables;
+		/** True if resources display is enabled */
+		bool                         m_resourcesDisplay;
 		/** True if all TCs should be confirmed */
 		bool                         m_forceTcConfirm;
+		bool                         m_forcePromptConfirm;
 		/** Identifier of the controlling client if any */
 		std::string 				m_controlClient;
 		/** Host of the controlling GUI */
@@ -556,6 +606,8 @@ private: //-------------------------------------------------------------------
 		int							m_maxVerbosity;
 		/** Context name */
 		std::string                 m_contextName;
+		/** Support for local resources flag */
+		bool 						m_localResourceSupport;
 };
 
 /*@}*/

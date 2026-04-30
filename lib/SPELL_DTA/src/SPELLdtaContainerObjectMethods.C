@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of data container
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -65,7 +65,7 @@ int SPELLdtaContainerObject_Init( SPELLdtaContainerObject* self, PyObject* args,
 void SPELLdtaContainerObject_Dealloc( SPELLdtaContainerObject* self )
 {
 	delete self->container;
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -326,8 +326,7 @@ static PyMethodDef dictiter_methods[] = {
 
 PyTypeObject SPELLdtaContainerIterator_Type =
 {
-        PyObject_HEAD_INIT(&PyType_Type)
-        0,                                      /* ob_size */
+        PyVarObject_HEAD_INIT(&PyType_Type,0)
         "container-keyiterator",                /* tp_name */
         sizeof(SPELLdtaContainerIteratorObject),/* tp_basicsize */
         0,                                      /* tp_itemsize */
@@ -380,51 +379,42 @@ PyObject* SPELLdtaContainerObject_NewIterator( SPELLdtaContainerObject* containe
 //============================================================================
 void SPELLdtaContainerObject_DeallocIterator( SPELLdtaContainerIteratorObject* di )
 {
-	di->ob_type->tp_free( (PyObject*)di );
+	Py_TYPE(di)->tp_free( (PyObject*)di );
 }
 
 //============================================================================
 // FUNCTION       : SPELLdtaContainerObject_NextKey
 //============================================================================
-PyObject* SPELLdtaContainerObject_NextKey( SPELLdtaContainerIteratorObject* di )
+PyObject* SPELLdtaContainerObject_NextKey(SPELLdtaContainerIteratorObject* di)
 {
-    PyObject *key;
-    register Py_ssize_t i, mask;
-    register PyDictEntry *ep;
+	PyObject *key, *value;
+	Py_ssize_t i;
+	int result;
+	DEBUG("[DTAPY] Next iterator key on " + PYCREPR(di));
 
-    DEBUG("[DTAPY] Next iterator key on " + PYCREPR(di));
+	PyObject* d = (PyObject*) di->di_dict;
 
-    PyDictObject* d = di->di_dict;
-
-    DEBUG("[DTAPY] Dictionary: " + PYCREPR(d));
-
-    if (d == NULL) return NULL;
-
-    if (di->di_used != d->ma_used)
-    {
-		PyErr_SetString(PyExc_RuntimeError, "dictionary changed size during iteration");
-		di->di_used = -1; /* Make this state sticky */
-		LOG_ERROR("Dictionary changed size during iteration!!!");
+	if (d == NULL)
 		return NULL;
-    }
+	assert(PyDict_Check(d));
 
-    i = di->di_pos;
-    if (i < 0) goto fail;
-    ep = d->ma_table;
-    mask = d->ma_mask;
-    while (i <= mask && ep[i].me_value == NULL) i++;
-    di->di_pos = i+1;
-    if (i > mask) goto fail;
-    di->len--;
-    key = ep[i].me_key;
-    if (key == NULL) goto fail;
-    Py_INCREF(key);
-    return key;
-fail:
-    DEBUG("[DTAPY] No key found to iterate on");
-    di->di_dict = NULL;
-    PyErr_Clear();
-    return NULL;
+	i = di->di_pos;
+	if (i < 0)
+		goto fail;
+
+	result = PyDict_Next(d, &di->di_pos, &key, &value);
+
+	if (!result)
+		goto fail;
+
+	di->len--;
+
+	Py_INCREF(key);
+	return key;
+fail: DEBUG("[DTAPY] No key found to iterate on");
+	di->di_dict = NULL;
+	PyErr_Clear();
+	return NULL;
 }
 
 //============================================================================

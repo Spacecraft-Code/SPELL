@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Database base class
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -35,14 +35,14 @@ from spell.utils.vimport import ImportValue,ExportValue
 
 ################################################################################
 class Database(object):
-    
+
     # Holds the ordered list of keys
     _vkeys = []
     # Holds the data types per key
     _types = {}
     # Holds the key-value pairs
     _properties = {}
-    
+
     #===========================================================================
     def __init__(self):
         self._vkeys = []
@@ -51,11 +51,11 @@ class Database(object):
         # Disallow instantiation
         if type(self) is Database:
             raise NotImplemented()
-    
+
     #===========================================================================
     def __repr__(self):
         representation = "{"
-        for key in self._properties.keys():
+        for key in list(self._properties.keys()):
             if (representation != "{"): representation += ",\n "
             try:
                 item = repr(self.get(key))
@@ -70,17 +70,17 @@ class Database(object):
         return len(self._properties)
 
     #===========================================================================
-    def __nonzero__(self):
+    def __bool__(self):
         return len(self._properties)>0
 
     #===========================================================================
     def create(self):
         raise NotImplemented()
-    
+
     #===========================================================================
     def load(self):
         raise NotImplemented()
-    
+
     #===========================================================================
     def reload(self):
         raise NotImplemented()
@@ -95,19 +95,19 @@ class Database(object):
 
     #===========================================================================
     def __getitem__(self, key):
-        if not self._properties.has_key(key):
+        if key not in self._properties:
             raise DriverException("No such key: " + repr(key))
         return self._properties.get(key)
 
     #===========================================================================
     def __setitem__(self, key, value):
-        if not key in self._properties.keys():
+        if not key in list(self._properties.keys()):
             self._vkeys.append(key)
         self._properties[key] = value
 
     #===========================================================================
     def __delitem__(self, key):
-        if key in self._properties.keys():
+        if key in list(self._properties.keys()):
             del self._properties[key]
         if key in self._vkeys:
             idx = self._vkeys.index(key)
@@ -115,7 +115,7 @@ class Database(object):
 
     #===========================================================================
     def set(self, key, value, format = None):
-        if not key in self._properties.keys():
+        if not key in list(self._properties.keys()):
             self._vkeys.append(key)
         self._properties[key] = value
         if format:
@@ -123,7 +123,7 @@ class Database(object):
 
     #===========================================================================
     def get(self, key):
-        if not self._properties.has_key(key):
+        if key not in self._properties:
             return None
         return self._properties.get(key)
 

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the goto Python bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -80,8 +80,7 @@ static PyMethodDef Goto_Methods[] =
 //============================================================================
 static PyTypeObject Goto_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "executor.Goto",                   //tp_name
     sizeof(PyGotoObject),              //tp_basicsize
     0,                                 //tp_itemsize
@@ -135,7 +134,7 @@ static int Goto_Init( PyGotoObject* self, PyObject* args, PyObject* kwds )
 //============================================================================
 static void Goto_Dealloc( PyGotoObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================

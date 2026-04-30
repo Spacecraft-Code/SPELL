@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Adapter interface base
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -60,16 +60,16 @@ class Interface(object):
         self.__ifcName = name
         self.__ctxConfig = None
         self.__drvConfig = None
-        
+
     #==========================================================================
     def storeConfig(self, ctxConfig, drvConfig):
         self.__ctxConfig = ctxConfig
         self.__drvConfig = drvConfig
-        
+
     #===========================================================================
     def getInterfaceName(self):
         return self.__ifcName
-        
+
     #===========================================================================
     def refreshConfig(self):
         pass

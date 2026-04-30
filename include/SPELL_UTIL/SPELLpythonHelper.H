@@ -5,7 +5,7 @@
 // DESCRIPTION: Python utilities and manipulation functions
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -118,6 +118,18 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void importAllFrom( const std::string& package );
 
+        //////////////////////////////////////////////////////////////////////
+        /** Import all items from the given package into the builtins package.
+         *
+         * \throws SPELLcoreException if the given module cannot be imported.
+         * \throws SPELLcoreException if the __main__ module cannot be accessed.
+         * \throws SPELLcoreException if the __main__ module dictionary cannot be accessed.
+         *
+         * \param package IN: the package to import objects from.
+        **////////////////////////////////////////////////////////////////////
+        void updateBuiltinsWith( const std::string& package );
+
+
 		//////////////////////////////////////////////////////////////////////
 		/** Import an user library module
 		 *
@@ -127,7 +139,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \param package IN: the package to import objects from.
 		**////////////////////////////////////////////////////////////////////
-		void importUserLibraries( const std::string& libraryPath );
+		bool importUserLibraries( const std::string& libraryPath, std::string& errors );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Install an object in main dictionary
@@ -210,7 +222,9 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		PyFrameObject* createFrame( const std::string& filename, PyCodeObject* code );
 
-		//////////////////////////////////////////////////////////////////////
+		PyFrameObject* createFrameFromFunction( const std::string& filename, PyObject* func );
+
+		        //////////////////////////////////////////////////////////////////////
 		/** Call the given method of the given object, with variable arguments
 		 *
 		 * \param obj IN: object providing the desired method.

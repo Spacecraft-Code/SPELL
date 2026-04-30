@@ -5,7 +5,7 @@
 // DESCRIPTION: General utilities
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,7 +29,9 @@
 
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // System includes ---------------------------------------------------------
+
 #include "SPELL_UTIL/SPELLbase.H"
+
 // Local includes ----------------------------------------------------------
 // Project includes --------------------------------------------------------
 
@@ -538,6 +540,13 @@ namespace SPELLutils
 
 	//////////////////////////////////////////////////////////////////////////////
 	/**
+	 ** \brief Check if the given path is a symbolic link
+	 **
+	**////////////////////////////////////////////////////////////////////////////
+	bool isLink( const std::string& path );
+
+	//////////////////////////////////////////////////////////////////////////////
+	/**
 	 ** \brief Get the file size
 	 **
 	**////////////////////////////////////////////////////////////////////////////
@@ -577,6 +586,14 @@ namespace SPELLutils
 	 **
 	**////////////////////////////////////////////////////////////////////////////
 	std::string resolve( const std::string& hostname );
+
+	//////////////////////////////////////////////////////////////////////////////
+	/**
+	 ** \brief Compares two strings for alphabetical order ignoring the case
+	 **
+	**////////////////////////////////////////////////////////////////////////////
+	bool compareNocase (const std::string& first, const std::string& second);
+
 }
 
 /*@}*/

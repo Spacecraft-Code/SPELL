@@ -1,0 +1,22 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: kube-mp01-spell-server
+spec:
+  chart:
+    spec:
+      chart: ./deploy/spell-server
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: spell-repo
+        namespace: flux-system
+  interval: 10m0s
+  valuesFrom:
+  - kind: ConfigMap
+    name: kube-mp01-spell-server
+    valuesKey: kube-mp01-values.yaml
+
+        
+  

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Memory interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -45,7 +45,7 @@ from spell.lib.adapter.constants.notification import *
 
 __all__ = ['MemInterface']
 
-INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | CANCEL } 
+INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | CANCEL }
 
 ###############################################################################
 # Superclass
@@ -54,12 +54,12 @@ superClass = spell.lib.adapter.memory.MemInterface
 
 ###############################################################################
 class MemInterface( superClass ):
-    
+
     #==========================================================================
     def __init__(self):
         superClass.__init__(self)
         LOG("Created")
-            
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         superClass.setup(self, ctxConfig,drvConfig)
@@ -73,7 +73,7 @@ class MemInterface( superClass ):
     #===========================================================================
     def _generateReport(self, image, report_type, begin, end, source, config):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-    
+
     #===========================================================================
     def _compareImages(self, image1, image2, report_type, begin, end, source, config):
         raise DriverException("Cannot perform operation", "Not supported by driver")
@@ -81,3 +81,15 @@ class MemInterface( superClass ):
     #===========================================================================
     def _memoryLookup(self, name, report_type, source, config):
         raise DriverException("Cannot perform operation", "Not supported by driver")
+
+    #===========================================================================
+    def _dataObjectLookup(self, name, type, config):
+        raise DriverException("Cannot perform DataObjectLookup operation", "Not supported by driver")
+
+    #===========================================================================
+    def _dataItemLookup(self, name, type, source, valueFormat, config):
+        raise DriverException("Cannot perform DataItemLookup operation", "Not supported by driver")
+
+    #===========================================================================
+    def _getObjectIDs(self, type, source, config):
+        raise DriverException("Cannot perform GetObjectIDs operation", "Not supported by driver")

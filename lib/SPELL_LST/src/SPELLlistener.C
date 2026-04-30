@@ -5,7 +5,7 @@
 // DESCRIPTION: 
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -70,7 +70,16 @@ void SPELLlistener::start( const std::string& configFile )
 	m_contextListener = new SPELLlistenerContext( configFile );
 
 	m_guiListener->startup(m_contextListener, NULL);
-	m_contextListener->startup(m_guiListener, NULL);
+    m_contextListener->startup(m_guiListener, NULL);
+
+    std::vector<std::string> ctxList =
+            SPELLconfiguration::instance().getAvailableContexts();
+
+    for (std::vector<std::string>::iterator it = ctxList.begin();
+            it != ctxList.end(); it++)
+    {
+        m_contextListener->respawnContext((*it));
+    }
 }
 
 void SPELLlistener::stop()

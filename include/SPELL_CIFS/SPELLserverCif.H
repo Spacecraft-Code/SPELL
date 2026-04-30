@@ -5,7 +5,7 @@
 // DESCRIPTION: Client interface for server environment
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,6 +33,7 @@
 #include "SPELL_CIFS/SPELLrequestProcessor.H"
 #include "SPELL_CIFS/SPELLdisplayBuffer.H"
 #include "SPELL_CIFS/SPELLvariableBuffer.H"
+#include "SPELL_CIFS/SPELLresourceBuffer.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLthread.H"
 #include "SPELL_SYN/SPELLevent.H"
@@ -165,6 +166,16 @@ public: //--------------------------------------------------------------------
 				                        const std::vector<SPELLvarInfo>& locals );
 
 		//////////////////////////////////////////////////////////////////////
+		/** Notify a resource change.
+		**////////////////////////////////////////////////////////////////////
+		void specificNotifyResourceChange( const std::vector<SPELLresourceInfo>& changed );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Notify a resource list.
+		**////////////////////////////////////////////////////////////////////
+		 void specificNotifyResourceList( const std::vector<SPELLresourceInfo>& resources );
+
+		//////////////////////////////////////////////////////////////////////
 		/** See openSubprocedure
 		**////////////////////////////////////////////////////////////////////
 		std::string specificOpenSubprocedure( const std::string& procId,
@@ -184,7 +195,9 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Get prompt information if any
 		**////////////////////////////////////////////////////////////////////
-		SPELLpromptDefinition getPromptInfo() { return m_promptDef; }
+		SPELLpromptDefinition getPromptInfo() { return m_promptDef; };
+
+		SPELLipcMessage getPingMessage();
 
     //====================================================================
     // Python bindings end
@@ -196,6 +209,7 @@ protected: //-----------------------------------------------------------------
 
 		friend class SPELLdisplayBuffer;
 		friend class SPELLvariableBuffer;
+		friend class SPELLresourceBuffer;
 
     // EXCEPTIONS ////////////////////////////////////////////////////////////
     // ENUMS /////////////////////////////////////////////////////////////////
@@ -248,7 +262,7 @@ protected: //-----------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Wait acknowledge from client
 		 *////////////////////////////////////////////////////////////////////
-		void waitAcknowledge( const SPELLipcMessage& msg );
+		bool waitAcknowledge( const SPELLipcMessage& msg );
 
 		//====================================================================
 		// Shared data handling
@@ -341,7 +355,6 @@ protected: //-----------------------------------------------------------------
 		 *////////////////////////////////////////////////////////////////////
 		void prepareMessage( SPELLipcMessage& msg,  const std::string dataType, SPELLipcMessageType_ msgType );
 
-
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 private: //-------------------------------------------------------------------
@@ -408,6 +421,8 @@ private: //-------------------------------------------------------------------
 		SPELLdisplayBuffer* m_buffer;
 		/** Buffer to accumulate WOV messages */
 		SPELLvariableBuffer* m_wovBuffer;
+		/** Buffer to accumulate RDOTCO messages */
+		SPELLresourceBuffer* m_rdotcoBuffer;
 
 
 		/** True when the CIF is ready to work */
@@ -437,6 +452,8 @@ private: //-------------------------------------------------------------------
 
 		/** IPC synchronization */
 		SPELLmutex m_ipcLock;
+		/** Promp synchronization */
+		SPELLmutex m_promptLock;
 		/** Close synchronization */
 		SPELLmutex m_closeLock;
 		/** Closing flag */

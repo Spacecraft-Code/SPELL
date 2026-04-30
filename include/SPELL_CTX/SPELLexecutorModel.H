@@ -5,7 +5,7 @@
 // DESCRIPTION: Information of a given executor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -136,7 +136,8 @@ public: //--------------------------------------------------------------------
 
 protected: //-----------------------------------------------------------------
 
-		friend class SPELLexecutor;
+	    friend class SPELLexecutor;
+	    friend class SPELLservice;
 
     // EXCEPTIONS ////////////////////////////////////////////////////////////
     // ENUMS /////////////////////////////////////////////////////////////////

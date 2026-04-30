@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: spell
+resources:
+- ../spell-registry/
+- secretstore.yaml
+- externalsecret.yaml
+- mp09-s3-server.yaml
+- mp01-kube-server.yaml
+- s3cntl.yaml
+- s5cntl.yaml
+- flux-policies/imagepolicy.yaml
+- flux-policies/imagerepository.yaml
+- flux-policies/imageupdateautomation.yaml
+- flux-policies/nexus-ca.yaml
+- ddcntl.yaml
+
+configMapGenerator:
+- name: s3-mp09-spell-server
+  files:
+  - s3-mp09-values.yaml
+- name: kube-mp01-spell-server
+  files:
+  - kube-mp01-values.yaml
+
+configurations:
+- kustomizeconfig.yaml
+
+
+patchesJson6902:
+  - target:
+      kind: Ingress
+      name: spell-registry
+      version: v1
+    patch: |-
+      - op: replace
+        path: "/spec/rules/0/host"
+        value: "spell-registry.ing-lu-d.spo.internal.ses.com"
+      - op: replace
+        path: "/spec/tls/0/hosts/0"
+        value: "spell-registry.ing-lu-d.spo.internal.ses.com"

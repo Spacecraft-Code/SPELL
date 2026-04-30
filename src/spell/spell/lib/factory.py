@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Driver factory
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -38,43 +38,44 @@ import spell.lib.empty.resources
 import spell.lib.empty.ranging
 import spell.lib.empty.memory
 import spell.lib.empty.usr
+import spell.lib.empty.pcs
 import spell.lib.adapter.gcstime
 from spell.lib.adapter.dbmgr import *
 
 from spell.lib.adapter.constants.core import *
 from spell.utils.log import *
-
+from spell.lib.registry import REGISTRY
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
 import sys
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
 class FactoryError(BaseException): pass
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
 
-__all__ = ['Factory', 'FactoryError' ] 
+__all__ = ['Factory', 'FactoryError' ]
 
-KNOWN_INTERFACES = [ 'TM', 'TC', 'EV', 'RSC', 'TIME', 'TASK', 'USER', 'CONFIG', 'DBMGR', 'RNG', 'MEM' ]
+KNOWN_INTERFACES = [ 'TM', 'TC', 'EV', 'RSC', 'TIME', 'TASK', 'USER', 'CONFIG', 'DBMGR', 'RNG', 'MEM', 'PCS' ]
 
 IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'EV':'ev', 'RNG':'ranging', 'MEM': 'memory',
-                 'RSC':'resources', 'TIME':'gcstime', 'TASK':'task', 
-                 'USER':'usr', 'CONFIG':'config' }
+                 'RSC':'resources', 'TIME':'gcstime', 'TASK':'task',
+                 'USER':'usr', 'CONFIG':'config', 'PCS':'pcs' }
 
 __instance__ = None
 
 ###############################################################################
 class FactoryClass(object):
-    
+
     """
     DESCRIPTION:
         This class is in charge of the instantiation of all proper driver
@@ -85,7 +86,7 @@ class FactoryClass(object):
     #==========================================================================
     def __init__(self):
         self.__driver = None
-        
+
     #==========================================================================
     @staticmethod
     def instance():
@@ -93,16 +94,16 @@ class FactoryClass(object):
         if __instance__ is None:
             __instance__ = FactoryClass()
         return __instance__
-        
+
     #==========================================================================
     def setup(self, driver):
         """
         DESCRIPTION:
             Setup the factory for using the given driver
-            
+
         ARGUMENTS:
             driver      Driver identifier
-            
+
         RETURNS:
             Nothing
 
@@ -117,9 +118,9 @@ class FactoryClass(object):
         """
         DESCRIPTION:
             Create the configuration interface for the configured driver
-            
+
         ARGUMENTS:
-            
+
         RETURNS:
             The requested object
 
@@ -127,10 +128,10 @@ class FactoryClass(object):
             Nothing
         """
         LOG("Create " + ifcName + " interface")
-        
+
         if not ifcName in KNOWN_INTERFACES:
             raise FactoryError("Unknown interface: " + repr(ifcName))
-        
+
         try:
             # Import the required package
             LOG("Resolving %s" % ifcName)
@@ -138,20 +139,20 @@ class FactoryClass(object):
             # Obtain the interface instance
             interface = eval(ifcName)
         except:
-            LOG("Interface " + repr(ifcName) + 
+            LOG("Interface " + repr(ifcName) +
                 " could not be resolved.", severity = LOG_ERROR )
             return self.createEmptyInterface(ifcName)
-        
-        return interface            
+
+        return interface
 
     #==========================================================================
     def createInterface(self, ifcName):
         """
         DESCRIPTION:
             Create the configuration interface for the configured driver
-            
+
         ARGUMENTS:
-            
+
         RETURNS:
             The requested object
 
@@ -159,40 +160,57 @@ class FactoryClass(object):
             Nothing
         """
         LOG("Create " + ifcName + " interface")
-        
+
         if not ifcName in KNOWN_INTERFACES:
             raise FactoryError("Unknown interface: " + repr(ifcName))
-        
+
         # Build the full package name
         packageRoot = self.__driver + "." + IFC_PACKAGES.get(ifcName)
-        
+
         try:
             # Import the required package
             LOG("Root " + packageRoot + ' with ' + ifcName)
-            importedPackage = __import__(packageRoot, globals(),  locals(), [ifcName], -1)
+            importedPackage = __import__(packageRoot, globals(),  locals(), [ifcName])
 
             # Obtain the interface instance
             interface = importedPackage.__dict__.get(ifcName)
-            
+
             if interface is None:
                 raise FactoryError("Unable to create interface " + repr(ifcName) + " from '" + packageRoot + "'")
 
-        except ImportError,err:
-            LOG("Interface " + repr(ifcName) + 
+        except ImportError as err:
+            LOG("Interface " + repr(ifcName) +
                 " is not available on driver: " + repr(err), severity = LOG_ERROR )
             return self.createEmptyInterface(ifcName)
-        
-        return interface            
-
+        except:
+            import traceback
+            caughtExc = traceback.format_exc()
+            del traceback
+            LOG("Interface " + repr(ifcName) +
+                " generated an exception while initializing: \n" + repr(caughtExc), severity = LOG_ERROR )
+            errorInterface = self.createEmptyInterface(ifcName)
+            def errorSetup(ctxConfig, drvConfig,ifcName=ifcName,caughtExc=caughtExc):
+                from spell.lang.functions import Display
+                from spell.lang.constants import WARNING
+                Display("Interface " + ifcName + " failed to initialize!",WARNING)
+                LOG("Encountered error was:", severity = LOG_ERROR)
+                LOG(caughtExc, severity = LOG_ERROR)
+                Display("Procedure will use an empty interface instead!\n"
+                        "SPELL Functions requiring this interface will not work!",WARNING)
+                del WARNING
+                del Display
+            errorInterface.setup = errorSetup
+            return errorInterface
+        return interface
 
     #==========================================================================
     def createEmptyInterface(self, ifcName):
         """
         DESCRIPTION:
             Create the empty interface 
-            
+
         ARGUMENTS:
-            
+
         RETURNS:
             The requested object
 
@@ -220,6 +238,8 @@ class FactoryClass(object):
             return spell.lib.empty.ranging.RngInterface()
         elif ifcName == 'MEM':
             return spell.lib.empty.memory.MemInterface()
+        elif ifcName == 'PCS':
+            return spell.lib.empty.pcs.PcsInterface()
         else:
             raise FactoryError("Cannot create empty interface '" + ifcName + "'")
 

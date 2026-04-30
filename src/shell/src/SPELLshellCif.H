@@ -5,7 +5,7 @@
 // DESCRIPTION: CIF implementation for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -199,7 +199,7 @@ public: //--------------------------------------------------------------------
     //////////////////////////////////////////////////////////////////////
     /** \see SPELLcif class.
     **////////////////////////////////////////////////////////////////////
-    std::string prompt( const SPELLpromptDefinition& def );
+    std::string prompt( const SPELLpromptDefinition& def, bool doPromptConfirm = true);
 
     //====================================================================
     // Python bindings end

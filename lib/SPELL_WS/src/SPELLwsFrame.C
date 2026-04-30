@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the frame data manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -139,16 +139,19 @@ void SPELLwsFrame::fixState( PyThreadState* newState, bool isHead )
 	// Reset the frame values
 	m_frame->f_lasti = m_lastInstruction;
 	m_frame->f_lineno = m_lastLine;
+#if PY_MAJOR_VERSION < 3
 	m_frame->f_tstate = newState;
+#endif
 	m_frame->f_stacktop = m_frame->f_valuestack;
 	// Reset exception trace
+#if PY_MAJOR_VERSION < 3
 	Py_XDECREF(m_frame->f_exc_traceback);
 	Py_XDECREF(m_frame->f_exc_type);
 	Py_XDECREF(m_frame->f_exc_value);
 	m_frame->f_exc_traceback = NULL;
 	m_frame->f_exc_type = NULL;
 	m_frame->f_exc_value = NULL;
-
+#endif
 	// Recover the dynamic data and update the frame
 	DEBUG("[FRM] Recovering dynamic data");
 	m_dynamic->recover();

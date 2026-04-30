@@ -5,7 +5,7 @@
 // DESCRIPTION: Definition of IPC message
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -238,6 +238,12 @@ public: //--------------------------------------------------------------------
 		SPELLipcMessageType getType() const {
 			return m_type;
 		}
+
+		//////////////////////////////////////////////////////////////////////
+		/**Cleans up this message and frees as much meory as possible.
+		 *
+		**////////////////////////////////////////////////////////////////////
+		void clear();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Set the value of a message field.

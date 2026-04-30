@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Core definitions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,5 +33,3 @@ KEY_SEPARATOR = ":"
 
 ###############################################################################
 COMP_SYMBOLS = { eq:"=", neq:"!=", lt:"<", le:"<=", gt:">", ge:">=", bw:"bw", nbw:"nbw" }
-
-

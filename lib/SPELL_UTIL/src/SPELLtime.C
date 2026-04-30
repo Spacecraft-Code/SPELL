@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the time object
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -47,7 +47,7 @@ SPELLtime::SPELLtime()
 //=============================================================================
 SPELLtime::SPELLtime( unsigned long secs, bool delta )
 {
-    set(secs,0,delta);
+    set(secs,0,0,delta);
 }
 
 //=============================================================================
@@ -55,7 +55,15 @@ SPELLtime::SPELLtime( unsigned long secs, bool delta )
 //=============================================================================
 SPELLtime::SPELLtime( unsigned long secs, unsigned int msecs, bool delta )
 {
-    set(secs,msecs,delta);
+    set(secs,msecs,0,delta);
+}
+
+//=============================================================================
+// CONSTRUCTOR: SPELLtime::SPELLtime
+//=============================================================================
+SPELLtime::SPELLtime( unsigned long secs, unsigned int msecs, unsigned int usecs, bool delta )
+{
+    set(secs,msecs,usecs,delta);
 }
 
 //=============================================================================
@@ -63,7 +71,7 @@ SPELLtime::SPELLtime( unsigned long secs, unsigned int msecs, bool delta )
 //=============================================================================
 SPELLtime::SPELLtime( const SPELLtime& other )
 {
-    set(other.m_secs,other.m_msecs,other.m_delta);
+    set(other.m_secs,other.m_msecs,other.m_usecs,other.m_delta);
 }
 
 //=============================================================================
@@ -83,6 +91,7 @@ SPELLtime& SPELLtime::operator=( const SPELLtime& other )
     {
         m_secs = other.m_secs;
         m_msecs = other.m_msecs;
+        m_usecs = other.m_usecs;
         m_delta = other.m_delta;
     }
     // by convention, always return this
@@ -95,7 +104,12 @@ SPELLtime& SPELLtime::operator=( const SPELLtime& other )
 SPELLtime SPELLtime::operator+(const SPELLtime& other)
 {
     SPELLtime result(0,true);
-    result.set( m_secs + other.m_secs, m_msecs + other.m_msecs, m_delta && other.m_delta );
+    // Check for overflow
+    unsigned long secs = m_secs + other.m_secs;
+    unsigned int usecs = m_usecs + other.m_usecs;
+    secs += usecs / (1000*1000);
+    usecs %= (1000*1000);
+    result.set( secs, usecs/1000, usecs, m_delta && other.m_delta );
     return result;
 }
 
@@ -104,7 +118,12 @@ SPELLtime SPELLtime::operator+(const SPELLtime& other)
 //=============================================================================
 SPELLtime& SPELLtime::operator+=(SPELLtime& other)
 {
-    set( m_secs + other.m_secs, m_msecs + other.m_msecs, m_delta && other.m_delta );
+    // Check for overflow
+    unsigned long secs = m_secs + other.m_secs;
+    unsigned int usecs = m_usecs + other.m_usecs;
+    secs += usecs / (1000*1000);
+    usecs %= (1000*1000);
+    set( secs, usecs/1000, usecs, m_delta && other.m_delta );
     return *this;
 }
 
@@ -117,7 +136,8 @@ SPELLtime SPELLtime::operator-(const SPELLtime& other)
     bool delta = (m_delta && other.m_delta) || (!m_delta && !other.m_delta);
     long secs = m_secs - other.m_secs;
     int msecs = m_msecs - other.m_msecs;
-    result.set( (secs>0)? secs: 0, (msecs>0)? msecs: 0, delta );
+    int usecs = m_usecs - other.m_usecs;
+    result.set( (secs>0)? secs: 0, (msecs>0)? msecs: 0, (usecs>0)? usecs: 0, delta );
     return result;
 }
 
@@ -129,7 +149,8 @@ SPELLtime& SPELLtime::operator-=(SPELLtime& other)
     bool delta = (m_delta && other.m_delta) || (!m_delta && !other.m_delta);
     long secs = m_secs - other.m_secs;
     int msecs = m_msecs - other.m_msecs;
-    set( (secs>0)? secs: 0, (msecs>0)? msecs: 0, delta );
+    int usecs = m_usecs - other.m_usecs;
+    set( (secs>0)? secs: 0, (msecs>0)? msecs: 0, (usecs>0)? usecs: 0, delta );
     return *this;
 }
 
@@ -142,6 +163,10 @@ bool SPELLtime::operator<( const SPELLtime& other ) const
     if (m_secs == other.m_secs)
     {
         if (m_msecs < other.m_msecs) return true;
+        if (m_msecs == other.m_msecs)
+        {
+            if (m_usecs < other.m_usecs) return true;
+        }
     }
     return false;
 }
@@ -155,6 +180,10 @@ bool SPELLtime::operator>( const SPELLtime& other ) const
     if (m_secs == other.m_secs)
     {
         if (m_msecs > other.m_msecs) return true;
+        if (m_msecs == other.m_msecs)
+        {
+            if (m_usecs > other.m_usecs) return true;
+        }
     }
     return false;
 }
@@ -178,25 +207,25 @@ bool SPELLtime::operator<( const unsigned long& secs ) const
 }
 
 //=============================================================================
-// METHOD: SPELLtime::operator<
+// METHOD: SPELLtime::operator==
 //=============================================================================
 bool SPELLtime::operator==( const SPELLtime& other ) const
 {
-    if (m_secs == other.m_secs)
+    if (m_secs == other.m_secs && m_msecs == other.m_msecs && m_usecs == other.m_usecs)
     {
-        if (m_msecs == other.m_msecs) return true;
+        return true;
     }
     return false;
 }
 
 //=============================================================================
-// METHOD: SPELLtime::operator<
+// METHOD: SPELLtime::operator==
 //=============================================================================
 bool SPELLtime::operator==( const unsigned long& secs ) const
 {
     if (m_secs == secs)
     {
-        if (m_msecs == 0) return true;
+        if (m_msecs == 0 && m_usecs == 0) return true;
     }
     return false;
 }
@@ -206,10 +235,14 @@ bool SPELLtime::operator==( const unsigned long& secs ) const
 //=============================================================================
 bool SPELLtime::operator>=( const SPELLtime& other ) const
 {
-    if (m_secs >= other.m_secs) return true;
+    if (m_secs > other.m_secs ) return true;
     if (m_secs == other.m_secs)
     {
-        if (m_msecs >= other.m_msecs) return true;
+        if (m_msecs > other.m_msecs) return true;
+        if (m_msecs == other.m_msecs)
+        {
+            if (m_usecs >= other.m_usecs) return true;
+        }
     }
     return false;
 }
@@ -219,10 +252,14 @@ bool SPELLtime::operator>=( const SPELLtime& other ) const
 //=============================================================================
 bool SPELLtime::operator<=( const SPELLtime& other ) const
 {
-    if (m_secs <= other.m_secs) return true;
+    if (m_secs < other.m_secs) return true;
     if (m_secs == other.m_secs)
     {
-        if (m_msecs <= other.m_msecs) return true;
+        if (m_msecs < other.m_msecs) return true;
+        if (m_msecs == other.m_msecs)
+        {
+            if (m_usecs <= other.m_usecs) return true;
+        }
     }
     return false;
 }
@@ -232,7 +269,7 @@ bool SPELLtime::operator<=( const SPELLtime& other ) const
 //=============================================================================
 std::string SPELLtime::toString() const
 {
-    if (m_secs==0)
+    if (m_secs==0 && m_msecs==0 && m_usecs==0)
     {
         return "0";
     }
@@ -245,6 +282,7 @@ std::string SPELLtime::toString() const
         if (seconds<60) // Very short date format
         {
             timeStr = ISTR(seconds);
+            timeStr += getMicrosecondsSuffix();
         }
 		else
 		{
@@ -267,6 +305,8 @@ std::string SPELLtime::toString() const
 			//Seconds
 			if ( seconds < 10 ) timeStr += "0";
 			timeStr += ISTR(seconds);
+            //Milliseconds+Microseconds
+            timeStr += getMicrosecondsSuffix();
 		}
 	}
     //Absolute date e.g. 2009-12-07 16:55:12
@@ -274,7 +314,7 @@ std::string SPELLtime::toString() const
     {
         time_t seconds = m_secs;
         struct tm* ptm = localtime(&seconds);
-        if (ptm==NULL)
+        if (ptm==NULL && m_msecs==0 && m_usecs==0)
         {
             return "\?\?\?\?-\?\?-\?\? \?\?:\?\?:\?\?";
         }
@@ -294,16 +334,19 @@ std::string SPELLtime::toString() const
 		//Seconds
 		if ( ptm->tm_sec < 10 ) timeStr += "0";
 		timeStr += ISTR(ptm->tm_sec);
+        //Milliseconds+Microseconds
+        timeStr += getMicrosecondsSuffix();
     }
     return timeStr;
 }
+
 
 //=============================================================================
 // METHOD: SPELLtime::toString
 //=============================================================================
 std::string SPELLtime::toTIMEString() const
 {
-    if (m_secs==0)
+    if (m_secs==0 && m_msecs==0 && m_usecs==0)
     {
         return "+000 00:00:00";
     }
@@ -336,13 +379,15 @@ std::string SPELLtime::toTIMEString() const
         //Seconds
         if ( seconds < 10 ) timeStr += "0";
         timeStr += ISTR(seconds);
+        //Milliseconds+Microseconds
+        timeStr += getMicrosecondsSuffix();
     }
     //Absolute date e.g. e.g. 2009-12-07:16:55:12
     else
     {
         time_t seconds = m_secs;
         struct tm* ptm = localtime(&seconds);
-        if (ptm==NULL)
+        if (ptm==NULL && m_msecs==0 && m_usecs==0)
         {
             return "\?\?\?\?-\?\?-\?\? \?\?:\?\?:\?\?";
         }
@@ -353,7 +398,7 @@ std::string SPELLtime::toTIMEString() const
         if (month.length()==1) month = "0" + month;
         std::string day = ISTR(ptm->tm_mday);
         if (day.length()==1) day = "0" + day;
-        timeStr += month + "-" + day + ":";
+        timeStr += month + "-" + day + " ";
 
 		//Hours
 		if ( ptm->tm_hour < 10 ) timeStr += "0";
@@ -364,6 +409,8 @@ std::string SPELLtime::toTIMEString() const
 		//Seconds
 		if ( ptm->tm_sec < 10 ) timeStr += "0";
 		timeStr += ISTR(ptm->tm_sec);
+        //Milliseconds+Microseconds
+        timeStr += getMicrosecondsSuffix();
     }
     return timeStr;
 }
@@ -374,7 +421,7 @@ std::string SPELLtime::toTIMEString() const
 void SPELLtime::setCurrent()
 {
     SPELLutils::SPELLtimeDesc time = SPELLutils::getSystemTime();
-    set( time.seconds, time.useconds/1000, false );
+    set( time.seconds, time.useconds/1000, time.useconds%1000, false );
 }
 
 //=============================================================================
@@ -382,19 +429,45 @@ void SPELLtime::setCurrent()
 //=============================================================================
 void SPELLtime::set( unsigned long secs, unsigned int msecs )
 {
-    set(secs,msecs,true);
+    set(secs,msecs,0,true);
 }
 
 //=============================================================================
 // METHOD: SPELLtime::set
 //=============================================================================
-void SPELLtime::set( unsigned long secs, unsigned int msecs, bool delta )
+void SPELLtime::set( unsigned long secs, unsigned int msecs, unsigned int usecs )
+{
+    set(secs,msecs,usecs,true);
+}
+
+//=============================================================================
+// METHOD: SPELLtime::set
+//=============================================================================
+void SPELLtime::set( unsigned long secs, unsigned int msecs, unsigned int usecs, bool delta )
 {
     m_secs = secs;
     m_msecs = msecs;
+    m_usecs = usecs;
     m_delta = delta;
-    //DEBUG("[TIME] Set time: " + ISTR(m_secs) + ", " + ISTR(m_msecs) + ", " + BSTR(m_delta))
+    //DEBUG("[TIME] Set time: " + ISTR(m_secs) + ", " + ISTR(m_msecs) + ", " + ISTR(m_usecs) + ", " + BSTR(m_delta))
 }
+
+//=============================================================================
+// METHOD: SPELLtime::getMicrosecondsSuffix
+//=============================================================================
+std::string SPELLtime::getMicrosecondsSuffix() const {
+    std::stringstream ss;
+    if ( m_msecs == 0 && m_usecs == 0 )
+    {
+        return "";
+    }
+    ss << ".";
+    ss << std::setfill('0') << std::setw(3) << m_msecs;
+    if ( m_usecs%1000 != 0) {
+        ss << std::setfill('0') << std::setw(3) << m_usecs%1000;
+    }  
+    return ss.str();
+};
 
 //=============================================================================
 // STATIC: SPELLticker::tickIn

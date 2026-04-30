@@ -1,6 +1,24 @@
-AUTOMAKE_OPTIONS = foreign
+################################################################################
+#
+#  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
+# 
+#  This file is part of SPELL.
+# 
+#  SPELL is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+# 
+#  SPELL is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU General Public License for more details.
+# 
+#  You should have received a copy of the GNU General Public License
+#  along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
-if WITH_LIBS
 SUBDIRS = SPELL_UTIL \
           SPELL_SYN  \
           SPELL_CFG  \
@@ -13,22 +31,8 @@ SUBDIRS = SPELL_UTIL \
           SPELL_SDB  \
           SPELL_DTA  \
           SPELL_EXC  \
-          SPELL_WS   
-
-if WITH_EXECUTOR
-SUBDIRS += SPELL_CIFS
-endif
-
-if WITH_EXECUTOR_CMD
-SUBDIRS += SPELL_CIFC
-endif
-
-if WITH_CONTEXT
-SUBDIRS += SPELL_CTX
-endif
-
-if WITH_LISTENER
-SUBDIRS += SPELL_LST 
-endif
-
-endif
+          SPELL_WS   \
+          SPELL_CIFS \
+          SPELL_CIFC \
+          SPELL_CTX  \
+          SPELL_LST

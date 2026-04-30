@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the timer mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -46,7 +46,7 @@ SPELLtimer::SPELLtimer( unsigned long period, SPELLtimerListener& listener )
     m_period   = period;
     m_elapsed  = 0;
     m_timeout  = 0;
-    DEBUG("[TMR] Timer created (1) " + PSTR(this))
+    //DEBUG("[TMR] Timer created (1) " + PSTR(this))
 }
 
 //=============================================================================
@@ -61,7 +61,7 @@ SPELLtimer::SPELLtimer( unsigned long period, SPELLtimerListener& listener, unsi
     m_period   = period;
     m_elapsed  = 0;
     m_timeout  = timeout;
-    DEBUG("[TMR] Timer created (2) " + PSTR(this))
+    //DEBUG("[TMR] Timer created (2) " + PSTR(this))
 }
 
 //=============================================================================
@@ -79,26 +79,26 @@ SPELLtimer::~SPELLtimer()
 //=============================================================================
 void SPELLtimer::run()
 {
-    DEBUG("[TMR] Timer thread started: " + PSTR(this))
+    //DEBUG("[TMR] Timer thread started: " + PSTR(this))
     setCounting(true);
     while(isCounting())
     {
         usleep(m_period*1000);// Period is given in msec
         if (callTimerCallback())
         {
-            DEBUG("[TMR] Ending timer thread (callback) for " + PSTR(this))
+            //DEBUG("[TMR] Ending timer thread (callback) for " + PSTR(this))
             return;
         }
         if (checkTimeout())
         {
-            DEBUG("[TMR] Ending timer thread (timeout) for " + PSTR(this))
+            //DEBUG("[TMR] Ending timer thread (timeout) for " + PSTR(this))
             return;
         }
-        DEBUG("[TMR] Stop event wait in " + PSTR(this))
+        //DEBUG("[TMR] Stop event wait in " + PSTR(this))
         wait();
-        DEBUG("[TMR] Stop event wait out " + PSTR(this))
+        //DEBUG("[TMR] Stop event wait out " + PSTR(this))
     }
-    DEBUG("[TMR] Ending timer thread for " + PSTR(this))
+    //DEBUG("[TMR] Ending timer thread for " + PSTR(this))
 }
 
 //=============================================================================
@@ -137,10 +137,10 @@ bool SPELLtimer::checkTimeout()
 //=============================================================================
 void SPELLtimer::cancel()
 {
-	DEBUG("[TMR] Cancelling timer thread IN" + PSTR(this))
+	//DEBUG("[TMR] Cancelling timer thread IN" + PSTR(this))
 	setCounting(false);
 	cont();
-    DEBUG("[TMR] Cancelling timer thread " + PSTR(this) + " OUT ")
+    //DEBUG("[TMR] Cancelling timer thread " + PSTR(this) + " OUT ")
 }
 
 //=============================================================================
@@ -166,7 +166,7 @@ void SPELLtimer::setCounting( bool counting )
 //=============================================================================
 void SPELLtimer::stop()
 {
-    DEBUG("[TMR] Stopping timer IN" + PSTR(this))
+    //DEBUG("[TMR] Stopping timer IN" + PSTR(this))
     SPELLmonitor monitor(m_mutex);
     m_stopEvent.clear();
 }
@@ -176,7 +176,7 @@ void SPELLtimer::stop()
 //=============================================================================
 void SPELLtimer::cont()
 {
-    DEBUG("[TMR] Continue timer IN" + PSTR(this))
+    //DEBUG("[TMR] Continue timer IN" + PSTR(this))
     SPELLmonitor monitor(m_mutex);
     m_stopEvent.set();
 }
@@ -186,6 +186,6 @@ void SPELLtimer::cont()
 //=============================================================================
 void SPELLtimer::wait()
 {
-    DEBUG("[TMR] Wait timer IN" + PSTR(this))
+    //DEBUG("[TMR] Wait timer IN" + PSTR(this))
     m_stopEvent.wait();
 }

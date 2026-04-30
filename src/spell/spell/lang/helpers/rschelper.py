@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for resource management
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -40,7 +40,7 @@ from spell.lib.registry import *
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from basehelper import *
+from .basehelper import *
 
 #*******************************************************************************
 # System Imports
@@ -53,19 +53,22 @@ class SetResource_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the SetConfig wrapper.
-    """    
-    
+    """
+
     # Name of the parameter to be checked
     __parameter = None
     __value = None
-    
+    __isLocal = False
+
     #===========================================================================
     def __init__(self):
-        WrapperHelper.__init__(self)
+        WrapperHelper.__init__(self, 'RSC')
         self.__parameter = None
         self.__value = ""
-        self._opName = "Set resource" 
-    
+        self.__isLocal = False
+        self.__useConfig = self.getConfig()
+        self._opName = "Set resource"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -73,147 +76,236 @@ class SetResource_Helper(WrapperHelper):
             raise SyntaxException("Expected resource name and value")
         elif len(args)==1:
             raise SyntaxException("Expected resource value")
-        
+
         if type(args[0])!=str:
             raise SyntaxException("Expected a string")
+
+        if IsLocal in kargs and type(kargs[IsLocal])!=bool:
+            raise SyntaxException("Expected a bool for the local modifier")
 
         self.__parameter = args[0]
         if type(self.__parameter)!=str:
             self.__parameter = self.__parameter.name()
         self.__value = args[1]
 
-        self._setActionString( ACTION_SKIP   ,  "Skip the modification of the GCS resource " + repr(self.__parameter) + " and return success (True)")
-        self._setActionString( ACTION_CANCEL ,  "Skip the modification of the GCS resource " + repr(self.__parameter) + " and return failure (False)")
-        self._setActionString( ACTION_REPEAT ,  "Repeat the modification of the GCS resource " + repr(self.__parameter))
-        
+        if IsLocal in kargs:
+            self.__isLocal = kargs[IsLocal]
+        loc = "local" if self.__isLocal else "global"
+
+        self._setActionString( ACTION_SKIP   ,  "Skip the modification of the GCS resource (%s) " % loc + repr(self.__parameter) + " and return success (True)")
+        self._setActionString( ACTION_CANCEL ,  "Skip the modification of the GCS resource (%s) " % loc + repr(self.__parameter) + " and return failure (False)")
+        self._setActionString( ACTION_REPEAT ,  "Repeat the modification of the GCS resource (%s) " % loc + repr(self.__parameter))
+
         # Store information for possible failures
         self.setFailureInfo("RSC", self.__parameter)
 
-        self._notifyValue( repr(self.__parameter), repr(self.__value), NOTIF_STATUS_PR, "Injecting")
-        
-        self._write("Setting ground resource " + repr(self.__parameter) + " value to " + repr(self.__value))
-        
-        result = REGISTRY['RSC'].setResource( self.__parameter, self.__value, self.getConfig() )
+        if Notify in self.__useConfig and self.__useConfig.get(Notify):
+            self._notifyValue( repr(self.__parameter), repr(self.__value), NOTIF_STATUS_PR, "Injecting %s" % loc)
+
+        self._write("Setting %s ground resource " % loc + repr(self.__parameter) + " value to " + repr(self.__value))
+
+        result = REGISTRY['RSC'].setResource( self.__parameter, self.__value, self.__isLocal, self.getConfig() )
         if result:
-            self._notifyValue( repr(self.__parameter), repr(self.__value), NOTIF_STATUS_OK, "Injected")
-            self._write("Ground resource changed")
+            if Notify in self.__useConfig and self.__useConfig.get(Notify):
+                self._notifyValue( repr(self.__parameter), repr(self.__value), NOTIF_STATUS_OK, "Injected")
+            self._write("Ground resource (%s) changed" % loc)
+            return [False,result,NOTIF_STATUS_OK,"Resource set"]
         else:
             self._notifyValue( repr(self.__parameter), repr(self.__value), NOTIF_STATUS_FL, "Failed")
-            self._write("Failed to change ground resource", {Severity:ERROR})
+            self._write("Failed to change ground resource (%s)" % loc, {Severity:ERROR})
+            raise SpellException("Failed to change ground resource (%s)" % loc)
 
-        return [False,result,NOTIF_STATUS_OK,"Resource set"]
-                
-        #===========================================================================
-        def _doRepeat(self):
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_PR, " ")
-            self._write("Retry set GCS resource " + repr(self.__parameter), {Severity:WARNING} )
-            return [True, None]
-    
-        #===========================================================================
-        def _doSkip(self):
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
-            self._write("Skip set GCS resource " + repr(self.__parameter), {Severity:WARNING} )
-            return [False, None]
+    #===========================================================================
+    def _doRepeat(self):
+        self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_PR, " ")
+        self._write("Retry set GCS resource " + repr(self.__parameter), {Severity:WARNING} )
+        return [True, None]
 
-        #===========================================================================
-        def _doCancel(self):
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
-            self._write("Skip set GCS resource " + repr(self.__parameter), {Severity:WARNING} )
-            return [False, None]
-                                    
+    #===========================================================================
+    def _doSkip(self):
+        self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
+        self._write("Skip set GCS resource " + repr(self.__parameter), {Severity:WARNING} )
+        return [False, None]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
+        self._write("Skip set GCS resource " + repr(self.__parameter), {Severity:WARNING} )
+        return [False, None]
+
 ################################################################################
 class GetResource_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the GetConfig wrapper.
-    """    
-    
+    """
+
     # Name of the parameter to be checked
     __parameter = None
-    
+    # True if local value requested
+    __isLocal = False
+
     #===========================================================================
     def __init__(self):
-        WrapperHelper.__init__(self)
+        WrapperHelper.__init__(self, 'RSC')
         self.__parameter = None
-        self._opName = "Get resource" 
-    
+        self.__isLocal = False
+        self.__useConfig = self.getConfig()
+        self._opName = "Get resource"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
         if len(args)==0 or type(args[0])!=str:
             raise SyntaxException("Expected resource name as string")
 
+        if IsLocal in kargs and type(kargs[IsLocal])!=bool:
+            raise SyntaxException("Expected a bool for the local modifier")
+
         self.__parameter = args[0]
         if type(self.__parameter)!=str:
             self.__parameter = self.__parameter.name()
 
+        if IsLocal in kargs:
+            self.__isLocal = kargs[IsLocal]
+        loc = "local" if self.__isLocal else "global"
+
         # Store information for possible failures
         self.setFailureInfo("RSC", self.__parameter)
 
-        self._setActionString( ACTION_SKIP   ,  "Skip the acquisition of the GCS resource " + repr(self.__parameter) + " and return None")
-        self._setActionString( ACTION_CANCEL ,  "Skip the acquisition of the GCS resource " + repr(self.__parameter) + " and return None")
-        self._setActionString( ACTION_REPEAT ,  "Repeat the acquisition of the GCS resource " + repr(self.__parameter))
-        
-        self._notifyValue( repr(self.__parameter), "", NOTIF_STATUS_PR, "Reading")
-        result = REGISTRY['RSC'].getResource( self.__parameter, self.getConfig() )
-        if result is None:
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_FL, "Failed")
-            self._write("Unable to read ground resource " + repr(self.__parameter), {Severity:ERROR})
+        self._setActionString( ACTION_SKIP   ,  "Skip the acquisition of the GCS resource (%s) " % loc + repr(self.__parameter) + " and return None")
+        self._setActionString( ACTION_CANCEL ,  "Skip the acquisition of the GCS resource (%s) " % loc + repr(self.__parameter) + " and return None")
+        self._setActionString( ACTION_REPEAT ,  "Repeat the acquisition of the GCS resource (%s) " % loc + repr(self.__parameter))
+
+        if Notify in self.__useConfig and self.__useConfig.get(Notify):
+            self._notifyValue( repr(self.__parameter), "", NOTIF_STATUS_PR, "Reading %s" % loc)
+        result = REGISTRY['RSC'].getResource( self.__parameter, self.__isLocal, self.getConfig() )
+        if result:
+            if Notify in self.__useConfig and self.__useConfig.get(Notify):
+               self._notifyValue( repr(self.__parameter), repr(result), NOTIF_STATUS_OK, "Read %s" % loc)
+            self._write("Ground resource (%s) " % loc + repr(self.__parameter) + " has a value of " + repr(result))
+            return [False,result,NOTIF_STATUS_OK,"Resource acquired"]
         else:
-            self._notifyValue( repr(self.__parameter), repr(result), NOTIF_STATUS_OK, "Read")
-            self._write("Ground resource " + repr(self.__parameter) + " has a value of " + repr(result))
+            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_FL, "Failed")
+            self._write("Unable to read %s ground resource " % loc + repr(self.__parameter), {Severity:ERROR})
+            raise SpellException("Unable to read %s ground resource " % loc + repr(self.__parameter))
 
-        return [False,result,NOTIF_STATUS_OK,"Resource acquired"]
-                
-        #===========================================================================
-        def _doRepeat(self):
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_PR, " ")
-            self._write("Retry get resource value " + repr(self.__parameter), {Severity:WARNING} )
-            return [True, None]
-    
-        #===========================================================================
-        def _doSkip(self):
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
-            self._write("Skip get resource value " + repr(self.__parameter), {Severity:WARNING} )
-            self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-            return [False, None]
+    #===========================================================================
+    def _doRepeat(self):
+        self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_PR, " ")
+        self._write("Retry get resource value " + repr(self.__parameter), {Severity:WARNING} )
+        return [True, None]
 
-        #===========================================================================
-        def _doCancel(self):
-            self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
-            self._write("Skip get resource value " + repr(self.__parameter), {Severity:WARNING} )
-            self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-            return [False, None]
-                                    
+    #===========================================================================
+    def _doSkip(self):
+        self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
+        self._write("Skip get resource value " + repr(self.__parameter), {Severity:WARNING} )
+        self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
+        return [False, None]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._notifyValue( repr(self.__parameter), "???", NOTIF_STATUS_SP, " ")
+        self._write("Skip get resource value " + repr(self.__parameter), {Severity:WARNING} )
+        self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
+        return [False, None]
+
+################################################################################
+class GetResources_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+        Helper for the GetConfigs name-value map wrapper.
+    """
+
+    # True if local value requested
+    __isLocal = False
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, 'RSC')
+        self.__isLocal = False
+        self.__useConfig = self.getConfig()
+        self._opName = "Get resources"
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        if IsLocal in kargs and type(kargs[IsLocal])!=bool:
+            raise SyntaxException("Expected a bool for the local modifier")
+
+        if IsLocal in kargs:
+            self.__isLocal = kargs[IsLocal]
+        loc = "local" if self.__isLocal else "global"
+
+        # Store information for possible failures
+        self.setFailureInfo("RSC")
+
+        self._setActionString( ACTION_SKIP   ,  "Skip the acquisition of the GCS resources (%s) and return None." % loc)
+        self._setActionString( ACTION_CANCEL ,  "Skip the acquisition of the GCS resources (%s) and return None." % loc)
+        self._setActionString( ACTION_REPEAT ,  "Repeat the acquisition of the GCS resources (%s) " % loc)
+
+        if Notify in self.__useConfig and self.__useConfig.get(Notify):
+            self._notifyValue( "", "", NOTIF_STATUS_PR, "Reading %s" % loc)
+        result = REGISTRY['RSC'].getResources( self.__isLocal, self.getConfig() )
+        if type(result) == dict:
+            if Notify in self.__useConfig and self.__useConfig.get(Notify):
+               self._notifyValue( "", repr(result), NOTIF_STATUS_OK, "Read %s" % loc)
+            #self._write("Ground resources (%s) " % loc + " have name-value map of " + repr(result))
+            return [False,result,NOTIF_STATUS_OK,"Resources acquired"]
+        else:
+            self._notifyValue( "", "???", NOTIF_STATUS_FL, "Failed")
+            self._write("Unable to read %s ground resources " % loc, {Severity:ERROR})
+            raise SpellException("Unable to read %s ground resources " % loc)
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._notifyValue( "", "???", NOTIF_STATUS_PR, " ")
+        self._write("Retry get resources name-value map", {Severity:WARNING} )
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._notifyValue( "", "???", NOTIF_STATUS_SP, " ")
+        self._write("Skip get resources name-value map", {Severity:WARNING} )
+        self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
+        return [False, None]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._notifyValue( "", "???", NOTIF_STATUS_SP, " ")
+        self._write("Skip get resources name-value map", {Severity:WARNING} )
+        self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
+        return [False, None]
+
 ################################################################################
 class SetLink_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the SetLink wrapper.
-    """    
-    
+    """
+
     # Name of the link
     __name = None
     __enable = None
-    
+
     #===========================================================================
     def __init__(self):
-        WrapperHelper.__init__(self)
+        WrapperHelper.__init__(self, 'RSC')
         self.__name = None
         self.__enable = None
-        self._opName = "Set link" 
-    
+        self._opName = "Set link"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         """
         DESCRIPTION:
-        
+
         ARGUMENTS:
-                
+
         RETURNS:
-            
+
         RAISES:
             DriverException if there is a problem in the driver layer
         """
@@ -222,54 +314,53 @@ class SetLink_Helper(WrapperHelper):
             raise SyntaxException("Expected link identifier and status")
         elif len(args)==1:
             raise SyntaxException("Expected link status")
-        
+
         if type(args[0])!=str:
             raise SyntaxException("Expected a string")
-        
 
         self.__name = args[0]
         self.__enable = args[1]
-        
+
         result = REGISTRY['RSC'].setLink( self.__name, self.__enable, self.getConfig() )
 
         return [False,result,None,None]
-                
-        #===========================================================================
-        def _doRepeat(self):
-            self._write("Retry set link status " + repr(self.__name), {Severity:WARNING})
-            return [True, None]
-    
-        #===========================================================================
-        def _doSkip(self):
-            self._write("Skip set link status " + repr(self.__name), {Severity:WARNING})
-            return [False, None]
-                                    
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry set link status " + repr(self.__name), {Severity:WARNING})
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip set link status " + repr(self.__name), {Severity:WARNING})
+        return [False, None]
+
 ################################################################################
 class CheckLink_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the CheckLink wrapper.
-    """    
-    
+    """
+
     # Name of the link
     __name = None
-    
+
     #===========================================================================
     def __init__(self):
-        WrapperHelper.__init__(self)
+        WrapperHelper.__init__(self, 'RSC')
         self.__name = None
-        self._opName = "Check link" 
-    
+        self._opName = "Check link"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         """
         DESCRIPTION:
-        
+
         ARGUMENTS:
-                
+
         RETURNS:
-            
+
         RAISES:
             DriverException if there is a problem in the driver layer
         """
@@ -280,18 +371,17 @@ class CheckLink_Helper(WrapperHelper):
             raise SyntaxException("Expected a string")
 
         self.__name = args[0]
-        
+
         result = REGISTRY['RSC'].checkLink( self.__name, self.getConfig() )
 
         return [False,result]
-                
-        #===========================================================================
-        def _doRepeat(self):
-            self._write("Retry set link status " + repr(self.__name), {Severity:WARNING})
-            return [True, None]
-    
-        #===========================================================================
-        def _doSkip(self):
-            self._write("Skip set link status " + repr(self.__name), {Severity:WARNING})
-            return [False, None,None,None]
-                                    
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry set link status " + repr(self.__name), {Severity:WARNING})
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip set link status " + repr(self.__name), {Severity:WARNING})
+        return [False, None,None,None]

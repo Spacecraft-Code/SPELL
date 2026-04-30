@@ -5,7 +5,7 @@
 // DESCRIPTION: Automatic (non-interactive) client interface implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -145,6 +145,16 @@ public: //--------------------------------------------------------------------
 				                        const std::vector<SPELLvarInfo>& globals,
 				                        const std::vector<SPELLvarInfo>& locals );
 
+
+		//////////////////////////////////////////////////////////////////////
+		/** Notify a resource change.
+		**////////////////////////////////////////////////////////////////////
+		 void specificNotifyResourceChange( const std::vector<SPELLresourceInfo>& changed );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Notify a resource list.
+		**////////////////////////////////////////////////////////////////////
+		 void specificNotifyResourceList( const std::vector<SPELLresourceInfo>& resources );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Open subprocedure.

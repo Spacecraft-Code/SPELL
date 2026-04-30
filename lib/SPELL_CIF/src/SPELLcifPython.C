@@ -5,7 +5,7 @@
 // DESCRIPTION: Python bindings for CIF object
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -102,6 +102,13 @@ static PyObject* ClientIF_Notify( PyObject* self, PyObject* args, PyObject* kwds
 //============================================================================
 static PyObject* ClientIF_Prompt( PyObject* self, PyObject* args, PyObject* kwds );
 //============================================================================
+// FUNCTION        : ClientIF_ForcePromptConfirm
+// DESCRIPTION    : Send a prompt
+//============================================================================
+static PyObject* ClientIF_ForcePromptConfirm( PyObject* self, PyObject* args);
+
+
+//============================================================================
 // FUNCTION        : ClientIF_GetSharedData
 // DESCRIPTION     : Get shared variables
 //============================================================================
@@ -161,6 +168,7 @@ static PyMethodDef ClientIF_Methods[] =
     {"setVerbosity",           ClientIF_SetVerbosity,           METH_VARARGS, "Change CIF verbosity"},
     {"resetVerbosity",         ClientIF_ResetVerbosity,         METH_NOARGS,  "Reset CIF verbosity"},
     {"write",                  ClientIF_Write,                  METH_VARARGS, "Write a message"},
+    {"forcePromptConfirm",     (PyCFunction)ClientIF_ForcePromptConfirm,                  METH_VARARGS, "Force Prompt Confirm Flag"},
     {"notify",                 (PyCFunction)ClientIF_Notify,    METH_VARARGS | METH_KEYWORDS,"Send a notification"},
     {"prompt",                 (PyCFunction)ClientIF_Prompt,    METH_VARARGS | METH_KEYWORDS,"Send a prompt"},
     {"clearSharedData",        (PyCFunction)ClientIF_ClearSharedData,    METH_VARARGS | METH_KEYWORDS, "Remove shared variables"},
@@ -179,8 +187,7 @@ static PyMethodDef ClientIF_Methods[] =
 //============================================================================
 static PyTypeObject ClientIF_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "executor.ClientIF",               //tp_name
     sizeof(PyClientIFObject),          //tp_basicsize
     0,                                 //tp_itemsize
@@ -234,7 +241,7 @@ static int ClientIF_Init( PyClientIFObject* self, PyObject* args, PyObject* kwds
 //============================================================================
 static void ClientIF_Dealloc( PyClientIFObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -304,6 +311,33 @@ static PyObject* ClientIF_SetVerbosity( PyObject* self, PyObject* args )
 static PyObject* ClientIF_ResetVerbosity( PyObject* self, PyObject* args )
 {
     SPELLexecutor::instance().getCIF().resetVerbosity();
+    Py_RETURN_NONE;
+}
+
+static PyObject* ClientIF_ForcePromptConfirm( PyObject* self, PyObject* args )
+{
+	SPELLpyArgs pargs(args);
+	bool forcePromptConfirm = false;
+
+	if (pargs.size()>0)
+	{
+		PyObject* pyForcePrompt = pargs[0];
+		if (PyBool_Check(pyForcePrompt))
+		{
+
+			forcePromptConfirm = pyForcePrompt == Py_True;
+		}
+		else if(pyForcePrompt == Py_None)
+		{
+			// Nothing to do
+		}
+		else
+		{
+			THROW_SYNTAX_EXCEPTION("Syntax error on CIF::forcePromptConfirm()", "Malformed argument: " + PYREPR(args));
+		}
+	}
+	SPELLexecutor::instance().getCIF().setForcePromptConfirm(forcePromptConfirm);
+
     Py_RETURN_NONE;
 }
 
@@ -467,6 +501,10 @@ static PyObject* ClientIF_Prompt( PyObject* self, PyObject* args, PyObject* kwds
     if (argumentsC.hasModifier(LanguageModifiers::Timeout))
     {
     	def.timeout = argumentsC.getModifier_Timeout();
+    } 
+    else
+    {
+        def.timeout = SPELLtime(0, true);
     }
     // The prompt scope
 	def.scope = argumentsC.getModifier_Scope();

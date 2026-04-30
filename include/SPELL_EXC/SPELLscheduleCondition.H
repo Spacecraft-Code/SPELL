@@ -5,7 +5,7 @@
 // DESCRIPTION: Defines a scheduler condition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -92,6 +92,7 @@ public: //--------------------------------------------------------------------
 			period.set(0,0,false);
 			message = "";
 			m_tmVerificationExpression = NULL;
+			promptUser = false;
 		}
 
 		//////////////////////////////////////////////////////////////////////

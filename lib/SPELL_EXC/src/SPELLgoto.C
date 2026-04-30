@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the goto mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -35,10 +35,21 @@
 
 
 // Macros for accessing opcodes
+#if PY_MAJOR_VERSION >= 3
+#define INSTR_OFFSET()  \
+    (sizeof(_Py_CODEUNIT) * (int)(next_instr - first_instr))
+#define NEXTOPARG()  do { \
+        _Py_CODEUNIT word = *next_instr; \
+        opcode = _Py_OPCODE(word); \
+        oparg = _Py_OPARG(word); \
+        next_instr++; \
+    } while (0)
+
+#else
 #define NEXTOP()        (*next_instr++)
 #define NEXTARG()       (next_instr += 2, (next_instr[-1]<<8) + next_instr[-2])
 #define INSTR_OFFSET()  ((int)(next_instr - first_instr))
-
+#endif
 static const std::string STEP_CALL("Step");
 static const std::string GOTO_CALL("Goto");
 
@@ -84,19 +95,25 @@ void SPELLgoto::analyze()
     // Assume there is no INIT step
     m_initLine = -1;
     // Pointer to initial instruction (used by macros)
-    unsigned char* first_instr = (unsigned char*) PyString_AS_STRING(m_code->co_code);
+#if PY_MAJOR_VERSION >= 3
+    _Py_CODEUNIT* first_instr = (_Py_CODEUNIT*) PyBytes_AsString(m_code->co_code);
+	// Size of the code to analyze
+	const unsigned int code_size = PyBytes_Size(m_code->co_code);
+#else
+	_Py_CODEUNIT* first_instr = (_Py_CODEUNIT*) PyString_AsString(m_code->co_code);
     // Size of the code to analyze
     const unsigned int code_size = PyString_Size(m_code->co_code);
+#endif
     // Pointer to current instruction (used by macros)
-    register unsigned char* next_instr = first_instr;
+    register _Py_CODEUNIT* next_instr = first_instr;
     // Holds the current line
     unsigned int lineno;
     // Holds the current instruction offset
     register unsigned int offset;
     // Holds the current opcode
-    register unsigned int opcode;
+    register int opcode;
     // Opcode argument
-    register unsigned int oparg;
+    register int oparg;
 
     // Holds the last loaded name
     std::string loaded_name,loaded_const = "";
@@ -105,22 +122,38 @@ void SPELLgoto::analyze()
 	// Hold the goto information
 	std::string step_id,step_title,goto_id = "";
     register unsigned short const1 = 1;
-
+#if PY_MAJOR_VERSION >= 3
+    int extendedArg = 0;
+#endif
     offset = INSTR_OFFSET();
     while (offset < code_size)
     {
+#if PY_MAJOR_VERSION >= 3
+    	NEXTOPARG();
+#else
         // Obtain the opcode
         opcode = NEXTOP();
 
         // Get the opcode argument
         oparg  = 0;
         if (HAS_ARG(opcode)) oparg = NEXTARG();
-
+#endif
         switch(opcode)
         {
+#if PY_MAJOR_VERSION >= 3
+        case EXTENDED_ARG:
+        {
+        	extendedArg = (extendedArg << 8) + oparg;
+        	break;
+        }
+#endif
         case LOAD_NAME:
         case LOAD_GLOBAL:
         {
+#if PY_MAJOR_VERSION >= 3
+			oparg = oparg + (extendedArg << 8);
+			extendedArg = 0;
+#endif
             loaded_name = PYSTR(PyTuple_GetItem(m_code->co_names,oparg));
             if (loaded_name == STEP_CALL)
             {
@@ -138,6 +171,10 @@ void SPELLgoto::analyze()
         }
         case LOAD_CONST:
         {
+#if PY_MAJOR_VERSION >= 3
+			oparg = oparg + (extendedArg << 8);
+			extendedArg = 0;
+#endif
         	PyObject* pyConst = PyTuple_GetItem(m_code->co_consts,oparg);
         	if (pyConst != Py_None)
         	{
@@ -162,7 +199,10 @@ void SPELLgoto::analyze()
         }
         case CALL_FUNCTION:
         {
-            if (loaded_name == STEP_CALL)
+#if PY_MAJOR_VERSION >= 3
+			extendedArg = 0;
+#endif
+			if (loaded_name == STEP_CALL)
             {
                 // Get the corresponding script line
                 lineno = PyCode_Addr2Line(m_code, offset);
@@ -186,6 +226,13 @@ void SPELLgoto::analyze()
             const1 = 1;
             break;
         }
+        default:
+        {
+#if PY_MAJOR_VERSION >= 3
+			extendedArg = 0;
+#endif
+			break;
+		}
         }// End switch
 
 //    	// Inform about errors, but ignore them at this analysis

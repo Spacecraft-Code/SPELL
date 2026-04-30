@@ -5,7 +5,7 @@
 // DESCRIPTION: Operations in relation with the current Python frame (runtime)
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -30,6 +30,7 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutionModel.H"
+#include "SPELL_EXC/SPELLresourceMonitor.H"
 #include "SPELL_EXC/SPELLexecutionTrace.H"
 #include "SPELL_EXC/SPELLcallstackIF.H"
 #include "SPELL_EXC/SPELLbreakpoint.H"
@@ -94,7 +95,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Destructor.
 		**////////////////////////////////////////////////////////////////////
-		~SPELLframeManager();
+		virtual ~SPELLframeManager();
 
     // METHODS ///////////////////////////////////////////////////////////////
 
@@ -129,6 +130,13 @@ public: //--------------------------------------------------------------------
 		 * \return The execution model.
 		**////////////////////////////////////////////////////////////////////
 		SPELLexecutionModel& getModel( const std::string& code_id );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Get the resources monitor.
+		 *
+		 * \return Reference to the resources monitor.
+		**////////////////////////////////////////////////////////////////////
+		SPELLresourceMonitor& getResourceMonitor() { return m_resourceMonitor; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** Replay the frame structure in the given stack
@@ -332,7 +340,7 @@ protected: //-------------------------------------------------------------------
     // METHODS ///////////////////////////////////////////////////////////////
 
 private: //-------------------------------------------------------------------
-
+		friend class SPELLserviceFrameManager;
     // EXCEPTIONS ////////////////////////////////////////////////////////////
     // ENUMS /////////////////////////////////////////////////////////////////
     // TYPES /////////////////////////////////////////////////////////////////
@@ -356,7 +364,7 @@ private: //-------------------------------------------------------------------
 		 * \throws SPELLcoreException if the file cannot be found, or the
 		 *  compilation fails.
 		**////////////////////////////////////////////////////////////////////
-		void compile();
+		virtual void compile();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Compile the given script and obtain the bytecode.
@@ -368,7 +376,7 @@ private: //-------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Create initial frame out of the current code
 		**////////////////////////////////////////////////////////////////////
-		void createInitialFrame();
+		virtual void createInitialFrame();
 
 		//////////////////////////////////////////////////////////////////////
 		/** Create frame model for a new frame
@@ -401,7 +409,7 @@ private: //-------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Update data for watch of variables when a new frame arrives
 		**////////////////////////////////////////////////////////////////////
-		void updateVariables( PyFrameObject* frame );
+		virtual void updateVariables( PyFrameObject* frame );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Update SPELL builtins using the given frames
@@ -435,6 +443,8 @@ private: //-------------------------------------------------------------------
 		PyObject*             m_definitions;
 		/** Holds the currently active execution model */
 		SPELLexecutionModel*  m_model;
+		/** Monitor of resources */
+		SPELLresourceMonitor m_resourceMonitor;
 		/** Holds the AST analyzer */
 		SPELLastAnalyzer      m_ast;
 		/** Map of model objects per code object */

@@ -5,7 +5,7 @@
 // DESCRIPTION: Procedure model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -107,15 +107,6 @@ public: //--------------------------------------------------------------------
 		};
 
 		//////////////////////////////////////////////////////////////////////
-		/** Obtain the procedure file MD5 checksum.
-		 *
-		 * \returns The checksum.
-		**////////////////////////////////////////////////////////////////////
-		const std::string getMD5() const       {
-			return m_md5;
-		};
-
-		//////////////////////////////////////////////////////////////////////
 		/** Obtain the procedure file name and path.
 		 *
 		 * \returns The procedure file name and path.
@@ -210,11 +201,6 @@ protected: //-----------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		const bool isPropertyContinued( const std::string& line );
 
-		//////////////////////////////////////////////////////////////////////
-		/** Calculate de MD5 checksum of the procedure file.
-		**////////////////////////////////////////////////////////////////////
-		std::string obtainChecksum( const std::string& filename );
-
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 private: //-------------------------------------------------------------------
@@ -229,8 +215,6 @@ private: //-------------------------------------------------------------------
 		std::string m_procId;
 		/** Procedure name */
 		std::string m_name;
-		/** MD5 checksum */
-		std::string m_md5;
 		/** Procedure file */
 		std::string m_file;
 		/** Procedure source code */

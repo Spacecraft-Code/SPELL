@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the message request processor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -160,12 +160,14 @@ void SPELLrequestProcessor::processGetConfig( const SPELLipcMessage& msg, SPELLi
     std::string byStep = config.isByStep() ? True : False;
     std::string browsableLibStr = config.getBrowsableLibStr();
     std::string forceTcConfirm = config.isForceTcConfirm() ? True : False;
+    std::string forcePromptConfirm = config.isForcePromptConfirm() ? True : False;
 
     response.set(ExecutorConstants::ExecDelay, execDelay);
     response.set(ExecutorConstants::PromptDelay, promptDelay);
     response.set(ExecutorConstants::ByStep, byStep);
     response.set(ExecutorConstants::BrowsableLib, browsableLibStr );
     response.set(ExecutorConstants::ForceTcConfirm, forceTcConfirm);
+    response.set(ExecutorConstants::ForcePromptConfirm, forcePromptConfirm);
 
     LOG_INFO("Current executor configuration:");
     LOG_INFO("           run into   : " + (config.isRunInto() ? True : False) );
@@ -174,6 +176,7 @@ void SPELLrequestProcessor::processGetConfig( const SPELLipcMessage& msg, SPELLi
     LOG_INFO("              by step : " + byStep);
     LOG_INFO("        browsable lib : " + browsableLibStr );
     LOG_INFO("        force confirm : " + forceTcConfirm);
+    LOG_INFO(" force prompt confirm : " + forcePromptConfirm);
     DEBUG("[CIF] Request to get executor config done");
 }
 
@@ -237,6 +240,7 @@ void SPELLrequestProcessor::processSetConfig( const SPELLipcMessage& msg, SPELLi
     std::string byStep = msg.get(ExecutorConstants::ByStep);
     std::string browsableLibStr = msg.get(ExecutorConstants::BrowsableLib);
     std::string forceTcConfirm = msg.get(ExecutorConstants::ForceTcConfirm);
+    std::string forcePromptConfirm = msg.get(ExecutorConstants::ForcePromptConfirm);
 
 
     LOG_INFO("New executor configuration ----------------------------------");
@@ -246,6 +250,7 @@ void SPELLrequestProcessor::processSetConfig( const SPELLipcMessage& msg, SPELLi
     LOG_INFO("   By step   : " + byStep);
     LOG_INFO("   Br. lib   : " + browsableLibStr);
     LOG_INFO("   TC confirm: " + forceTcConfirm);
+    LOG_INFO("Prompt confirm: " + forcePromptConfirm);
     LOG_INFO("-------------------------------------------------------------");
 
     SPELLexecutor::instance().setRunInto( (runInto == True) );
@@ -254,6 +259,7 @@ void SPELLrequestProcessor::processSetConfig( const SPELLipcMessage& msg, SPELLi
     SPELLexecutor::instance().setByStep( (byStep == True) );
     SPELLexecutor::instance().setBrowsableLibStr( browsableLibStr );
     SPELLexecutor::instance().setForceTcConfirm( forceTcConfirm == True );
+    SPELLexecutor::instance().setForcePromptConfirm( forcePromptConfirm == True );
     DEBUG("[CIF] Request to change executor config done");
 }
 
@@ -280,7 +286,6 @@ void SPELLrequestProcessor::processSetBreakpoint( const SPELLipcMessage& msg, SP
 //=============================================================================
 void SPELLrequestProcessor::processClearBreakpoints( const SPELLipcMessage& msg, SPELLipcMessage& response )
 {
-	SPELLmonitor mon(m_requestLock);
     DEBUG("[CIF] Request to clear breakpoints for the given code");
     // Update the response message
     response.setId(ExecutorMessages::RSP_CLEAR_BREAKPOINT);
@@ -293,7 +298,6 @@ void SPELLrequestProcessor::processClearBreakpoints( const SPELLipcMessage& msg,
 //=============================================================================
 void SPELLrequestProcessor::processCheckVariablesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response )
 {
-	SPELLmonitor mon(m_requestLock);
     // Update the response message
     response.setId(ExecutorMessages::RSP_WVARIABLES_ENABLED);
     bool enabled = SPELLexecutor::instance().getVariableManager().isEnabled();
@@ -447,6 +451,82 @@ void SPELLrequestProcessor::processChangeVariable( const SPELLipcMessage& msg, S
     SPELLvarInfo info(name,"",valueExpression,global);
 
 	SPELLexecutor::instance().getVariableManager().changeVariable( info );
+}
+
+//=============================================================================
+// METHOD: SPELLrequestProcessor::processCheckResourcesEnabled
+//=============================================================================
+void SPELLrequestProcessor::processCheckResourcesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response )
+{
+    // Update the response message
+    response.setId(ExecutorMessages::RSP_DRESOURCES_ENABLED);
+    bool enabled = SPELLexecutor::instance().getResourceManager().isEnabled();
+    bool localSupport = SPELLexecutor::instance().getConfiguration().isLocalResourcesSupported();
+    response.set( MessageField::FIELD_DRESOURCES_ENABLED, enabled ? "True" : "False");
+    response.set( MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED, localSupport ? "True" : "False");
+}
+
+//=============================================================================
+// METHOD: SPELLrequestProcessor::processGetResources
+//=============================================================================
+void SPELLrequestProcessor::processGetResources( const SPELLipcMessage& msg, SPELLipcMessage& response )
+{
+	SPELLmonitor mon(m_requestLock);
+    // Update the response message
+    response.setId(ExecutorMessages::RSP_GET_RESOURCES);
+
+	if (!SPELLexecutor::instance().getResourceManager().isStatusValid())
+	{
+		LOG_WARN("Resource manager is not in valid status");
+		response.setType(MSG_TYPE_ERROR);
+		response.set( MessageField::FIELD_ERROR, "Cannot retrieve resources");
+		response.set( MessageField::FIELD_REASON, "Resource analysis cannot be done in the current status");
+		response.set( MessageField::FIELD_FATAL, PythonConstants::False );
+		return;
+	}
+
+	if (!SPELLexecutor::instance().getResourceManager().isEnabled())
+	{
+		LOG_WARN("Resource manager is disabled, but received getResources request");
+		return;
+	}
+
+	SPELLexecutor::instance().getResourceManager().getResources();
+}
+
+//=============================================================================
+// METHOD: SPELLrequestProcessor::processChangeResource
+//=============================================================================
+void SPELLrequestProcessor::processChangeResource( const SPELLipcMessage& msg, SPELLipcMessage& response )
+{
+	SPELLmonitor mon(m_requestLock);
+    // Update the response message
+    response.setId(ExecutorMessages::RSP_CHANGE_RESOURCE);
+
+	if (!SPELLexecutor::instance().getResourceManager().isStatusValid())
+	{
+		LOG_WARN("Resource manager is not in valid status");
+		response.setType(MSG_TYPE_ERROR);
+		response.set( MessageField::FIELD_ERROR, "Cannot change resources");
+		response.set( MessageField::FIELD_REASON, "Resource analysis cannot be done in the current status");
+		response.set( MessageField::FIELD_FATAL, PythonConstants::False );
+		return;
+	}
+
+	if (!SPELLexecutor::instance().getResourceManager().isEnabled())
+	{
+		LOG_WARN("Resource manager is disabled, but received change resource request");
+		return;
+	}
+
+    std::string name = msg.get( MessageField::FIELD_RESOURCE_NAME );
+    std::string globalValueExpression = msg.get( MessageField::FIELD_RESOURCE_GLOBAL_VALUE );
+    std::string localValueExpression = msg.get( MessageField::FIELD_RESOURCE_LOCAL_VALUE );
+
+    // Type and registration flag are not important here
+    SPELLresourceInfo info(name,"",globalValueExpression,localValueExpression, std::vector<std::pair<std::string, std::string> >(), "");
+
+	SPELLexecutor::instance().getResourceManager().changeResource( info );
 }
 
 //=============================================================================

@@ -1,0 +1,84 @@
+<config>
+
+    <!-- =================================================================== -->
+    <!-- GENERAL PROPERTIES -->
+    <!-- =================================================================== -->
+    <common>
+        <property name="Log">ENABLED</property>
+        <property name="LogDetail">PROC</property>
+        <!-- Default: 9, Slashes: 1, Dots: 0 -->
+        <property name="TdsTimeFormat">9</property>
+        <!-- Timeout for GUI requests in milliseconds -->
+ 		<property name="GuiRequestTimeout">20000</property>
+        <!-- Timeout for context requests in milliseconds -->
+		<property name="CtxRequestTimeout">20000</property>
+        <!-- Timeout for opening a procedure in milliseconds -->
+		<property name="OpenProcTimeout">30000</property>
+        <!-- Timeout for executor login in milliseconds -->
+		<property name="ExecutorLoginTimeout">10000</property>
+        <!-- Timeout for receiving a notification acknowledge in milliseconds -->
+		<property name="AcknowledgeTimeout">60000</property>
+	</common>
+
+    <!-- =================================================================== -->
+    <!-- LANGUAGE CONFIGURATION FILE -->
+    <!-- =================================================================== -->
+    <language>
+        <file>language.xml</file>
+    </language>
+
+    <!-- =================================================================== -->
+    <!-- LISTENER CONFIGURATION -->
+    <!-- =================================================================== -->
+    <listener>
+        <property name="ListenerPort">19823</property>
+        <property name="ContextListenerPort">19723</property>
+    </listener>
+   
+    <!-- =================================================================== -->
+    <!-- CONTEXT GENERAL CONFIGURATION -->
+    <!-- =================================================================== -->
+    <context>
+        <property name="ExecutorProgram">$SPELL_HOME/bin/SPELL-Executor</property>
+        <property name="UseDriverTime">false</property>
+        <property name="OverrideContextSpacecraftName">{{ .Values.spell_server.context_mission | default .Values.spell_server.mission }}</property>
+    </context>
+ 
+    <!-- =================================================================== -->
+    <!-- EXECUTOR CONFIGURATION COMMON TO ALL CONTEXTS -->
+    <!-- =================================================================== -->
+    <executor>
+        <property name="ExecDelay">0</property>
+        <property name="PromptWarningDelay">3600</property>
+        <property name="RunInto">True</property>
+        <property name="ByStep">False</property>
+        <property name="BrowsableLib">False</property>
+        <property name="MaxVerbosity">5</property>
+        <property name="SaveStateMode">DISABLED</property>
+        <property name="WatchVariables">DISABLED</property>
+    </executor>
+
+    <!-- =================================================================== -->
+    <!-- AVAILABLE DRIVERS -->
+    <!-- =================================================================== -->
+    <drivers>
+        <driver>driver.xml</driver>
+    </drivers>
+    
+    <!-- =================================================================== -->
+    <!-- AVAILABLE CONTEXTS -->
+    <!-- =================================================================== -->
+    <contexts>
+        <context>context.xml</context>
+    </contexts>
+
+    <!-- =================================================================== -->
+    <!-- SATELLITE FAMILIES -->
+    <!-- =================================================================== -->
+    <families>
+{{- range $key, $value := .Values.spell_server.applicable_missions }}
+        <family name="{{ $key }}">{{ tpl $value $ }}</family>
+{{- end}}
+    </families>
+    
+</config>

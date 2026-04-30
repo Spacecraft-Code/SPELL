@@ -1,0 +1,215 @@
+syntax="proto3";
+
+package OBus;
+
+option go_package = ".;service";
+option java_package = "com.ses.grpc.obus";
+
+// Not implemented.
+service FleetTMControlService {
+    rpc LoadReferenceLimits (Satellite) returns (Empty){}
+    rpc SelectOverlay (Overlay) returns (Empty){}
+    rpc SubmitLimitUpdate (LimitUpdate) returns (Empty){}
+}
+    
+// FleetTMService provides (streaming) functions to retrieve telemetry incl. limit information.
+service FleetTMService {
+    // Waits for an update and returns the sample of the requested mnemonic or pid.
+    // Set requestCurrentValue to True in the request to return the current value instead.
+    rpc GetTelemetrySample (TelemetrySampleRequest) returns (TelemetrySample){}
+    // Streams sample updates of the subscribed mnemonics or pids.
+    // Set requestCurrentValue to True in the request to return the current values at the beginning.
+    // During runtime, the clients must keep the subscription thread running and update subscriptions as necessary.
+    rpc GetTelemetrySamples (stream TelemetryStreamRequest) returns (stream TelemetrySamples){}
+    // Returns the current value table (CVT) of all known samples.
+    rpc GetTelemetryCvt (TelemetryCvtRequest) returns (TelemetrySamples){}
+
+    // Returns the current value table (CVT) of all known samples with limitVal > INFO.
+    rpc GetLimitCvt (TelemetryCvtRequest) returns (TelemetrySamples){}
+    // Streams sample updates where limit information is changing.
+    rpc GetLimitChanges (LimitStreamRequest) returns (stream TelemetrySamples){}
+    
+    // Not implemented.
+    rpc GetLimitDefinition (TelemetrySampleRequest) returns (LimitDefinition){}
+    rpc GetLimitDefinitions (stream TelemetryStreamRequest) returns (stream LimitDefinitions){}
+
+    // Returns the status of available TM streams.
+    // A stream is flagged as stalled after 5 seconds of inactivity.
+    rpc GetTelemetryStatus(TelemetryStatusRequest) returns (TelemetryStatus){}
+}
+
+enum STATEV {
+    VALID = 0;
+    INVALID = 1;
+    CRC_ERROR = 2;
+    INVALID_AND_CRC_ERROR = 3;
+    EXPIRED = 4;
+    INVALID_AND_EXPIRED = 5;
+    CRC_ERROR_AND_EXPIRED = 6;
+    INVALID_AND_CRC_ERROR_AND_EXPIRED = 7;
+}
+
+enum TM_TYPE {
+    UNKNOWN = 0;
+    DOUBLE = 1;
+    LONG = 2;
+    STRING = 3;
+    UNSIGNED_LONG = 4;
+}
+
+enum ERROR_CODES {
+	NONE = 0;
+	NOT_FOUND = 1;
+}
+
+enum LIMIT { 
+    NORMAL = 0;
+    INFO = 1;
+    WARNING = 2;
+    HAZARDOUS = 3;
+    CRITICAL = 4;
+    OOR = 5;
+}
+
+message TelemetrySampleRequest {
+	string satelliteName = 1; // Mandatory
+	string seatName = 2; // Leave empty for real S/C
+	string mnemonic = 3; // Mandatory if pid is not set
+	bool requestCurrentValue = 4; // Default: False
+	uint32 pid = 5; // Mandatory if mnemonic is not set
+}
+
+message TelemetryStreamRequest {
+	string satelliteName = 1; // Mandatory
+	string seatName = 2; // Leave empty for real S/C
+	// (subscribeMnemonics /\ unsubscribeMnemonics != {}) => (subscribePids /\ unsubscribePids == {})
+	repeated string subscribeMnemonics = 3;
+	repeated string unsubscribeMnemonics = 4;
+	bool requestCurrentValue = 5; // Default: False
+	// (subscribePids /\ unsubscribePids != {}) => (subscribeMnemonics /\ unsubscribeMnemonics == {})
+	repeated uint32 subscribePids = 6;
+	repeated uint32 unsubscribePids = 7;
+}
+
+message TelemetryCvtRequest {
+	string satelliteName = 1; // Mandatory
+	string seatName = 2; // Leave empty for real S/C
+}
+
+message LimitStreamRequest {
+	string satelliteName = 1; // Mandatory
+	string seatName = 2; // Leave empty for real S/C
+}
+
+message TelemetryStatusRequest {
+}
+
+message TelemetrySamples {
+    repeated TelemetrySample samples = 1;
+}
+
+message AnalogLimit {
+    uint32 limitSet = 1;
+    uint32 hysteresis = 2;
+    double low = 3;
+    double high = 4;
+    LIMIT level = 5;
+    string conditionName = 6;
+    string conditionAlgo = 7;
+    int64 version = 8;
+}
+
+message StatusLimit {
+    uint32 limitSet = 1;
+    uint32 hysteresis = 2;
+    int64 limitVal = 3;
+    LIMIT level = 4;
+    string conditionName = 5;
+    string conditionAlgo = 6;
+    int64 version = 7;
+}
+
+message LimitDefinition {
+    repeated string mnemonic = 1;
+    map<uint32, LimitDefinitionEntry> entries = 2;
+}
+
+message LimitDefinitions {
+    repeated LimitDefinition definitions = 1;
+}
+
+message LimitDefinitionEntry {
+    uint64 limitTS = 1;
+    string overlayName = 2;
+    
+	oneof LimitValues {
+	    AnalogLimit analogLimit = 3;
+	    StatusLimit statusLimit = 4;
+	}
+}
+
+message TelemetrySample {
+	repeated string mnemonic = 1;
+	uint64 onboardTS = 2;
+	uint64 groundTS = 3;
+	double engV = 4;
+	int64 rawV = 5;
+	string calV = 6;
+	STATEV stateV = 7;
+	int32 strmID = 8;
+	int32 pktID = 9;
+	ERROR_CODES error = 10;
+	TM_TYPE tmType = 11;
+	oneof LimitValues {
+	    AnalogLimit analogLimit = 12;
+	    StatusLimit statusLimit = 13;
+	}
+	uint32 pid = 14;
+}
+
+message Empty {
+}
+
+message Overlay {
+	string satelliteName = 1;
+	string overlayName = 2;
+}
+
+message Satellite { 
+	string satelliteName = 1;
+	string seatName = 2;
+}
+
+message LimitUpdate {
+	message AnalogLimit {
+	}
+	message StatusLimit {
+	}
+	string satelliteName = 1;
+	string mnemonic = 2;
+	repeated AnalogLimit updatedAnalogLimit = 3;
+	repeated StatusLimit updatedStatusLimit = 4;
+}
+
+message Reply {
+	enum RETURN_CODE {
+		SUCCESS = 0;
+		ERROR = 1;
+	}
+	RETURN_CODE errorCode = 1;
+}
+
+message TelemetryStreamInfo {
+    enum STREAM_STATUS {
+        NORMAL = 0;
+        STALLED = 1; // No updates within 5 seconds
+    }
+    string satelliteName = 1;
+    string seatName = 2;
+    STREAM_STATUS status = 3;
+    uint64 time = 4; // Last known reception time
+}
+
+message TelemetryStatus {
+    repeated TelemetryStreamInfo info = 1;
+}

@@ -5,7 +5,7 @@
 // DESCRIPTION: Manages the executor operations interacts with clients
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -224,8 +224,6 @@ private: //-------------------------------------------------------------------
 		bool hasInstanceNumber( const std::string& procId, int instanceNum );
 
 		void addInstanceNumber( const std::string& procId, int instanceNum );
-
-		void removeInstanceNumber( const std::string& procId, int instanceNum );
 
 		void clearModels();
 

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the client IPC interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -47,8 +47,11 @@
 //=============================================================================
 SPELLclientIPC::SPELLclientIPC()
 : SPELLipcInterfaceListener(),
+#ifdef WITH_KUBERNETES
+  m_ipc("CTX-TO-GUI", 888, 19888)
+#else
   m_ipc("CTX-TO-GUI", 888, 0)
-
+#endif
 {
 	SPELLclientManager::instance().setIPC(this);
 }
@@ -133,6 +136,7 @@ void SPELLclientIPC::unregisterInterest( int clientKey, SPELLclientListener* lis
 //=============================================================================
 void SPELLclientIPC::processMessage( const SPELLipcMessage& msg )
 {
+	LOG_INFO("[CLTRCV] Received message from client " + ISTR(msg.getKey()) + ": " + msg.getId() + " for ("+msg.get("User")+")");
 	// Get the peer key
 	int clientKey = msg.getKey();
 
@@ -148,8 +152,9 @@ void SPELLclientIPC::processMessage( const SPELLipcMessage& msg )
 //=============================================================================
 SPELLipcMessage SPELLclientIPC::processRequest( const SPELLipcMessage& msg )
 {
+	if (msg.getId() != ContextMessages::REQ_CURRENT_TIME)
+	    LOG_INFO("[CLTRCV] Received request from client " + ISTR(msg.getKey()) + ": " + msg.getId() + " for ("+msg.get("User")+")");
 	int clientKey = msg.getKey();
-	DEBUG("[CLTRCV] Received request from client: " + msg.getId());
 	SPELLipcMessage resp = VOID_MESSAGE;
 	SPELLclientInterestList* list = getClientInterestList(clientKey);
 	// If the message is a login message, redirect it to the client manager
@@ -193,7 +198,12 @@ SPELLipcMessage SPELLclientIPC::processRequest( const SPELLipcMessage& msg )
 	}
 	else
 	{
-		LOG_ERROR("No listeners for client " + ISTR(clientKey) + " to distribute request: " + msg.getId());
+		if (msg.getId() == ContextMessages::REQ_CURRENT_TIME) {
+			resp = SPELLcontext::instance().getCurrentTime(msg);
+			return resp;
+		} else {
+			LOG_ERROR("No listeners for client " + ISTR(clientKey) + " to distribute request: " + msg.getId());
+		}		
 	}
 	return resp;
 }

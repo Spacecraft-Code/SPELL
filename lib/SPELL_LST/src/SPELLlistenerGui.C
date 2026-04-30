@@ -5,7 +5,7 @@
 // DESCRIPTION: 
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -46,6 +46,9 @@ SPELLlistenerGui::SPELLlistenerGui(const std::string& configFile)
     m_configFile = configFile;
     m_port = STRI(SPELLconfiguration::instance().getListenerParameter("ListenerPort"));
     m_peer = NULL;
+    m_ctx = NULL;
+    m_peer = NULL;
+    m_ipc = NULL;
 }
 
 //=============================================================================

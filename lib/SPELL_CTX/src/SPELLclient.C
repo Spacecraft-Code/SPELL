@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the client
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -179,6 +179,10 @@ SPELLipcMessage SPELLclient::processRequestFromClient( const SPELLipcMessage& ms
 		{
 			resp = SPELLcontext::instance().getExecutorList( msg );
 		}
+		else if (msg.getId() == ContextMessages::REQ_SERVICE_LIST)
+        {
+            resp = SPELLcontext::instance().getServiceList( msg );
+        }
 		else if (msg.getId() == ContextMessages::REQ_PROC_PROP)
 		{
 			resp = SPELLcontext::instance().getProcedureProperties( msg );
@@ -191,6 +195,10 @@ SPELLipcMessage SPELLclient::processRequestFromClient( const SPELLipcMessage& ms
 		{
 			resp = SPELLcontext::instance().getExecutorInfo( msg );
 		}
+		else if (msg.getId() == ContextMessages::REQ_SERVICE_INFO)
+        {
+            resp = SPELLcontext::instance().getServiceInfo( msg );
+        }
 		else if (msg.getId() == ContextMessages::REQ_CLIENT_INFO)
 		{
 			resp = SPELLcontext::instance().getClientInfo( msg );

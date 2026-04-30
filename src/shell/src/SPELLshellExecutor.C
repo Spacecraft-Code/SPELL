@@ -5,7 +5,7 @@
 // DESCRIPTION: Fake executor model for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -47,6 +47,8 @@ SPELLshellExecutor::SPELLshellExecutor()
 	m_scheduler = NULL;
 	m_callstack = NULL;
 	m_childMgr = NULL;
+	m_frameManager = NULL;
+	m_varManager = NULL;
 }
 
 //============================================================================

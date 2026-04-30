@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL listener library header file
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -97,10 +97,10 @@ public:
     void notifyClients( const SPELLipcMessage& msg );
     
     // SPELLprocessListener methods
-    void processStarted( const std::string& identifier );
-	void processFinished( const std::string& identifier, const int& retValue );
-	void processKilled( const std::string& identifier );
-	void processFailed( const std::string& identifier );
+    void processStarted( const std::string identifier );
+	void processFinished( const std::string identifier, const int& retValue );
+	void processKilled( const std::string identifier );
+	void processFailed( const std::string identifier );
     bool respawnContext(const std::string& ctxName);
 
     // Internals

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Database based on local subversioned files
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -26,13 +26,13 @@
 ##
 ###################################################################################
 
-from dbfilespb import *
+from .dbfilespb import *
 import os.path
 from spell.utils.log import *
 
 ################################################################################
 class DatabaseSubversionSPB(DatabaseFileSPB):
-    
+
     #===========================================================================
     def __init__(self, name, path, defaultExt = None):
         try:
@@ -43,7 +43,7 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
             raise DriverException("Cannot import pysvn")
 
         super(DatabaseSubversionSPB, self).__init__(name, path, defaultExt)
-        
+
     #===========================================================================
     def load(self):
         super(DatabaseSubversionSPB, self).load()
@@ -60,7 +60,7 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
 
         try:
             statuslst = client.status(filename, recurse = False, update = True)
-        except Exception, ex:
+        except Exception as ex:
             raise DriverException("Cannot get the Subversion database status (%s)" % ex)
 
         return statuslst[0]
@@ -79,7 +79,7 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
 
         if not exists:
             super(DatabaseSubversionSPB, self).create()
-            client.add(filename) 
+            client.add(filename)
             client.propset('svn:needs-lock', '*', filename)
             client.checkin([filename], '\n')
         else:
@@ -88,11 +88,11 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
             self.unlock()
 
         return self
-    
+
     #===========================================================================
     def __del__(self):
         self.unlock()
-        
+
     #===========================================================================
     def lock(self):
         import pysvn
@@ -102,7 +102,7 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
 
         status = self.status()
 
-       	if status.entry is None:
+        if status.entry is None:
             raise DriverException("The database is not under revision control")
 
         if status.entry.schedule == pysvn.wc_schedule.add:
@@ -116,11 +116,11 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
         filename = self._getPathName()
 
         status = self.status()
-        
+
         if status.entry.lock_token is None: return
-        
+
         LOG('Unlocking Subversion database ' + filename)
-        client.unlock(filename)        
+        client.unlock(filename)
 
     #===========================================================================
     def commit(self):
@@ -136,4 +136,3 @@ class DatabaseSubversionSPB(DatabaseFileSPB):
         client.checkin([filename], msg, keep_locks = True)
 
         self.unlock()
-

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -40,6 +40,7 @@
 #include "SPELL_IPC/SPELLipc_Context.H"
 #include "SPELL_IPC/SPELLipc_Executor.H"
 #include "SPELL_WRP/SPELLconstants.H"
+#include "SPELL_CTX/SPELLserviceManager.H"
 // System includes ---------------------------------------------------------
 
 
@@ -79,7 +80,7 @@ SPELLexecutorManager& SPELLexecutorManager::instance()
 void SPELLexecutorManager::setup( const std::string& ctxName )
 {
 	m_contextName = ctxName;
-	m_persisTable = new SPELLpersistencyTable(ctxName);
+	m_persisTable = new SPELLpersistencyTable(ctxName + "_executors");
 	if (m_persisTable->load())
 	{
 		reconnectExecutors();
@@ -199,6 +200,8 @@ void SPELLexecutorManager::callback_executorReconnected( const std::string& inst
 		SPELLexecutor* exec = it->second;
 		addInstanceNumber( exec->getModel().getProcId(), exec->getModel().getInstanceNum() );
 		addExecutorModel( exec );
+		SPELLprocessManager::instance().attachProcess( exec->getModel().getInstanceId(),  exec->getModel().getPID() );
+
 		m_pendingLogin.erase(it);
 
 		SPELLexecutorOperation op;
@@ -318,7 +321,13 @@ void SPELLexecutorManager::deleteExecutorFiles( const SPELLexecutorStartupParams
 //=============================================================================
 void SPELLexecutorManager::addExecutorModel( SPELLexecutor* exec )
 {
-	m_executors.insert( std::make_pair( exec->getModel().getInstanceId(), exec ));
+    const std::string id = exec->getModel().getInstanceId();
+    if (m_executors.count(id) > 0)
+    {
+        delete m_executors[id];
+        m_executors.erase(id);
+    }
+	m_executors.insert( std::make_pair(id, exec ));
 	DEBUG("[EMGR] Added executor: '" + exec->getModel().getInstanceId() + "'");
 	m_persisTable->registerExecutor(exec->getModel().getInstanceId(),
 									exec->getModel().getTimeId(),
@@ -337,13 +346,17 @@ void SPELLexecutorManager::removeExecutorModel( const std::string& instanceId )
 	{
 		DEBUG("[EMGR] Removing executor model: '" + instanceId + "'");
 		m_persisTable->deregisterExecutor(it->second->getModel().getInstanceId());
+		m_lock.unlock();
 		delete it->second;
+		m_lock.lock();
+
 		m_executors.erase(it);
 		DEBUG("[EMGR] Removed executor: '" + instanceId + "'");
 	}
 	else
 	{
-		LOG_ERROR("[EMGR]: No executor to remove: '" + instanceId + "'");
+	    SPELLserviceManager::instance().removeServiceModel(instanceId);
+		//LOG_ERROR("[EMGR]: No executor to remove: '" + instanceId + "'");
 	}
 }
 
@@ -353,6 +366,15 @@ void SPELLexecutorManager::removeExecutorModel( const std::string& instanceId )
 std::string SPELLexecutorManager::getInstanceId( const std::string& procId )
 {
 	SPELLmonitor m(m_lock);
+
+	// We never remove instance numbers but we can live with it - memory consumption
+	// is not big and do not need to be concerned with race conditions between add and get
+	// due to simultaneous requests from *different* clients (e.g .GUI and Parent Exec).
+
+	// Nevertheless attempt to clean now, protected by the lock, before getting an instance id.
+	// Just clean if no executors running.
+	if (m_executors.size()==0) m_instances.clear();
+
 	std::string instanceId = "";
 	InstanceMap::iterator it = m_instances.find(procId);
 	if ( it == m_instances.end() )
@@ -363,9 +385,10 @@ std::string SPELLexecutorManager::getInstanceId( const std::string& procId )
 	{
 		int instanceNum = 0;
 		while(hasInstanceNumber(procId, instanceNum)) instanceNum++;
+		addInstanceNumber(procId, instanceNum);
 		instanceId = procId + "#" + ISTR(instanceNum);
 	}
-	DEBUG("[EMGR] Found instance id: '" + instanceId + "'");
+	LOG_INFO("Assigned instance id: '" + instanceId + "'");
 	return instanceId;
 }
 
@@ -402,42 +425,17 @@ bool SPELLexecutorManager::hasInstanceNumber( const std::string& procId, int ins
 }
 
 //=============================================================================
-// METHOD: SPELLexecutorManager::removeInstanceNumber()
-//=============================================================================
-void SPELLexecutorManager::removeInstanceNumber( const std::string& procId, int instanceNum )
-{
-	InstanceMap::iterator it = m_instances.find(procId);
-	if (it != m_instances.end())
-	{
-		InstanceList::iterator toRemove = it->second.end();
-		InstanceList::iterator lit;
-		for( lit = it->second.begin(); lit != it->second.end(); lit++ )
-		{
-			if (*lit == instanceNum)
-			{
-				toRemove = lit;
-				break;
-			}
-		}
-		if (toRemove != it->second.end())
-		{
-			it->second.erase(toRemove);
-		}
-	}
-}
-
-//=============================================================================
 // METHOD: SPELLexecutorManager::closeExecutor()
 //=============================================================================
 void SPELLexecutorManager::closeExecutor( const std::string& instanceId )
 {
 	SPELLmonitor m(m_lock);
+
 	try
 	{
 		// Will raise exception if not found
 		SPELLexecutor* exec = getExecutor(instanceId);
 		exec->close();
-		removeInstanceNumber( exec->getModel().getProcId(), exec->getModel().getInstanceNum() );
 		removeExecutorModel( exec->getModel().getInstanceId() );
 		LOG_INFO("Executor successfully closed: " + instanceId);
 	}
@@ -466,7 +464,6 @@ void SPELLexecutorManager::killExecutor( const std::string& instanceId )
 		// Will raise exception if not found
 		SPELLexecutor* exec = getExecutor(instanceId);
 		exec->kill();
-		removeInstanceNumber( exec->getModel().getProcId(), exec->getModel().getInstanceNum() );
 		removeExecutorModel( exec->getModel().getInstanceId() );
 	}
 	catch(SPELLcoreException& ex)
@@ -499,7 +496,6 @@ void SPELLexecutorManager::clearModels()
 				try
 				{
 					SPELLexecutor* exec = getExecutor(*it);
-					removeInstanceNumber( exec->getModel().getProcId(), exec->getModel().getInstanceNum() );
 					removeExecutorModel( exec->getModel().getInstanceId() );
 				}
 				catch(SPELLcoreException& ex)
@@ -509,6 +505,9 @@ void SPELLexecutorManager::clearModels()
 			}
 		}
 		m_toClear.clear();
+		if (m_executors.empty()){
+			m_instances.clear();
+		}
 	}
 }
 
@@ -520,6 +519,8 @@ SPELLexecutor* SPELLexecutorManager::getExecutor( const std::string& instanceId 
 	//DEBUG("[EMGR] Search for executor: '" + instanceId + "'");
 	ExecutorMap::iterator it = m_executors.find(instanceId);
 	if (it != m_executors.end()) return it->second;
+	const std::string id = noInstanceId(instanceId);
+	return SPELLserviceManager::instance().getService(id);
 	THROW_EXCEPTION("Cannot get executor", "No such id: " + instanceId, SPELL_ERROR_EXECUTION );
 	return NULL;
 }
@@ -591,10 +592,11 @@ void SPELLexecutorManager::buildExecutorInfo( const std::string& procId, SPELLip
 {
 	LOG_INFO("Building executor information for " + procId );
 
-	std::string procName = 	SPELLprocedureManager::instance().getProcName(procId);
 
 	try
 	{
+	    std::string procName =  SPELLprocedureManager::instance().getProcName(procId);
+
 		// Will raise exception if not found
 		SPELLexecutor* exec = getExecutor(procId);
 
@@ -675,23 +677,6 @@ void SPELLexecutorManager::buildExecutorInfo( const std::string& procId, SPELLip
 	}
 	catch(SPELLcoreException& ex)
 	{
-		LOG_ERROR("No executor found to complete information");
-		msg.set( MessageField::FIELD_PROC_ID, procId );
-		msg.set( MessageField::FIELD_GROUP_ID, procId );
-		msg.set( MessageField::FIELD_ORIGIN_ID, "???" );
-		msg.set( MessageField::FIELD_PARENT_PROC, " " );
-		msg.set( MessageField::FIELD_PARENT_PROC_LINE, " " );
-		msg.set( MessageField::FIELD_PROC_NAME, procName );
-		msg.set( MessageField::FIELD_ASRUN_NAME, " " );
-		msg.set( MessageField::FIELD_EXEC_STATUS, SPELLdataHelper::executorStatusToString(STATUS_UNINIT) );
-		msg.set( MessageField::FIELD_CONDITION, " " );
-		msg.set( MessageField::FIELD_GUI_LIST, " " );
-		msg.set( MessageField::FIELD_GUI_CONTROL, " " );
-		msg.set( MessageField::FIELD_GUI_CONTROL_HOST, " " );
-		msg.set( MessageField::FIELD_OPEN_MODE, " " );
-		msg.set( MessageField::FIELD_STAGE_ID, " " );
-		msg.set( MessageField::FIELD_STAGE_TL, " " );
-		msg.set( MessageField::FIELD_CSP, " " );
-		msg.set( MessageField::FIELD_CODE_NAME, " " );
+	    SPELLserviceManager::instance().buildServiceInfo( procId, msg );
 	}
 }

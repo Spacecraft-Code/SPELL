@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the driver manager wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,7 +33,6 @@
 #include "SPELL_UTIL/SPELLutils.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_CFG/SPELLconfiguration.H"
-
 
 
 SPELLdriverManager* SPELLdriverManager::s_instance = 0;
@@ -73,6 +72,7 @@ PyObject* SPELLdriverManager::getDriverManagerObject()
     if (m_dManager == 0)
     {
     	// Borrowed
+        SPELLsafePythonOperations ops("SPELLdriverManager::setup()");
         PyObject* classObj = SPELLpythonHelper::instance().getObject("spell.lib.drivermgr", "DriverManager");
         m_dManager = SPELLpythonHelper::instance().callMethod( classObj, "instance", NULL );
         Py_XINCREF(m_dManager);
@@ -85,17 +85,29 @@ PyObject* SPELLdriverManager::getDriverManagerObject()
 //=============================================================================
 void SPELLdriverManager::setup( const std::string& ctxName, const std::string& interfaces )
 {
-	SPELLsafePythonOperations ops("SPELLdriverManager::setup()");
-    PyObject* pmgr = getDriverManagerObject();
-    if (interfaces.empty())
+    try
     {
-        SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), NULL);
+        PyObject* pmgr = getDriverManagerObject();
+        if (interfaces.empty())
+        {
+            SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), NULL);
+        }
+        else
+        {
+            SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), SSTRPY(interfaces), NULL);
+        }
+        SPELLpythonHelper::instance().checkError();
     }
-    else
+    catch(SPELLcoreException& ex)
     {
-        SPELLpythonHelper::instance().callMethod( pmgr, "setup", SSTRPY(ctxName), SSTRPY(interfaces), NULL);
+    	LOG_ERROR("Setup failed: " + ex.what());
+        throw ex;
     }
-    SPELLpythonHelper::instance().checkError();
+    catch(...)
+    {
+    	LOG_ERROR("Setup failed: Unknown!");
+        throw;
+    }
 }
 
 //=============================================================================
@@ -103,17 +115,27 @@ void SPELLdriverManager::setup( const std::string& ctxName, const std::string& i
 //=============================================================================
 void SPELLdriverManager::cleanup( bool shutdown )
 {
-	SPELLsafePythonOperations ops("SPELLdriverManager::cleanup()");
-    PyObject* pmgr = getDriverManagerObject();
-    if (shutdown)
+	try
     {
-        SPELLpythonHelper::instance().callMethod( pmgr, "cleanup", Py_False, Py_True, NULL );
+        PyObject* pmgr = getDriverManagerObject();
+        if (shutdown)
+        {
+            SPELLpythonHelper::instance().callMethod( pmgr, "cleanup", Py_False, Py_True, NULL );
+        }
+        else
+        {
+            SPELLpythonHelper::instance().callMethod( pmgr, "cleanup", NULL);
+        }
+        SPELLpythonHelper::instance().checkError();
     }
-    else
+    catch(SPELLcoreException& ex)
     {
-        SPELLpythonHelper::instance().callMethod( pmgr, "cleanup", NULL);
+    	LOG_ERROR("Cleanup failed: " + ex.what());
     }
-    SPELLpythonHelper::instance().checkError();
+    catch(...)
+    {
+    	LOG_ERROR("Cleanup failed: Unknown!");
+    }
 }
 
 //=============================================================================
@@ -121,11 +143,12 @@ void SPELLdriverManager::cleanup( bool shutdown )
 //=============================================================================
 void SPELLdriverManager::onCommand( const std::string& commandId )
 {
-    PyObject* pmgr = getDriverManagerObject();
-    PyObject* cmd = SSTRPY(commandId);
-    Py_INCREF(cmd);
     try
     {
+        SPELLsafePythonOperations ops("SPELLdriverManager::onCommand");
+        PyObject* pmgr = getDriverManagerObject();
+        PyObject* cmd = SSTRPY(commandId);
+        Py_INCREF(cmd);
 		SPELLpythonHelper::instance().callMethod( pmgr, "onCommand", cmd, NULL );
 		SPELLpythonHelper::instance().checkError();
     }

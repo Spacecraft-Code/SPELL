@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Expressions for TM conditions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -25,11 +25,11 @@
 ###################################################################################
 
 from spell.lib.exception import SyntaxException
-from spell.lib.adapter.verifier import TmVerifierClass 
+from spell.lib.adapter.verifier import TmVerifierClass
 from spell.lib.registry import REGISTRY
 from spell.lang.constants import WARNING
 from spell.lang.modifiers import PromptUser,Severity
-from constants.core import COMP_SYMBOLS
+from .constants.core import COMP_SYMBOLS
 
 import time
 
@@ -38,17 +38,17 @@ OR_TYPE  = '@OR@'
 
 ################################################################################
 class Expression():
-    
+
     __expression = []
-    
+
     def __init__(self, *args):
-        
+
         if len(args)==0:
             raise SyntaxException("Expected at least one list as argument")
         self.__expression = args
-        
+
     def getConditions(self):
-        conditions = []  
+        conditions = []
         for item in self.__expression:
             if isinstance(item,Expression):
                 conditions.append( item.getConditions() )
@@ -58,47 +58,47 @@ class Expression():
 
     def getType(self):
         return None
-    
+
 ################################################################################
 class ExpressionVerifier():
-    
+
     __expression = []
     __verifiers = []
     __tmVerifiers = []
-    
+
     #===========================================================================
     def __init__(self,expression):
-        
+
         self.__expression = expression
         self.__verifiers = []
         self.__tmVerifiers = None
-        
+
     #===========================================================================
     def prepare(self, useConfig, verifierList, verifierTable):
         # Get composed list of conditions
         conditions = self.__expression.getConditions()
         # Create a verifier per raw condition and store it in the corresponding place of the list
         self.__verifiers = self.createExpressionVerifiers(0, conditions[:], useConfig, verifierList, verifierTable)
-        
+
         self.__tmVerifiers = verifierList
-        
+
     #===========================================================================
     def clear(self):
         del self.__verifiers
         self.__tmVerifiers = None
-        
+
     #===========================================================================
     def evaluate(self):
-        
+
         # Start the verifiers now
         self.startExpressionVerifiers(self.__verifiers)
-        
+
         # And wait for them
         self.waitExpressionVerifiers(self.__tmVerifiers)
-        
+
         # Then evaluate the conditions
         resultList = self.extractExpressionVerifiersResult(self.__verifiers)
-        
+
         overallResult = self.evaluateResults(resultList)
         errors = self.generateVerifierReport()
         return overallResult,errors
@@ -110,7 +110,7 @@ class ExpressionVerifier():
             return self.evaluateAND(resultList[1:])
         elif etype == OR_TYPE:
             return self.evaluateOR(resultList[1:])
-                
+
     #===========================================================================
     def evaluateAND(self, resultList):
         for item in resultList:
@@ -130,7 +130,7 @@ class ExpressionVerifier():
             elif item in ['SUCCESS']:
                 return True
         return False
-    
+
     #===========================================================================
     def generateVerifierReport(self):
         # Show verification information
@@ -144,7 +144,7 @@ class ExpressionVerifier():
             # Take into account ternary operators
             if len(defn[1]) >= 4 and type(defn[1][3])!=dict: # it is value of ternary op
                 message = message + " and " + str(defn[1][3])
-            
+
             # Configuration
             configText = ""
             if len(defn[1]) >=4 and type(defn[1][-1])==dict:
@@ -152,17 +152,17 @@ class ExpressionVerifier():
                 configDict = defn[1][-1]
                 for key in configDict:
                     if key == PromptUser: continue
-                    if len(configText)>0: 
+                    if len(configText)>0:
                         configText += " "
                     configText += str(key) + " = " + str(configDict.get(key))
 
             if len(verifMessage)>0: verifMessage += "\n"
             verifMessage += message + configText
         REGISTRY['CIF'].write(verifMessage)
-        
+
         # Will be true if verification was interrupted
         stopped = False
-        
+
         errors = []
         for v in self.__tmVerifiers:
             defn = v.getDefinition()
@@ -172,7 +172,7 @@ class ExpressionVerifier():
 
             # Verifier step number
             stepNum = str(defn[0])
-            
+
             # Decide how to report the failed verification step
             if v.stopped:
                 stopped = True
@@ -182,11 +182,11 @@ class ExpressionVerifier():
                 message = "Verification " + stepNum + " failed. "
                 message += v.reason + "."
                 REGISTRY['CIF'].write( message )
-        
+
         if stopped:
             REGISTRY['CIF'].write( "Telemetry expression verification interrupted", {Severity:WARNING} )
         return errors
-        
+
     #===========================================================================
     def waitExpressionVerifiers(self, verifiers):
         while True:
@@ -198,7 +198,7 @@ class ExpressionVerifier():
                     break
             if not someAlive:
                 return
-        
+
     #===========================================================================
     def startExpressionVerifiers(self, verifiers):
         for item in verifiers:
@@ -214,7 +214,7 @@ class ExpressionVerifier():
                 item.stopVerification()
             elif type(item) == list:
                 self.stopExpressionVerifiers(item)
-        
+
     #===========================================================================
     def createExpressionVerifiers(self, stepNum, conditions, globalConfig, verifierList, verifierTable):
         for item in conditions:
@@ -229,8 +229,10 @@ class ExpressionVerifier():
                     icopy = item[:]
                     if len(icopy) == 3:
                         icopy = icopy + [ {PromptUser:False} ]
+                    elif len(icopy) == 4 and type(icopy[-1]) != dict:
+                        icopy = icopy + [ {PromptUser:False} ]
                     elif len(icopy) > 3:
-                        icopy[-1][PromptUser] = False 
+                        icopy[-1][PromptUser] = False
                     v = TmVerifierClass(stepNum,icopy,globalConfig)
                     # Replace the condition by the TM verifier
                     conditions[ idx ] = v
@@ -248,4 +250,3 @@ class ExpressionVerifier():
             elif type(item) == list:
                 verifiers[ verifiers.index(item) ] = self.extractExpressionVerifiersResult(item)
         return verifiers
-    

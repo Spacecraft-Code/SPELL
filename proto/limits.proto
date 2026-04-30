@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package Limits;
+
+import "header.proto";
+
+message DefinitionUpdate {
+  string url = 1;               // URL of the new overlay or reference database
+  string filename = 2;          // filename, e.g. main
+  uint32 version = 3;           // version number
+  uint32 scID = 4;              // SCID as per SATDB
+  uint64 ts = 5;                // update timestamp
+};
+
+message Fileset {
+  uint64 ts = 1;                // update timestamp
+  repeated string urls = 2;     // Ordered list of URLs of the databases
+};
+
+message Item {
+    Messages.Header header = 1;
+
+    oneof these {
+        DefinitionUpdate limit_definition_update = 6;
+        Fileset fileset = 7;
+    };
+};
+

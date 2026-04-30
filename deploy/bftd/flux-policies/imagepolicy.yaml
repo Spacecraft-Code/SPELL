@@ -1,0 +1,27 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImagePolicy
+metadata:
+  name: spell-registry
+spec:
+  imageRepositoryRef:
+    name: spell-registry
+  filterTags:
+    pattern: '^v(?P<semver>[^.]+(\.[^.]+)?(\.[^.]+)?)\.?(?P<minor>[^-]*)'
+    extract: '$semver$minor'
+  policy:
+    semver:
+      range: x.x.x
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImagePolicy
+metadata:
+  name: spell-server
+spec:
+  imageRepositoryRef:
+    name: spell-server
+  filterTags:
+    pattern: '^v(?P<semver>[^.]+(\.[^.]+)?(\.[^.]+)?)\.?(?P<minor>[^-]*)'
+    extract: '$semver$minor'
+  policy:
+    semver:
+      range: x.x.x

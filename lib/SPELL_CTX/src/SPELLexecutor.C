@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -42,53 +42,42 @@
 #include "SPELL_UTIL/SPELLtime.H"
 #include "SPELL_IPC/SPELLipc_Executor.H"
 #include "SPELL_IPC/SPELLipc_Context.H"
+#include "SPELL_PRD/SPELLprocedureManager.H"
 // System includes ---------------------------------------------------------
 
-class LoginMonitor : public SPELLthread
-{
-public:
-	LoginMonitor( SPELLexecutor& exec )
-	: SPELLthread("login-" + exec.getModel().getInstanceId() ),
-	  m_exec( exec )
-	{}
 
-	void run()
-	{
-		SPELLtime checkStart;
-		for(;;)
-		{
-			SPELLtime now;
-			SPELLtime delta = now - checkStart;
-			if (delta.getSeconds()>120)
-			{
-				SPELLexecutorManager::instance().callback_executorNotReconnected( m_exec.getModel().getInstanceId() );
-				return;
-			}
-			else
-			{
-				if (m_exec.isLoggedIn())
-				{
-					SPELLexecutorManager::instance().callback_executorReconnected( m_exec.getModel().getInstanceId() );
-					return;
-				}
-				else
-				{
-					usleep(30000);
-				}
-			}
-		}
-	}
-
-private:
-	SPELLexecutor& m_exec;
-};
 
 // DEFINES /////////////////////////////////////////////////////////////////
 
 #define DEFAULT_START_TIMEOUT 20
 #define DEFAULT_LOGIN_TIMEOUT 60
 
-
+void LoginMonitor::run()
+{
+    SPELLtime checkStart;
+    for (;;)
+    {
+        SPELLtime now;
+        SPELLtime delta = now - checkStart;
+        if (delta.getSeconds() > 120)
+        {
+            SPELLexecutorManager::instance().callback_executorNotReconnected(m_exec.getModel().getInstanceId());
+            return;
+        }
+        else
+        {
+            if (m_exec.isLoggedIn())
+            {
+                SPELLexecutorManager::instance().callback_executorReconnected(m_exec.getModel().getInstanceId());
+                return;
+            }
+            else
+            {
+                usleep(30000);
+            }
+        }
+    }
+}
 //=============================================================================
 // CONSTRUCTOR: SPELLexecutor::SPELLexecutor()
 //=============================================================================
@@ -112,6 +101,10 @@ SPELLexecutor::SPELLexecutor( const SPELLexecutorStartupParams& config, SPELLcli
 	m_reconnecting = config.isReconnecting();
 	m_loggedIn = false;
 	m_loginMonitor = NULL;
+	m_notAckNotifications = 0;
+	m_status = STATUS_UNINIT;
+	m_processStatus = PSTATUS_INITIAL;
+
 }
 
 //=============================================================================
@@ -150,6 +143,15 @@ void SPELLexecutor::start()
 			THROW_EXCEPTION("Cannot launch executor", "No executor command defined in configuration", SPELL_ERROR_CONFIG);
 		}
 
+		std::string pyVersion = SPELLprocedureManager::instance().getProperty(m_model.getProcId(),"PYTHON VERSION");
+		if (pyVersion.empty())
+			pyVersion = "2";
+		LOG_INFO("Requested executor for python version " + pyVersion);
+		if (pyVersion.find("3") == 0)
+		{
+			command += "_v3";
+		}
+
 		int startTimeout = -1;
 		int loginTimeout = -1;
 		std::string startTimeoutStr = SPELLconfiguration::instance().getContextParameter( SPELLcontextConfig::ExecutorStartTimeout );
@@ -177,7 +179,8 @@ void SPELLexecutor::start()
 		{
 			command += " -r " + m_model.getWsFilename();
 		}
-
+		if (SPELLprocessManager::instance().checkProcessExist(m_model.getInstanceId() ))
+			SPELLprocessManager::instance().killProcess( m_model.getInstanceId() );
 		SPELLprocessManager::instance().clearProcess( m_model.getInstanceId() );
 		SPELLprocessManager::instance().startProcess( m_model.getInstanceId(), command );
 
@@ -355,7 +358,12 @@ SPELLipcMessage SPELLexecutor::sendRequestToExecutor( const SPELLipcMessage& msg
 	SPELLipcMessage response = VOID_MESSAGE;
 	if (processOk())
 	{
-		response =  m_ipc.sendRequest( m_model.getInstanceId(), msg, 5000 );
+		int timeout = 3000;
+		if (msg.getId() == ExecutorMessages::REQ_WVARIABLES_ENABLED)
+		{
+			timeout = 500;
+		}
+		response =  m_ipc.sendRequest( m_model.getInstanceId(), msg, timeout );
 	}
 	else
 	{
@@ -496,7 +504,7 @@ SPELLipcMessage SPELLexecutor::processRequestFromExecutor( SPELLipcMessage msg )
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::processStarted( const std::string& identifier )
+void SPELLexecutor::processStarted( const std::string identifier )
 {
 	DEBUG("Callback - Executor process started: " + identifier);
 	m_processStatus = PSTATUS_RUNNING;
@@ -506,7 +514,7 @@ void SPELLexecutor::processStarted( const std::string& identifier )
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::processFinished( const std::string& identifier, const int& retValue )
+void SPELLexecutor::processFinished( const std::string identifier, const int& retValue )
 {
 	LOG_INFO("Executor process finished: " + identifier);
 	m_processStatus = PSTATUS_FINISHED;
@@ -517,7 +525,7 @@ void SPELLexecutor::processFinished( const std::string& identifier, const int& r
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::processKilled( const std::string& identifier )
+void SPELLexecutor::processKilled( const std::string identifier )
 {
 	LOG_ERROR("Executor process killed: " + identifier);
 	m_model.setStatus(STATUS_ERROR);
@@ -547,7 +555,7 @@ void SPELLexecutor::processKilled( const std::string& identifier )
 //=============================================================================
 // METHOD: SPELLexecutor::
 //=============================================================================
-void SPELLexecutor::processFailed( const std::string& identifier )
+void SPELLexecutor::processFailed( const std::string identifier )
 {
 	LOG_ERROR("Executor process failed startup: " + identifier);
 	m_model.setStatus(STATUS_ABORTED);
@@ -654,6 +662,11 @@ bool SPELLexecutor::isActive()
 		DEBUG("Executor " + m_model.getInstanceId() + " active: " + SPELLdataHelper::executorStatusToString(getStatus()));
 		return true;
 	}
+	if (m_reconnecting)
+	{
+	    DEBUG("Executor " + m_model.getInstanceId() + " is reconnecting: " + SPELLdataHelper::executorStatusToString(getStatus()));
+        return true;
+	}
 	return false;
 }
 
@@ -723,6 +736,9 @@ void SPELLexecutor::removeControllingClient( bool clientLost )
 		removeClient.set( MessageField::FIELD_PROC_ID, m_model.getInstanceId() );
 		removeClient.set( MessageField::FIELD_GUI_CONTROL, ISTR(cKey));
 		removeClient.set( MessageField::FIELD_GUI_CONTROL_HOST, cHost);
+		if (clientLost) {
+			removeClient.set( MessageField::FIELD_TEXT, "Procedure GUI disconnected from SPELL Context: " + m_model.getInstanceId());
+		}
 		sendMessageToExecutor(removeClient);
 
 		LOG_INFO("Controlling client removed");
@@ -752,6 +768,8 @@ void SPELLexecutor::forcePause()
 	}
 	else if (getStatus() == STATUS_RUNNING)
 	{
+		if (m_executorStatusEvent.isClear())
+			return;
 		cmd.id = CMD_PAUSE;
 		LOG_WARN("Pausing procedure (force stop)");
 		command(cmd);
@@ -974,12 +992,16 @@ SPELLipcMessage SPELLexecutor::executorLogin( const SPELLipcMessage& msg )
 	DEBUG("Received executor login: " + m_model.getInstanceId() );
 
 	m_loggedIn = true;
+	m_model.setStatus(STATUS_UNINIT);
 
 	// Store the information given by the executor
+	LOG_INFO("Executor login provided: " + m_model.getInstanceId());
 	m_model.setIpcKey(msg.getKey());
-	m_model.setStatus(SPELLdataHelper::stringToExecutorStatus( msg.get( MessageField::FIELD_EXEC_STATUS )));
+	LOG_INFO("    IPC key: " + msg.getKey());
 	m_model.setAsRunFilename( msg.get( MessageField::FIELD_ASRUN_NAME ));
+	LOG_INFO("    ASRUN  : " + msg.get( MessageField::FIELD_ASRUN_NAME ));
 	m_model.setLogFilename( msg.get( MessageField::FIELD_LOG_NAME ));
+	LOG_INFO("    LOG    : " + msg.get( MessageField::FIELD_LOG_NAME ));
 	//TODO
 	//m_model.wsFileName = msg.get( MessageField::FIELD_WS_NAME );
 
@@ -1110,7 +1132,7 @@ void SPELLexecutor::executorNotification( const SPELLipcMessage& nmsg )
 
 			// Force an additional status notification upon line notifications where
 			// the stage title changes
-			if (getModel().getStageId() != id)
+			if (getModel().getStageId() != id || getModel().getStageTitle() != tl)
 			{
 				getModel().setStage(id,tl);
 				SPELLexecutorOperation op;

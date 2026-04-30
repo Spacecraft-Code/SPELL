@@ -1,0 +1,12 @@
+<driver id="{{ .Values.spell_server.driver.name}}">
+    <name>{{ .Values.spell_server.driver.name | upper}} Driver</name>
+    <interfaces>TM,TC,EV,RSC,TIME,RNG,TASK,MEM</interfaces>
+    <maxproc>{{ .Values.spell_server.maxprocs | default 15}}</maxproc>
+    <lib>{{ tpl (.Values.spell_server.driver.lib | default "$SPELL_DRIVER/lib") $  }}</lib>
+    <path>{{ tpl (.Values.spell_server.driver.path | default "$SPELL_DRIVER/drivers") $  }}</path>
+    <properties>
+{{- range $key, $value := .Values.spell_server.driver.properties }}
+        <property name="{{ $key | upper }}">{{ tpl $value $ }}</property>
+{{- end}}
+    </properties>
+</driver>

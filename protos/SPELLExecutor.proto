@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package spell.core;
+
+import "SPELLDriver.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+option java_multiple_files = true;
+option java_package = "lu.ses.engineering.spell.grpc.executor";
+option java_outer_classname = "SPELLExecutorProto";
+option go_package = "driver";
+
+service SPELLExecutor {
+	rpc DriverLogin(driver.DriverInfo) returns (ExecutorCapability);
+
+	rpc Ping (google.protobuf.Empty) returns (google.protobuf.Empty);
+	rpc Close (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message ExecutorCapability {
+	bool providesSpellAccess = 1;
+	bool providesControlAccess = 2;
+	bool providesMonitorAccess = 3;
+}

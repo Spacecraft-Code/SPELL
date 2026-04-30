@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Driver manager
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -36,18 +36,18 @@ from spell.lib.exception import DriverException
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from registry import *
-from factory import *
- 
+from .registry import *
+from .factory import *
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
 import traceback,sys
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -55,7 +55,7 @@ import traceback,sys
 GENERIC_INTERFACES = [ 'DBMGR' ]
 INTERNAL_INTERFACES = [ 'CONFIG' ]
 HOME_TAG = "$SPELL_HOME$"
-IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'EV':'ev', 'MEM': 'memory',
+IFC_PACKAGES = { 'TM':'tm', 'TC':'tc', 'PCS':'pcs', 'EV':'ev', 'MEM': 'memory',
                  'RSC':'resources', 'TASK':'task', 'RNG':'ranging',
                  'USER':'usr', 'CONFIG':'config', 'TIME':'gcstime' }
 
@@ -65,7 +65,7 @@ __instance__ = None
 
 ################################################################################
 class DriverManagerClass(object):
-    
+
     driverName = None
     driverConfig = None
     contextName = None
@@ -74,7 +74,7 @@ class DriverManagerClass(object):
     libraries = []
     driverPackage = None
     loaded = None
-    
+
     #===========================================================================
     def __init__(self):
         self.driverName = None
@@ -85,7 +85,7 @@ class DriverManagerClass(object):
         self.driverPackage = None
         self.contextName = None
         self.contextConfig = None
-    
+
     #==========================================================================
     @staticmethod
     def instance():
@@ -93,22 +93,22 @@ class DriverManagerClass(object):
         if __instance__ is None:
             __instance__ = DriverManagerClass()
         return __instance__
-    
+
     #===========================================================================
-    def setup(self, contextName, specificInterfaces=None):
+    def setup(self, contextName, specificInterfaces=None, skipSetup = False):
 
         # Get the context information
         self.contextName = contextName
         self.contextConfig = Config.instance().getContextConfig(contextName)
-        # Obtain the corresponding driver 
+        # Obtain the corresponding driver
         self.driverName = self.contextConfig.getDriver()
         self.driverConfig = Config.instance().getDriverConfig(self.driverName)
-        
+
         REGISTRY['CTX'] = self.contextConfig
 
-        if self.loaded is not None: 
+        if self.loaded is not None:
             # Do not load the same driver twice
-            if self.loaded == self.driverName: return True 
+            if self.loaded == self.driverName: return True
             success = self.cleanup()
             if not success:
                 raise DriverException("Unable to load driver","Could not cleanup previously loaded driver " + str(self.loaded))
@@ -118,7 +118,7 @@ class DriverManagerClass(object):
         self.interfaces = []
         self.libraries = []
         self.driverPackage = None
-        
+
         # Get interfaces defined by the driver
         self.interfaces.extend(INTERNAL_INTERFACES)
 
@@ -134,7 +134,7 @@ class DriverManagerClass(object):
         libraries = self.driverConfig.getLibraries()
         if len(libraries)>0:
             self.libraries = libraries.split(",")
-        
+
         # Get the driver package path
         self.driverPackage = self.driverConfig.getPackagePath()
         # Resolve the path
@@ -142,38 +142,39 @@ class DriverManagerClass(object):
 
         if self.driverPackage is None or len(self.driverPackage)==0:
             raise DriverException("Unable to load driver", "Driver package path not defined")
-        
+
         LOG("Using driver    :" + self.driverName)
         LOG("Package         :" + self.driverPackage)
         LOG("Using interfaces: " + repr(self.interfaces))
         LOG("Using libraries : " + repr(self.libraries))
 
-        try:         
+        try:
             # Configure the factory
             Factory.instance().setup(self.driverName)
-            
+
             # Preload libraries
             for lib in self.libraries:
                 lib = lib.strip(" \n\r")
                 lib = Config.resolvePath(lib)
                 LOG("Appending to path: " + lib)
                 sys.path.append(lib)
-                
+
             # Put the driver package in first place of the path
             LOG("Adding drivers base path: " + repr(self.driverPackage))
             sys.path.append(self.driverPackage)
-                
+
             # Create driver interfaces
             self.createInterfaces()
             # Initialize driver interfaces
-            self.initInterfaces()
+            if not skipSetup:
+                self.initInterfaces()
             # Set the driver as loaded
             self.loaded = self.driverName
-            
-        except DriverException,e:
+
+        except DriverException as e:
             traceback.print_exc(file = sys.stderr)
             raise e
-        except BaseException,e:
+        except BaseException as e:
             traceback.print_exc(file = sys.stderr)
             raise DriverException("Unable to load driver",repr(e))
 
@@ -206,14 +207,14 @@ class DriverManagerClass(object):
                         REGISTRY[ifc].cleanup()
         self.loaded = None
         return True
-    
+
     #===========================================================================
     def cleanupCache(self):
         # Remove previously imported driver packages if any
-        for path in sys.path_importer_cache.keys()[:]:
+        for path in list(sys.path_importer_cache.keys())[:]:
             if self.driverPackage in path:
                 del sys.path_importer_cache[path]
-        for moduleName in sys.modules.keys()[:]:
+        for moduleName in list(sys.modules.keys())[:]:
             moduleObj = sys.modules[moduleName]
             if moduleObj and hasattr(moduleObj, "__file__"):
                 moduleFile = moduleObj.__file__
@@ -245,7 +246,7 @@ class DriverManagerClass(object):
     #==========================================================================
     def onCommand(self, commandId):
         for ifc in self.interfaces:
-            obj = REGISTRY[ifc] 
+            obj = REGISTRY[ifc]
             if 'onCommand' in dir(obj):
                 obj.onCommand(commandId)
         return

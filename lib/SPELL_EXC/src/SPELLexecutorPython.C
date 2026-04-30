@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor Python bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -179,6 +179,17 @@ static PyObject* Executor_DisableUserAction( PyObject* self, PyObject* args );
 // DESCRIPTION     : set current step id and description
 //============================================================================
 static PyObject* Executor_SetStep( PyObject* self, PyObject* args );
+
+//============================================================================
+// FUNCTION        : Executor_SetByStep
+//============================================================================
+static PyObject* Executor_SetByStep( PyObject* self, PyObject* args );
+
+//============================================================================
+// FUNCTION        : Executor_SetExecutionDelay
+//============================================================================
+static PyObject* Executor_GetByStep( PyObject* self, PyObject* args );
+
 //============================================================================
 // FUNCTION        : Executor_Notify
 // DESCRIPTION     : Notify arbitrary data
@@ -232,8 +243,10 @@ static PyMethodDef Executor_Methods[] =
     {"dismissUserAction",     Executor_DismissUserAction,  METH_NOARGS, "Unset the user action function"},
     {"enableUserAction",      Executor_EnableUserAction,   METH_NOARGS, "Enable the user action function"},
     {"disableUserAction",     Executor_DisableUserAction,  METH_NOARGS, "Disable the user action function"},
-    {"setStep" ,              Executor_SetStep,            METH_VARARGS, "Set current step name"},
-    {"setExecutionDelay",     Executor_SetExecutionDelay,  METH_VARARGS, "Set execution delay"},
+	{"setStep" ,              Executor_SetStep,            METH_VARARGS, "Set current step name"},
+	{"setByStep" ,            Executor_SetByStep,          METH_VARARGS, "Set the ByStep configuration"},
+	{"getByStep" ,            Executor_GetByStep,          METH_NOARGS, "Get the ByStep configuration"},
+	{"setExecutionDelay",     Executor_SetExecutionDelay,  METH_VARARGS, "Set execution delay"},
     {"notify",      		  Executor_Notify,   		   METH_VARARGS, "Notify items"},
     {"getControllingHost",    Executor_GetControllingHost, METH_NOARGS, "Get the controlling host"},
     {NULL, NULL, 0, NULL} /* Sentinel */
@@ -244,8 +257,7 @@ static PyMethodDef Executor_Methods[] =
 //============================================================================
 static PyTypeObject Executor_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "executor.Executor",               //tp_name
     sizeof(PyExecutorObject),          //tp_basicsize
     0,                                 //tp_itemsize
@@ -298,7 +310,7 @@ static int Executor_Init( PyExecutorObject* self, PyObject* args, PyObject* kwds
 //============================================================================
 static void Executor_Dealloc( PyExecutorObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -725,7 +737,11 @@ static PyObject* Executor_SetUserAction( PyObject* self, PyObject* args )
     DEBUG("[EXECPY] Set user action");
     PyObject* funcObj = PyTuple_GetItem(args,0);
     std::string label = PYSTR(PyTuple_GetItem(args, 1));
+#if PY_MAJOR_VERSION >= 3
+    std::string funcName = PYSTR( ((PyFunctionObject*)funcObj)->func_name );
+#else
     std::string funcName = PYSTR( PyObject_GetAttrString( funcObj, "func_name" ) );
+#endif
     PyObject* configObj = PyTuple_GetItem(args,2);
     unsigned int severity = LanguageConstants::INFORMATION;
     SPELLpyHandle pySev = SSTRPY(LanguageModifiers::Severity);
@@ -808,7 +824,7 @@ static PyObject* Executor_SetStep( PyObject* self, PyObject* args )
 
     PyObject* idObj = PyTuple_GetItem(args,0);
     PyObject* descObj = PyTuple_GetItem(args,1);
-    SPELLexecutor::instance().displayStage( PYSSTR(idObj), PYSSTR(descObj) );
+    SPELLexecutor::instance().stageReached( PYSSTR(idObj), PYSSTR(descObj) );
     Py_RETURN_NONE;
 }
 
@@ -833,6 +849,34 @@ static PyObject* Executor_SetExecutionDelay( PyObject* self, PyObject* args )
     	SPELLexecutor::instance().setExecDelay( PyLong_AsLong(PyLong_FromDouble( PyFloat_AsDouble(delayObj)) ) );
     }
     Py_RETURN_NONE;
+}
+
+//============================================================================
+// FUNCTION        : Executor_SetByStep
+//============================================================================
+static PyObject* Executor_SetByStep( PyObject* self, PyObject* args )
+{
+    DEBUG("[EXECPY] Set ByStep configuration");
+
+    PyObject* byStep = PyTuple_GetItem(args,0);
+    SPELLexecutor::instance().setByStep(PyObject_IsTrue(byStep));
+
+    Py_RETURN_NONE;
+}
+
+//============================================================================
+// FUNCTION        : Executor_SetExecutionDelay
+//============================================================================
+static PyObject* Executor_GetByStep( PyObject* self, PyObject* args )
+{
+    DEBUG("[EXECPY] Get ByStep configuration");
+
+    if (SPELLexecutor::instance().getConfiguration().isByStep()){
+    	Py_RETURN_TRUE;
+    } else {
+    	Py_RETURN_FALSE;
+    }
+
 }
 
 //============================================================================

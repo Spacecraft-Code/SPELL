@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: spell
+resources:
+- ../spell-registry/
+- secretstore.yaml
+- externalsecret.yaml
+- missions/zs24a/
+- missions/zs24b/
+- missions/zs24c/
+- missions/zs24d/
+- missions/zs24e/
+- missions/zs24f/
+
+patchesJson6902:
+  - target:
+      kind: Ingress
+      name: spell-registry
+      version: v1
+    patch: |-
+      - op: replace
+        path: "/spec/rules/0/host"
+        value: "spell-registry.ing-lu-s.spo.internal.ses.com"
+      - op: replace
+        path: "/spec/tls/0/hosts/0"
+        value: "spell-registry.ing-lu-s.spo.internal.ses.com"
+
+configurations:
+- kustomizeconfig.yaml

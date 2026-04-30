@@ -5,7 +5,7 @@
 // DESCRIPTION: Mailbox for incoming messages
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -165,11 +165,6 @@ private: //-------------------------------------------------------------------
 		 * \param id IN: ongoing request identifier.
 		**////////////////////////////////////////////////////////////////////
 		SPELLipcMessageQueue* getQueue( std::string id );
-
-		//////////////////////////////////////////////////////////////////////
-		/** Cancell all requests waiting
-		**////////////////////////////////////////////////////////////////////
-		void cancelAll();
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 		/** Holds the map of message queues */

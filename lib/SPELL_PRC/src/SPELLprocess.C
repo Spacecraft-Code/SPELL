@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of process model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -103,6 +103,7 @@ SPELLprocess::SPELLprocess( std::string identifier, int pid, SPELLprocessManager
 SPELLprocess::~SPELLprocess()
 {
     DEBUG("[PRC] PROCESS " + m_identifier + " DESTROYED");
+    this->join();
 }
 
 //=============================================================================
@@ -117,6 +118,7 @@ void SPELLprocess::run()
 		m_statusCode = PSTATUS_INITIAL;
 		try
 		{
+			LOG_INFO("Starting process with command '" + m_command + "'");
 			m_processPID = popen( m_command );
 		}
 		catch(SPELLcoreException& ex)
@@ -223,7 +225,7 @@ void SPELLprocess::run()
         m_statusCode = PSTATUS_RUNNING;
 	    m_pManager->fireProcessStarted( m_identifier );
 
-	    bool repeat = false;
+	    bool repeat = true;
 	    do
 	    {
 	    	if ( !SPELLutils::pathExists( "/proc/" + ISTR(m_processPID) + "/stat" ) )
@@ -243,7 +245,7 @@ void SPELLprocess::run()
 	    	}
 	    	else
 	    	{
-		    	usleep(1000);
+		    	usleep(100000);
 	    	}
 	    }
 	    while(repeat);
@@ -303,7 +305,7 @@ pid_t SPELLprocess::popen( std::string command )
     }
     else if (pid == 0)
     {
-        if (execl("/bin/sh", "sh", "-c", command.c_str(), NULL) != 0)
+        if (execl("/bin/bash", "bash", "-c", command.c_str(), NULL) != 0)
 		{
         	std::cerr << "####################################################################" << std::endl;
         	std::cerr << "####################################################################" << std::endl;

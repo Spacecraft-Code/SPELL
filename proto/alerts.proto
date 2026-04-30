@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+import "header.proto";
+
+package Alerts;
+
+enum SeverityType {
+    SEV_NORMAL = 0;
+    SEV_INFO = 1;
+    SEV_WARNING = 2;
+    SEV_HAZARDOUS = 3;
+    SEV_CRITICAL = 4;
+};
+
+message Alert {
+  string machineName = 1;       // short name (lowercase) of the machine (p1anal01, p1cntl, opsb-ses10tec1, etc.)
+  uint64 eventTS = 2;           // timestamp of the event, represents the number of Nano-seconds since Unix epoch
+  string appName = 3;           // identifier of the application that generated the message
+  SeverityType severity = 4;    // severity of the alert (refer to SeverityType definition)
+  string label = 5;             // sentence to describe the alert, one line (no linefeed)
+  string eventData = 6;         // additional data as per application defined pattern (no free text, strict template to be published)
+};
+
+message Item {
+    Messages.Header header = 1;
+
+    oneof these {
+        Alert alert = 8;
+    };
+};
+

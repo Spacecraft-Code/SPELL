@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the mutex mechanism for POSIX
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -36,6 +36,7 @@
 SPELLmutexPOSIX::SPELLmutexPOSIX()
 : SPELLmutexIF()
 {
+	m_threadId = 0;
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);

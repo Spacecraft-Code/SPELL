@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the thread worker mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -44,6 +44,7 @@ SPELLthreadWorker::SPELLthreadWorker( const std::string& id )
     m_work = NULL;
     m_shutdown = false;
     m_newWork.clear();
+    m_busy = false;
 }
 
 //=============================================================================

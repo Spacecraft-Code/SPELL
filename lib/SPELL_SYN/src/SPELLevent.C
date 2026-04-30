@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the event mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -42,7 +42,7 @@ SPELLevent::SPELLevent( bool log )
 {
 	m_log = log;
     m_isClear = false;
-    DEBUG("[EVE] Event " + PSTR(this) + " created with mutex " + PSTR(&m_mutex))
+    //DEBUG("[EVE] Event " + PSTR(this) + " created with mutex " + PSTR(&m_mutex))
 	if (m_log) std::cerr << "   CREATE EVENT " << (void*) this << std::endl;
 }
 
@@ -51,7 +51,7 @@ SPELLevent::SPELLevent( bool log )
 //=============================================================================
 SPELLevent::~SPELLevent()
 {
-    DEBUG("[EVE] Event " + PSTR(this) + " destroyed")
+    //DEBUG("[EVE] Event " + PSTR(this) + " destroyed")
 	if (m_log) std::cerr << "   DESTROY EVENT " << (void*) this << std::endl;
 }
 
@@ -61,7 +61,7 @@ SPELLevent::~SPELLevent()
 void SPELLevent::set()
 {
 	if (m_log) std::cerr << "SET EVENT TRY IN " << (void*) this << std::endl;
-	DEBUG("[EVE] Event " + PSTR(this) + " set")
+	//DEBUG("[EVE] Event " + PSTR(this) + " set")
 	m_mutex.lock();
 	if (m_isClear)
 	{
@@ -80,7 +80,7 @@ void SPELLevent::set()
 void SPELLevent::clear()
 {
 	if (m_log) std::cerr << "CHECK CLEAR EVENT IN " << (void*) this << std::endl;
-    DEBUG("[EVE] Event " + PSTR(this) + " clear")
+    //DEBUG("[EVE] Event " + PSTR(this) + " clear")
     m_mutex.lock();
     m_isClear = true;
     m_mutex.unlock();
@@ -93,14 +93,14 @@ void SPELLevent::clear()
 void SPELLevent::wait()
 {
 	if (m_log) std::cerr << "WAIT EVENT TRY IN " << (void*) this << std::endl;
-	DEBUG("[EVE] Event " + PSTR(this) + " wait in with mutex " + PSTR(&m_mutex))
+	//DEBUG("[EVE] Event " + PSTR(this) + " wait in with mutex " + PSTR(&m_mutex))
 	m_mutex.lock();
 	while (m_isClear)
 	{
 		m_condition.wait(&m_mutex);
 	}
 	m_mutex.unlock();
-	DEBUG("[EVE] Event " + PSTR(this) + " wait out")
+	//DEBUG("[EVE] Event " + PSTR(this) + " wait out")
 	if (m_log) std::cerr << "WAIT EVENT FINISH " << (void*) this << std::endl;
 }
 
@@ -110,7 +110,7 @@ void SPELLevent::wait()
 bool SPELLevent::wait( unsigned long timeoutMsec )
 {
         bool timedout = false;
-	DEBUG("[EVE] Event " + PSTR(this) + " wait in with mutex " + PSTR(&m_mutex))
+	//DEBUG("[EVE] Event " + PSTR(this) + " wait in with mutex " + PSTR(&m_mutex))
 	if (m_log) std::cerr << "   WAIT EVENT T.O. TRY IN " << (void*) this << std::endl;
 	m_mutex.lock();
 	while (m_isClear && !timedout)
@@ -121,7 +121,7 @@ bool SPELLevent::wait( unsigned long timeoutMsec )
 	}
 	m_mutex.unlock();
 	if (m_log) std::cerr << "   WAIT EVENT T.O. FINISH" << (void*) this << std::endl;
-	DEBUG("[EVE] Event " + PSTR(this) + " wait out")
+	//DEBUG("[EVE] Event " + PSTR(this) + " wait out")
     return timedout;
 }
 
@@ -131,7 +131,7 @@ bool SPELLevent::wait( unsigned long timeoutMsec )
 bool SPELLevent::isClear()
 {
 	if (m_log) std::cerr << "   IS CLEAR EVENT IN " << (void*) this << std::endl;
-    DEBUG("[EVE] Event " + PSTR(this) + " isclear with mutex " + PSTR(&m_mutex))
+    //DEBUG("[EVE] Event " + PSTR(this) + " isclear with mutex " + PSTR(&m_mutex))
     bool isClear = false;
     m_mutex.lock();
     isClear = m_isClear;

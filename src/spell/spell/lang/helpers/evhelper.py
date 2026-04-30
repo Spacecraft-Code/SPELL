@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for event functions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -37,7 +37,7 @@ from spell.lib.adapter.constants.notification import *
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from basehelper import *
+from .basehelper import *
 
 #*******************************************************************************
 # System Imports
@@ -56,13 +56,13 @@ class Event_Helper(WrapperHelper):
     DESCRIPTION:
         Helper for the Event wrapper.
     """
-    __msg = ""    
-    
+    __msg = ""
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "EV")
         self.__msg = ""
-        self._opName = "Event Injection" 
+        self._opName = "Event Injection"
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
@@ -74,10 +74,10 @@ class Event_Helper(WrapperHelper):
             raise SyntaxException("Expected a message string")
         if len(args)>=2:
             self.addConfig(Severity, args[1])
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip injecting event and return success (True)")
         self._setActionString( ACTION_CANCEL ,  "Skip injecting event and return failure (False)")
         self._setActionString( ACTION_REPEAT ,  "Try to inject the event again")
@@ -86,21 +86,19 @@ class Event_Helper(WrapperHelper):
         self.setFailureInfo("EV", self.__msg)
 
         self._write( self.__msg, self.getConfig() )
-        import sys
-        sys.stderr.write("SEVERITY " + repr(self.getConfig(Severity)))
-        REGISTRY['EV'].raiseEvent(self.__msg, self.getConfig())            
+        REGISTRY['EV'].raiseEvent(self.__msg, self.getConfig())
         return [False,True,NOTIF_STATUS_OK,OPERATION_SUCCESS]
 
     #===========================================================================
     def _doSkip(self):
         self._write("Inject event skipped", {Severity:WARNING} )
-        return [False,True]        
+        return [False,True]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Inject event skipped", {Severity:WARNING} )
-        return [False,False]        
-                
+        return [False,False]
+
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry inject event", {Severity:WARNING} )

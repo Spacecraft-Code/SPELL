@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL command line executor main program
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -35,8 +35,9 @@
 #include "SPELL_EXC/SPELLinterpreter.H"
 #include "SPELL_CIFC/SPELLstandaloneCif.H"
 #include "SPELL_CIFC/SPELLautomaticCif.H"
-
-
+#ifdef WITH_BACKTRACE
+#include <backward.hpp>
+#endif
 // GLOBALS ///////////////////////////////////////////////////////////////////
 
 // Initialization/configuration variables
@@ -53,7 +54,6 @@ static std::string promptFile = "";
 static std::string arguments = "";
 
 // STATIC ////////////////////////////////////////////////////////////////////
-
 
 //============================================================================
 // Show usage
@@ -156,6 +156,10 @@ int parseArgs( int argc, char** argv )
 //============================================================================
 int main( int argc, char** argv )
 {
+    #ifdef WITH_BACKTRACE
+    backward::SignalHandling sh;
+    std::cout << "Singal Handlers loaded: " << sh.loaded() << std::endl;
+    #endif
     if ( parseArgs(argc,argv) != 0 ) return 1;
 
     // Show the environment configuration

@@ -1,0 +1,99 @@
+# Default values for spell-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+serviceAccountName: spell-sa
+
+image:
+  registry: bzengnexus1.idmz.eng.ses
+
+# tolerations:
+#   - key: agentpool
+#     operator: Equal
+#     value: escorpio
+#     effect: NoSchedule
+
+service:
+  annotations: {}
+  type: LoadBalancer
+  port: 22
+  name: ssh
+
+spell_addons:
+  logrotate:
+    image: spell/logrotate-ubuntu
+    version: 2.6.10
+    enabled: true
+    env: 
+      LOGROTATE_INTERVAL: "daily"
+      DELAYED_START: 30
+    additionalVolumeMounts: []
+    additionalVolumes: []
+  pace:
+    image: spell/pace
+    enabled: false
+    version: 2.0.7
+    useDriver: true
+    mountProcs: true
+    env: {}
+    additionalVolumeMounts: []
+    # - mountPath: /home/spell/.wasp
+    #   name: wasp-secret
+    #   subPath: ".wasp"
+    #   readonly: true
+    additionalVolumes: []
+    # - name: wasp-secret
+    #   secret:
+    #     secretName: wasp-secret
+    #     optional: true
+    #     defaultMode: 0400
+    args: []
+    # - "ZMP01"
+    pharos: []
+
+auth:
+  mode: ssh #clear/ssh
+  ssh:
+    version: v2.6.8-dev
+    image: spell/ssh-server-ubuntu
+    ldap:
+      url: ldaps://beacdc1.xeneng.ses
+      binddn: CN=ldap,OU=G_SYS,OU=ses-users,DC=xeneng,DC=ses
+      bindpwSecret: ldap-secret
+
+fileds:
+  version: 1.3.7-dev
+  image: spell/fileds-ubuntu
+  
+spell_server:
+  version: v2.6.8-dev # {"$imagepolicy": "spell:spell-server:tag"}
+  driver:
+    name: scorpio
+    lib: "$SPELL_DRIVER/drivers/{{ .Values.spell_server.driver.name }}/interface"
+    env: {}
+    properties: {}
+    settings: {}
+      #cws: "{{ .Values.spell_server.seat | lower }}cntl.scorpio.eng.ses"
+      #archiva: "{{ .Values.spell_server.seat | lower }}dbs01.scorpio.eng.ses"
+      #obus: bfts-ob.eng.ses:54407
+  maxprocs: 15
+  mission: ZMP01
+  spacecraft: null
+  family: BSS702SP
+  seat: S3
+  applicable_missions: {}
+  input_folder: "{{ .Values.spell_server.mission }}/InputFiles/{{ .Values.spell_server.mission }}"
+  output_folder: "{{ .Values.spell_server.mission }}/OutputFiles/{{ .Values.spell_server.mission }}"
+  additionalVolumeMounts: []
+  additionalVolumes: []
+  additionalInitSteps: ""
+procedures:
+  additionalVolumeMounts: []
+  storageClass: null
+  size: 5Gi
+  repo_folder: MPOWER
+  branch: SIM
+  server: bzengrcs1.idmz.eng.ses
+  known_hosts: |-
+    bzengrcs1.idmz.eng.ses,10.35.65.65 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA3Hjvq/uZqY8nxGeB8sQiq5sLaq4T8h3BTnHkElLjq1C6lJ+5hV9OgiYdf9NCMwZuES5ENQAFqB2GnHjDc0X4sz6K/tk3pqGXQ/wdwVA+ZylBunpv5CJqKyQO+mu+pbke9yhZNuGZeGi7x8cmhQgZ5xOYQdW2ijMecQ/hxO2+598hiIB1nsCWcVnX4zV07cpgViRkZd/cA8J/TekYG3058fDekPTtVwOVVnG25W1jSVzY/wuV0pSwraRCesiLkE4XSF59RDMn0HEqLgy6iy0Gj5nWY4cJ3Fct/VyDjqZhVM/Lr6d6avo3Io7c7rUM055fKfu2Xh8iMluYMK7PSrwMDQ==
+    prengrcs1.idmz.eng.ses,10.113.65.65 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCkcQiI+f8S43Yy8lyZ+mbCbJdMi4sH19yXXJ6BKemsm2wiVcX/q+cYrsjYLCayd8/AJdS4tBzGZegXgQ3YSnhzuoNlKFg4UqRnnsU4ynwa+VU38dbxrSTZKUhumFYvZ749d55GIwHZnardMb0ZROYO+mga8beYRbe7bWLlqCUpRgsNkz8wuzS2fd/u+J9T+I7Z7iYNpD91IIeqlch6EXPix4piD/beoD4W+1tXSd6UKDEARANqAsF+mdv6OfOVsfzV06A65+XuoR8gZn0W6ieojm6CdlIU/8i+q7EyVf0q9TMjPCVEvZOdNI1x9a06fezQdQpETDtVuVJDbr/TpDRT

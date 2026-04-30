@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Context configuration model
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -35,20 +35,20 @@ from spell.lang.modifiers import *
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from base import ConfigItem,ConfigError
-from constants import *
- 
+from .base import ConfigItem,ConfigError
+from .constants import *
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
 import xml.dom.minidom
 import os,sys
 from xml.dom.minidom import Node
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -59,13 +59,33 @@ __all__ = [ 'ContextConfig' ]
 PROPERTIES = ['driver','spacecraft','satname','family','gcs','procpath','libpath', 'output_dir', 'input_dir', 'description']
 
 ################################################################################
-class ContextConfig(ConfigItem):
+class DataServer(object):
     
+    def __init__(self, name,url,serviceUrl):
+        self.name = name
+        self.url = url
+        self.serviceUrl = serviceUrl
+        self._nextDataServer = None
+           
+    def appendDataServer(self,nextDataServer):
+        if self._nextDataServer:
+            self._nextDataServer.appendDataServer(nextDataServer)
+        else:
+            self._nextDataServer = nextDataServer
+            
+    def nextDataServer(self):
+        return self._nextDataServer
+    
+    def __repr__(self):
+        return 'DataServer(name=%s,url=%s,serviceUrl=%s,next=%s)'%(self.name,self.url,self.serviceUrl,repr(self._nextDataServer))
+        
+class ContextConfig(ConfigItem):
+
     """
     Configuration entity for Contexts. 
     @see: ConfigItem for details.
     """
-    
+
     # Holds the driver information (data below 'driverinfo' node)
     __driverInfo = {}
     # Holds the database information
@@ -78,11 +98,12 @@ class ContextConfig(ConfigItem):
     __functionConfig = {}
     # Holds the executor configuration
     __executorConfig = {}
-            
-    #===========================================================================            
+
+    __dataSources = {}
+    #===========================================================================
     def __init__(self, reader, configFile):
         if not os.path.exists(configFile):
-            raise ConfigError("Cannot find context configuration file: " + configFile) 
+            raise ConfigError("Cannot find context configuration file: " + configFile)
         document = xml.dom.minidom.parse(configFile)
         node = document.getElementsByTagName(CONTEXT)[0]
         ConfigItem.__init__(self,node,PROPERTIES)
@@ -92,110 +113,123 @@ class ContextConfig(ConfigItem):
         self.__languageConfig = {}
         self.__functionConfig = {}
         self.__executorConfig = {}
+        self.__dataSources = {}
         self.__loadDriverConfig(node)
         self.__loadDatabases(node)
         self.__loadLanguage(reader, node)
         self.__loadExecutorConfig(reader, node)
 
-    #===========================================================================            
+    #===========================================================================
     def getId(self):
         return self["id"]
-        
-    #===========================================================================            
+
+    #===========================================================================
     def getName(self):
         return self["name"]
 
-    #===========================================================================            
+    #===========================================================================
     def getSC(self):
         return self["spacecraft"]
 
-    #===========================================================================            
+    #===========================================================================
     def getSatName(self):
         return self["satname"]
-    
-    #===========================================================================            
+
+    #===========================================================================
     def getDriver(self):
         return self["driver"]
 
-    #===========================================================================            
+    #===========================================================================
     def getFamily(self):
         return self["family"]
-    
-    #===========================================================================            
+
+    #===========================================================================
     def getGCS(self):
         return self["gcs"]
 
-    #===========================================================================            
+    #===========================================================================
     def getProcPath(self):
         return self["procpath"]
 
-    #===========================================================================            
+    #===========================================================================
     def getLibPath(self):
         return self["libpath"]
 
-    #===========================================================================            
+    #===========================================================================
     def getOutputPath(self):
         return self["output_dir"]
 
-    #===========================================================================            
+    #===========================================================================
     def getInputPath(self):
         return self["input_dir"]
 
-    #===========================================================================            
+    #===========================================================================
     def getDescription(self):
         return self["description"]
 
-    #===========================================================================            
+    #===========================================================================
     def getDriverParameter(self,key):
-        if not self.__driverConfig.has_key(key):
+        if key not in self.__driverConfig:
             return None
         return self.__driverConfig[key]
 
-    #===========================================================================            
+    #===========================================================================
     def getDriverParameterList(self):
-        return self.__driverConfig.keys()[:]
+        return list(self.__driverConfig.keys())[:]
 
-    #===========================================================================            
+    #===========================================================================
     def getInterfaceConfig(self, interfaceName):
         return self.__languageConfig.get(interfaceName)
 
-    #===========================================================================            
+    #===========================================================================
     def getFunctionConfig(self, functionName):
         return self.__functionConfig.get(functionName)
 
-    #===========================================================================            
+    #===========================================================================
     def changeInterfaceConfig(self, interfaceName, modifier, value):
         LOG("Modified interface " + interfaceName + " configuration: " + modifier + "=" + repr(value))
         self.__languageConfig.get(interfaceName)[modifier] = value
 
-    #===========================================================================            
+    #===========================================================================
     def changeFunctionConfig(self, functionName, modifier, value):
         LOG("Modified function " + functionName + " configuration: " + modifier + "=" + repr(value))
         self.__functionConfig.get(functionName)[modifier] = value
 
-    #===========================================================================            
+    #===========================================================================
     def getExecutorConfig(self):
         return self.__executorConfig
-
-    #===========================================================================            
+     
+    #===========================================================================
+    def getDataSource(self,dataSourceName):
+        if dataSourceName.upper() in self.__dataSources:
+            return self.__dataSources[dataSourceName.upper()]
+        return None
+     
+    #===========================================================================
     def getDatabaseInfo(self,dbName):
-        if not self.__databaseInfo.has_key(dbName):
+        if dbName not in self.__databaseInfo:
             return None
         return self.__databaseInfo[dbName]
 
     #==========================================================================
     def getLocationType(self, location):
+        if location not in self.__databaseLocations:
+            return ''
         return self.__databaseLocations[location][0]
 
     #==========================================================================
     def getLocationExt(self, location):
+        if location not in self.__databaseLocations:
+            return ''
         return self.__databaseLocations[location][1]
 
     #==========================================================================
     def getLocationPath(self, location):
+        if location not in self.__databaseLocations:
+            return ''
         return self.__databaseLocations[location][2]
 
-    #===========================================================================            
+    #===========================================================================
     def __loadDriverConfig(self, node):
         elements = node.getElementsByTagName("driverconfig")
         if elements is None or len(elements)==0:
@@ -213,12 +247,12 @@ class ContextConfig(ConfigItem):
                         self.__driverConfig[name] = str(value)
                         break
 
-    #===========================================================================            
+    #===========================================================================
     def __loadDatabases(self, node):
         elements = node.getElementsByTagName("databases")
         if elements is None or len(elements)==0:
             raise ConfigError("Could not find database information for context")
-        
+
         for database in elements:
             # Load database nodes
             for property in database.getElementsByTagName("database"):
@@ -251,9 +285,43 @@ class ContextConfig(ConfigItem):
                             raise ConfigError("Cannot find location path")
                         self.__databaseLocations[name] = [type, ext, locationPath]
                         break
-                    
-       
-    #===========================================================================            
+            for property in database.getElementsByTagName("datasource"):
+                dataSourceName = str(property.getAttribute("name")).upper()
+                for child in property.getElementsByTagName("dataserver"):
+                    name = str(child.getAttribute("name"))
+                    host = str(child.getAttribute("host"))
+                    serviceUrl = str(child.getAttribute("serviceUrl"))
+                    dataServer = DataServer(name,host,serviceUrl)
+                    if dataSourceName in self.__dataSources:
+                        self.__dataSources[dataSourceName].appendDataServer(dataServer)
+                    else:
+                        self.__dataSources[dataSourceName] = dataServer
+            # Default Values for Pharos Data Source  
+            targetGCS = ''
+            if 'CWS' in self.__driverConfig:
+                targetGCS = self.__driverConfig["CWS"]
+            if 'NameServer' in  self.__driverConfig:
+                targetGCS = self.__driverConfig["NameServer"]
+            useOPSConfig = targetGCS[0].lower() in ['o','b','p','g','m'] 
+            if useOPSConfig:
+                if 'PHAROS' not in self.__dataSources.keys():
+                    dataServer = DataServer('Pharos_Prime','https://10.34.94.33','/xml/services.json')
+                    self.__dataSources['PHAROS'] = dataServer 
+                if 'EXTERNAL' not in self.__dataSources.keys():
+                    dataServer = DataServer('Pharos_Prime','https://10.34.94.33','/xml/services.json')
+                    self.__dataSources['EXTERNAL'] = dataServer 
+            else:
+                if 'PHAROS' not in self.__dataSources.keys():
+                    dataServer = DataServer('Werewolf_Test','https://10.35.55.33','/xml/services.json')
+                    self.__dataSources['PHAROS'] = dataServer 
+                    dataServer = DataServer('Pharos_Prime','https://10.34.94.33','/xml/services.json')
+                    self.__dataSources['PHAROS'].appendDataServer(dataServer)
+                if 'EXTERNAL' not in self.__dataSources.keys():
+                    dataServer = DataServer('Werewolf_Test','https://10.35.55.33','/xml/services.json')
+                    self.__dataSources['EXTERNAL'] = dataServer 
+                    dataServer = DataServer('Pharos_Prime','https://10.34.94.33','/xml/services.json')
+                    self.__dataSources['EXTERNAL'].appendDataServer(dataServer)
+    #===========================================================================
     def __loadExecutorConfig(self, reader, node):
         elements = node.getElementsByTagName("executor")
         if elements is None or len(elements)==0:
@@ -263,7 +331,7 @@ class ContextConfig(ConfigItem):
         commons = reader.getSection(EXECUTOR)
         if commons:
             self.__executorConfig.update(commons)
-            
+
         # Now override with context defaults
         for database in elements:
             for property in database.getElementsByTagName("property"):
@@ -280,24 +348,24 @@ class ContextConfig(ConfigItem):
 
 #        for param in self.__executorConfig:
 #            LOG("Executor parameter " + param + "=" + str(self.__executorConfig[param]), level = LOG_CNFG)
-                
-    #===========================================================================            
+
+    #===========================================================================
     def __loadLanguage(self, reader, node):
         elements = node.getElementsByTagName("language")
         self.__languageConfig = {}
         self.__functionConfig = {}
-        
+
         # Obtain common defaults for interfaces
         commons = reader.getCommonLanguageConfig()
         if commons:
             self.__languageConfig.update(commons)
-            
+
         # Get the common defaults for functions
         commons = reader.getCommonFunctionsConfig()
         if commons:
             self.__functionConfig.update(commons)
         # Now override the commons with the context specification
-            
+
         # Now load functions and interfaces
         if elements is None or len(elements)==0:
             LOG("No language configuration in context " + self['id'], level = LOG_CNFG )
@@ -308,7 +376,7 @@ class ContextConfig(ConfigItem):
                 functionName = str(defaults.getAttribute("function"))
                 if interfaceName and len(interfaceName)>0:
                     self.__loadInterfaceDefaults( reader, interfaceName, defaults )
-                elif functionName and len(functionName)>0: 
+                elif functionName and len(functionName)>0:
                     self.__loadFunctionDefaults( reader, functionName, defaults )
                 else:
                     LOG("Unknown defaults: " + repr(defaults), LOG_WARN, level = LOG_CNFG )
@@ -341,7 +409,7 @@ class ContextConfig(ConfigItem):
     #===========================================================================
     def __loadFunctionDefaults(self, reader, name, defaults ):
         if not name in self.__functionConfig:
-            self.__functionConfig[name] = {}    
+            self.__functionConfig[name] = {}
 
         modifiers = defaults.getElementsByTagName("modifier")
         for modifier in modifiers:
@@ -353,4 +421,3 @@ class ContextConfig(ConfigItem):
                         self.__functionConfig[name][modifierName] = value
                     except:
                         LOG("   - Error in modifier definition: " + modifierName + "=" + str(child.data), LOG_ERROR, level = LOG_CNFG )
-

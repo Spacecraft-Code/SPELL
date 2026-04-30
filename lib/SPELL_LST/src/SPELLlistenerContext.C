@@ -5,7 +5,7 @@
 // DESCRIPTION: 
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -56,7 +56,7 @@ SPELLlistenerContext::SPELLlistenerContext(const std::string& configFile)
 
     m_gui = NULL;
     m_peer = NULL;
-
+    m_ipc = NULL;
     m_configFile = configFile;
     m_port = STRI(SPELLconfiguration::instance().getListenerParameter("ContextListenerPort"));
     m_contextStartupCmd = SPELLconfiguration::instance().getListenerParameter("ContextScript");
@@ -220,6 +220,7 @@ SPELLipcMessage SPELLlistenerContext::startContext( const SPELLipcMessage& msg )
 //=============================================================================
 SPELLipcMessage SPELLlistenerContext::destroyContext( const SPELLipcMessage& msg )
 {
+    LOG_INFO("Destroying context");
     std::string name;
 
     name = msg.get(MessageField::FIELD_CTX_NAME);
@@ -234,11 +235,12 @@ SPELLipcMessage SPELLlistenerContext::destroyContext( const SPELLipcMessage& msg
     	SPELLprocessManager::instance().killProcess("CTX_" + name);
     	SPELLprocessManager::instance().waitProcess("CTX_" + name);
     	SPELLprocessManager::instance().clearProcess("CTX_" + name);
+        usleep(10000000);
+    	respawnContext(name);
     }
     catch(SPELLcoreException& ex) {};
 
     LOG_INFO("Destroyed context");
-    
     return SPELLipcHelper::createResponse(ContextMessages::RSP_DESTROY_CTX, msg);
 }
 
@@ -312,7 +314,7 @@ SPELLipcMessage SPELLlistenerContext::stopContext( const SPELLipcMessage& msg )
     	    notify.setSender("LST");
     	    notify.setReceiver("GUI");
     	    m_gui->displace(&notify);
-
+    	    //respawnContext(ctxInfo->m_name);
     	}
     	catch(SPELLcoreException& ex) {};
     }
@@ -412,14 +414,26 @@ void SPELLlistenerContext::fillContextInfo(const std::string ctxName, SPELLipcMe
     std::string driverName;
     SPELLcontextConfig* ctxConfig;
     SPELLdriverConfig* drvConfig;
-    ContextInfo* ctxInfo;
+    std::map<std::string, ContextInfo>::iterator ctxInfo;
 
-	ctxInfo = &m_openContexts[ctxName];
-	ctxConfig = ctxInfo->m_ctxConfig;
-	drvConfig = ctxInfo->m_drvConfig;
+	ctxInfo = m_openContexts.find(ctxName);
+	if (ctxInfo == m_openContexts.end()){
+		msg.set(MessageField::FIELD_CTX_NAME, "Unknown");
+		msg.set(MessageField::FIELD_CTX_PORT, ISTR(0) );
+		msg.set(MessageField::FIELD_CTX_DRV, "Unknown");
+		msg.set(MessageField::FIELD_CTX_SC, "Unknown");
+		msg.set(MessageField::FIELD_CTX_FAM, "Unknown");
+		msg.set(MessageField::FIELD_CTX_GCS, "Unknown");
+		msg.set(MessageField::FIELD_CTX_DESC, "Unknown");
+		msg.set(MessageField::FIELD_CTX_STATUS, "ERROR");
+		msg.set(MessageField::FIELD_CTX_MAXPROC, "0" );
+		return;
+	}
+	ctxConfig = ctxInfo->second.m_ctxConfig;
+	drvConfig = ctxInfo->second.m_drvConfig;
 
 	msg.set(MessageField::FIELD_CTX_NAME, ctxName);
-	msg.set( MessageField::FIELD_CTX_PORT, ISTR(ctxInfo->m_port) );
+	msg.set( MessageField::FIELD_CTX_PORT, ISTR(ctxInfo->second.m_port) );
 
 	if (ctxConfig != NULL)
 	{
@@ -428,7 +442,7 @@ void SPELLlistenerContext::fillContextInfo(const std::string ctxName, SPELLipcMe
 		msg.set(MessageField::FIELD_CTX_FAM, ctxConfig->getFamily());
 		msg.set(MessageField::FIELD_CTX_GCS, ctxConfig->getGCS());
 		msg.set(MessageField::FIELD_CTX_DESC, ctxConfig->getDescription());
-		msg.set(MessageField::FIELD_CTX_STATUS, ctxInfo->m_status);
+		msg.set(MessageField::FIELD_CTX_STATUS, ctxInfo->second.m_status);
 	}
 	else
 	{
@@ -507,7 +521,7 @@ SPELLipcMessage SPELLlistenerContext::displace( const SPELLipcMessage& msg )
     else if (msg.getId() == ContextMessages::REQ_DESTROY_CTX)
         res = this->destroyContext(msg);
     else
-        LOG_ERROR("Unprocessed message: " + msg.getId())
+        LOG_ERROR("Unprocessed message: " + msg.getId());
 
 	DEBUG("Response IPC object: " + res.dataStr());
 
@@ -517,7 +531,7 @@ SPELLipcMessage SPELLlistenerContext::displace( const SPELLipcMessage& msg )
 //=============================================================================
 // METHOD: SPELLlistenerContext::processStarted
 //=============================================================================
-void SPELLlistenerContext::processStarted( const std::string& identifier )
+void SPELLlistenerContext::processStarted( const std::string identifier )
 {
 	LOG_INFO("Context process started: " + identifier);
 }
@@ -525,7 +539,7 @@ void SPELLlistenerContext::processStarted( const std::string& identifier )
 //=============================================================================
 // METHOD: SPELLlistenerContext::processFinished
 //=============================================================================
-void SPELLlistenerContext::processFinished( const std::string& identifier, const int& retValue )
+void SPELLlistenerContext::processFinished( const std::string identifier, const int& retValue )
 {
 	LOG_INFO("Context process finished: " + identifier);
 }
@@ -533,7 +547,7 @@ void SPELLlistenerContext::processFinished( const std::string& identifier, const
 //=============================================================================
 // METHOD: SPELLlistenerContext::processKilled
 //=============================================================================
-void SPELLlistenerContext::processKilled( const std::string& identifier )
+void SPELLlistenerContext::processKilled( const std::string identifier )
 {
     ContextInfo* ctxInfo;
     std::string ctxName = identifier.substr(4);
@@ -551,18 +565,25 @@ void SPELLlistenerContext::processKilled( const std::string& identifier )
     notify.setReceiver("GUI");
     m_gui->displace(&notify);
     DEBUG("Process killed processing done");
+    usleep(10000000);
+    respawnContext(ctxName);
 }
 
 //=============================================================================
 // METHOD: SPELLlistenerContext::processFailed
 //=============================================================================
-void SPELLlistenerContext::processFailed( const std::string& identifier )
+void SPELLlistenerContext::processFailed( const std::string identifier )
 {
     ContextInfo* ctxInfo;
     LOG_ERROR("Context " + identifier + " failed");
     ctxInfo = &m_openContexts[identifier.substr(4)];
     ctxInfo->m_status = MessageValue::DATA_CTX_ERROR;
-    m_ipc->disconnect();
+    try {
+        m_ipc->disconnectClient(ctxInfo->m_key);
+    } catch(SPELLcoreException& ex)
+    {
+        
+    }
 
     // Notify to other clients
     SPELLipcMessage notify( ListenerMessages::MSG_CONTEXT_OP );
@@ -572,7 +593,10 @@ void SPELLlistenerContext::processFailed( const std::string& identifier )
     notify.setSender("LST");
     notify.setReceiver("GUI");
     m_gui->displace(&notify);
+    usleep(10000000);
+    respawnContext(ctxInfo->m_name);
 }
+
 
 //=============================================================================
 // METHOD: SPELLlistenerContext::notifyClients

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: UTC time interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,39 +33,45 @@
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
+
 import datetime,time
 from spell.lib.exception import DriverException
 from spell.lib.registry import REGISTRY
 from spell.utils.log import *
 
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
 
+import sys
+
+if sys.version_info > (3, 0):
+    long = int
+    
 # The date/time formats accepted are:
 #
 # For absolute time:
-# 
+#
 #  * dd-mmm-yyyy [hh:mm[:ss]]
 #  * yyyy-mm-dd [hh:mm[:ss]]
 #  * dd/mm/yyyy [hh:mm[:ss]]
 #  * dd-mm-yyyy [hh:mm[:ss]]
-# 
+#
 #  * dd-mmm-yyyy:hh:mm[:ss]
 #  * yyyy-mm-dd:hh:mm[:ss]
 #  * dd/mm/yyyy:hh:mm[:ss]
 #  * dd-mm-yyyy:hh:mm[:ss]
-# 
+#
 # For relative times:
-# 
+#
 #  * +ss.nnn or -ss.nnn
 #  * +ddd hh:mm[:ss] or -ddd hh:mm[:ss]
 
@@ -79,35 +85,42 @@ TOMORROW_STR = 'TOMORROW'
 ################################################################################
 class TIME(object):
 
-    __fmt = None
-    
     #===========================================================================
     def __init__(self, timestamp):
+
         ttime = ttime_class()
         self._val = None
+
         if isinstance(timestamp, TIME):
+
             if isinstance(timestamp._val, str):
                 self._val = ttime.cnv(timestamp._val)
-                self.__fmt = ttime.fmt()
             else:
                 self._val = timestamp._val
+
         elif isinstance(timestamp, datetime.datetime) or isinstance(timestamp, datetime.timedelta):
+
             self._val = timestamp
+
         elif isinstance(timestamp, str):
+
             if timestamp in (NOW_STR, TODAY_STR, YESTERDAY_STR, TOMORROW_STR):
                 self._val = timestamp
             else:
                 self._val = ttime.cnv(timestamp)
-                self.__fmt = ttime.fmt()
+
         else:
+
             self._val = ttime.cnv(timestamp)
-	    
-	#Setting time format
-	self.__fmt = ttime.fmt()
-        
-	if self._val is None:
+
+        if self._val is None:
             raise DriverException("Invalid input for date/time: " + repr(timestamp))
-    
+
+    #===========================================================================
+    @staticmethod
+    def fmt(fmt):
+        return ttime_class.fmt(fmt)
+
     #===========================================================================
     @staticmethod
     def epoch(seconds):
@@ -128,131 +141,173 @@ class TIME(object):
     #===========================================================================
     def value(self):
         ttime = ttime_class()
-        
+
         if isinstance(self._val, str):
             return ttime.cnv(self._val)
         else:
             return self._val
-        
+
     #===========================================================================
     def abs(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             val = REGISTRY['TIME'].getUTC() + val
         return time.mktime(val.timetuple())
-    
+
     #===========================================================================
     def rel(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
-            return val.days * 3600 * 24 + val.seconds + val.microseconds / 1000000 
+            return val.days * 3600 * 24 + val.seconds + val.microseconds / 1000000
         return None
-    
+
     #===========================================================================
     def isAbs(self):
         val = self.value()
         if isinstance(val, datetime.datetime):
             return True
         return False
-    
+
     #===========================================================================
     def isRel(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return True
         return False
-    
+
     #===========================================================================
     def julianDay(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.timetuple()[7]
-    
+
     #===========================================================================
     def year(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.year
-    
+
     #===========================================================================
     def month(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.month
-    
+
     #===========================================================================
     def day(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.day
-    
+
     #===========================================================================
     def hour(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.hour
-    
+
     #===========================================================================
     def minute(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.minute
-    
+
     #===========================================================================
     def second(self):
         val = self.value()
         if isinstance(val, datetime.timedelta):
             return None
         return val.second
-    
+
+    #===========================================================================
+    def millisecond(self):
+        return int(self.microsecond() / 1000)
+
+    #===========================================================================
+    def microsecond(self):
+        val = self.value()
+        if isinstance(val, datetime.timedelta):
+            return val.microseconds
+        return val.microsecond
+
     #===========================================================================
     def __str__(self):
         val = self.value()
         res = None
         if isinstance(val, datetime.datetime):
-            res = val.strftime(self.__fmt)
+            res = val.strftime(ttime_class.fmt())
         elif isinstance(val, datetime.timedelta):
-            res = ('%+04i %02i:%02i:%02i' 
-                % (val.days, val.seconds // 3600, 
-                  val.seconds // 60 % 60, val.seconds % 60))
-            if val.microseconds != 0: res = res + ".%06i" % val.microseconds
+            epoch = val.days * 86400 + val.seconds + val.microseconds/1000000
+            sign = "-" if epoch < 0 else "+"
+            epoch = abs(epoch)
+            days = int(epoch) / 86400
+            seconds = int(epoch) % 86400
+            microseconds = (epoch - int(epoch))*1000000
+
+            res = ('%s%03i %02i:%02i:%02i'
+                % (sign,days, seconds / 3600,
+                  seconds / 60 % 60, seconds % 60))
+            if microseconds != 0: res = res + ".%06i" % microseconds
         return res
 
     #===========================================================================
     def __repr__(self):
         return self.__str__()
-    
+
     #===========================================================================
     def __translate(self, timestamp):
         if isinstance(timestamp, TIME):
             return timestamp
         else:
             return TIME(timestamp)
-            
+
     #===========================================================================
     def __cmp__(self, other):
         ttime = self.__translate(other)
         val = self.value()
         val2 = ttime.value()
-        
+
         if isinstance(val,datetime.timedelta) and isinstance(val2,datetime.datetime):
             return -1
         if isinstance(val,datetime.datetime) and isinstance(val2,datetime.timedelta):
             return 1
-        
+
         if (val2 == val):
             return 0
         elif (val < val2):
             return -1
         elif (val > val2):
             return 1
-    
+
+    #===========================================================================
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
+    #===========================================================================
+    def __ne__(self, other):
+        return self.__cmp__(other) != 0
+
+    #===========================================================================
+    def __gt__(self, other):
+        return self.__cmp__(other) > 0
+
+    #===========================================================================
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+
+    #===========================================================================
+    def __ge__(self, other):
+        return self.__cmp__(other) >= 0
+
+    #===========================================================================
+    def __le__(self, other):
+        return self.__cmp__(other) <= 0
+
     #===========================================================================
     def __add__(self, timestamp):
         return TIME(self.value() + self.__translate(timestamp).value())
@@ -263,7 +318,8 @@ class TIME(object):
 
     #===========================================================================
     def __mul__(self, coef):
-        return TIME(self.value() * coef)
+        v = self.value()
+        return TIME((v.days * 86400 + v.seconds + v.microseconds / 1000000.0) * coef)
 
     #===========================================================================
     def __radd__(self, timestamp):
@@ -275,19 +331,20 @@ class TIME(object):
 
     #===========================================================================
     def __rmul__(self, coef):
-        return TIME(self.value() * int(coef))
+        v = self.value()
+        return TIME((v.days * 86400 + v.seconds + v.microseconds / 1000000.0) * coef)
 
 ################################################################################
 class ttime_class(object):
 
     __isinitialized = False
     __instance = None
-    __fmt = None
-    
+    _fmt_ = '%d-%b-%Y %H:%M:%S'
+
     #===========================================================================
     def __new__(cls):
         if not isinstance(ttime_class.__instance, cls):
-            ttime_class.__instance = object.__new__(cls)        
+            ttime_class.__instance = object.__new__(cls)
         return ttime_class.__instance
 
     #===========================================================================
@@ -296,21 +353,25 @@ class ttime_class(object):
             return
         super(ttime_class, self).__init__()
         self.__isinitialized = True
-        self.__fmt = '%d-%b-%Y %H:%M:%S'
 
     #===========================================================================
-    def fmt(self):
-        return self.__fmt
-    
+    @staticmethod
+    def fmt( newFmt = None ):
+
+        if newFmt is not None:
+            ttime_class._fmt_ = newFmt
+
+        return ttime_class._fmt_
+
     #===========================================================================
     def cnv(self, timestamp):
-        
+
         mydt = datetime.datetime(1,1,1)
         evaluated = False
-        datefmtlist = [ 
-            '%Y.%j.%H.%M.%S',    '%Y.%j.%H.%M',    '%Y.%j',
+        datefmtlist = [
+            '%Y.%j.%H.%M.%S',    '%Y.%j.%H.%M',
             '%d-%b-%Y %H:%M:%S', '%d-%b-%Y %H:%M', '%d-%b-%Y',
-            '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d',
+            '%Y-%m-%d %H:%M:%S','%Y-%m-%dT%H:%M:%S','%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%d %H:%M', '%Y-%m-%d',
             '%Y/%m/%d %H:%M:%S', '%Y/%m/%d %H:%M', '%Y/%m/%d',
             '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%d/%m/%Y',
             '%d-%m-%Y %H:%M:%S', '%d-%m-%Y %H:%M', '%d-%m-%Y',
@@ -320,7 +381,7 @@ class ttime_class(object):
             '%d/%m/%Y:%H:%M:%S', '%d/%m/%Y:%H:%M', '%d/%m/%Y',
             '%d-%m-%Y:%H:%M:%S', '%d-%m-%Y:%H:%M', '%d-%m-%Y',
         ]
-        
+
         abshourfmtlist = [
             '%H.%M.%S', '%H:%M:%S', '%H:%M:%S', '%H:%M',
         ]
@@ -328,10 +389,10 @@ class ttime_class(object):
         # Split timestamp and microseconds
 
         ms = 0
-        
+
         if isinstance(timestamp, float):
             ms = (timestamp - int(timestamp)) * 1000000
-        
+
         elif isinstance(timestamp, str):
             # Check if the seconds are in mm:ss format. Otherwise dont check for microsecods
             if not timestamp.find(':') == -1:
@@ -345,25 +406,24 @@ class ttime_class(object):
                 try:
                     val = mydt.strptime(timestamp, fmt)
                     val = val.replace(microsecond = ms)
-                    self.__fmt = fmt;
                     evaluated = True
                 except:
                     pass
-        
+
         # - <int> or <float>
-                
+
         if not evaluated and (isinstance(timestamp, int) or isinstance(timestamp, float) or isinstance(timestamp, long)):
-            dd = int(timestamp / (3600 * 24)) 
-            hh = int(timestamp / 3600) % 24
-            mm = int(timestamp / 60) % 60 
-            ss = int(timestamp) % 60
+            dd = int(timestamp / (3600 * 24))
+            hh = int(timestamp / 3600) - dd * 24
+            mm = int(timestamp / 60) - (dd * 24 + hh) * 60
+            ss = int(timestamp) - ((dd * 24 + hh) * 60 + mm) * 60
 
             val = datetime.timedelta(days = dd, hours=hh, minutes=mm, seconds=ss, microseconds=ms)
-            
-            evaluated = True     
-            
+
+            evaluated = True
+
         # +|-[dd] hh:mm[:ss]
-                
+
         if not evaluated:
             try:
                 tmp = timestamp
@@ -373,23 +433,23 @@ class ttime_class(object):
                     if tmp[0] == '-':
                         sign = -1
                     tmp = tmp[1:]
-                    
+
                     # Capture the day ('dd' in 'dd hh:mm:ss' if 'dd' exists)
-                    items = tmp.split(' ')                    
+                    items = tmp.split(' ')
                     mytime = items[0]
                     dd = 0
-                    
+
                     # In case we have '+hh:mm:ss' days = 0 and we go on with the time)
                     if len(items) == 2:
                         dd = eval(items[0].lstrip('0') or '0')
                         mytime = items[1]
-                        
+
                     # Capture the time ('hh' 'mm' and 'ss' in 'hh:mm:ss')
                     items = mytime.split(':')
                     hh = eval(items[0].lstrip('0') or '0')
                     mm = eval(items[1].lstrip('0') or '0')
                     ss = int(eval(items[2].lstrip('0') or '0'))
-                    
+
                     # Normalize in case we have hours > 23
                     # E.g. +2 26:00:00 becomes +3 02:00:00
                     dd = dd + hh // 24
@@ -401,16 +461,15 @@ class ttime_class(object):
                     mm = mm * sign
                     ss = ss * sign
                     ms = ms * sign
-                    
+
                     val = datetime.timedelta(days = dd, hours=hh, minutes=mm, seconds=ss, microseconds=ms)
-                    
+
                     evaluated = True
             except:
                 pass
 
-
         # Evaluated TODAY, NOW, YESTERDAY and TOMORROW
-        
+
         if not evaluated:
             evaluated = True
             if REGISTRY.exists('TIME'):
@@ -425,7 +484,7 @@ class ttime_class(object):
                     val = val + datetime.timedelta(days = 1)
                 elif timestamp != TODAY_STR:
                     evaluated = False
-                            
+
         # - hh:mm[:ss] is TODAY at hh:mm[:ss]
 
         for fmt in abshourfmtlist:
@@ -433,12 +492,12 @@ class ttime_class(object):
                 try:
                     mydt = mydt.strptime(timestamp, fmt)
                     val = REGISTRY['TIME'].getUTC()
-                    val = val.replace(hour=mydt.hour, minute=mydt.minute, 
+                    val = val.replace(hour=mydt.hour, minute=mydt.minute,
                                       second=mydt.second, microsecond=ms)
                     evaluated = True
                 except:
                     pass
-        
+
         if evaluated:
             return val
 

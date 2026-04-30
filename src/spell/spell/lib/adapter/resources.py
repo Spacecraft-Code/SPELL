@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Resource management interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -38,14 +38,17 @@ from spell.lib.registry import REGISTRY
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from config import Configurable
-from interface import Interface
+from .config import Configurable
+from .interface import Interface
 
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
-import threading,thread,time
-
+import threading,time
+try:
+    import _thread as _thread
+except ImportError as ex:
+    import thread as _thread
 ###############################################################################
 # Module import definition
 
@@ -55,20 +58,20 @@ INTERFACE_DEFAULTS = { OnFailure:ABORT | SKIP | REPEAT }
 
 ###############################################################################
 class ResourceInterface(Configurable,Interface):
-    
+
     """
     DESCRIPTION:
         Resource management library interface. This class is in charge of
         managing the underlying system resources.
     """
-    
+
     # List of resources to check
     toCheck = []
     # Status of each resource (OK/NOK)
     rscStatus = {}
     # Callbacks for resource monitoring
     rscCallbacks = []
-    
+
     #==========================================================================
     def __init__(self):
         Interface.__init__(self, "RSC")
@@ -77,7 +80,7 @@ class ResourceInterface(Configurable,Interface):
         self.toCheck = [ 'TM', 'TC' ]
         self.rscStatus = {}
         self.rscCallbacks = []
-    
+
     #===========================================================================
     def refreshConfig(self):
         ctxConfig = self.getContextConfig()
@@ -86,7 +89,7 @@ class ResourceInterface(Configurable,Interface):
             INTERFACE_DEFAULTS.update(languageDefaults)
         self.setConfig( INTERFACE_DEFAULTS )
         LOG("Configuration loaded", level = LOG_CNFG )
-    
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         self.storeConfig(ctxConfig, drvConfig)
@@ -95,65 +98,83 @@ class ResourceInterface(Configurable,Interface):
     #==========================================================================
     def cleanup(self):
         LOG("Cleanup RSC adapter interface")
-        
+
     #==========================================================================
     def setLink(self, *args, **kargs):
         if len(args)<2:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         linkName = args[0]
         enable = args[1]
-         
+
         return self._setLink( linkName, enable, useConfig )
 
     #==========================================================================
     def _setLink(self, linkName, enable, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return False
-        
+
     #==========================================================================
     def checkLink(self, *args, **kargs):
         if len(args)<1:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         linkName = args[0]
-         
+
         return self._checkLink( linkName, useConfig )
 
     #==========================================================================
     def setResource(self, *args, **kargs):
-        if len(args)<2:
+        if len(args)<3:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         resourceName = args[0]
         resourceValue = args[1]
-         
-        return self._setResource( resourceName, resourceValue, useConfig )
+        isLocal = args[2]
+
+        return self._setResource( resourceName, resourceValue, isLocal, useConfig )
 
     #==========================================================================
-    def _setResource(self, resourceName, resourceValue, config = {} ):
+    def _setResource(self, resourceName, resourceValue, isLocal, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return False
-    
+
     #==========================================================================
     def getResource(self, *args, **kargs):
-        if len(args)<1:
+        if len(args)<2:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         resourceName = args[0]
-         
-        return self._getResource( resourceName, useConfig )
+        isLocal = args[1]
+
+        return self._getResource( resourceName, isLocal, useConfig )
 
     #==========================================================================
-    def _getResource(self, resourceName, config = {} ):
+    def _getResource(self, resourceName, isLocal, config = {} ):
+        REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
+        return None
+
+    #==========================================================================
+    def getResources(self, *args, **kargs):
+        if len(args)<1:
+            raise SyntaxException("Wrong arguments")
+
+        useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+
+        isLocal = args[0]
+
+        return self._getResources( isLocal, useConfig )
+
+    #==========================================================================
+    def _getResources(self, isLocal, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return None
 
@@ -164,7 +185,7 @@ class ResourceInterface(Configurable,Interface):
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         resource = args[0]
         return self._getResourceStatus( resource, useConfig )
-        
+
     #==========================================================================
     def isResourceOK(self, *args, **kargs ):
         if len(args)<1:
@@ -176,7 +197,7 @@ class ResourceInterface(Configurable,Interface):
     #==========================================================================
     def addResourceStatusCallback(self, callbackClass ):
         LOG("Add resource monitor: " + repr(callbackClass))
-        self.rscCallbacks.append(callbackClass)        
+        self.rscCallbacks.append(callbackClass)
 
     #==========================================================================
     def _getResourceStatus(self, resourceName, config = {} ):
@@ -195,5 +216,3 @@ class ResourceInterface(Configurable,Interface):
         if len(self.rscCallbacks)>0:
             for cbk in self.rscCallbacks:
                 cbk.notifyUpdate(resource,status)
-    
-    
