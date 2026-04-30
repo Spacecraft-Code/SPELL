@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of condition mechanism for POSIX
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -36,7 +36,21 @@
 //=============================================================================
 SPELLconditionPOSIX::SPELLconditionPOSIX()
 {
-    pthread_cond_init(&m_condition, NULL);
+    int result = pthread_cond_init(&m_condition, NULL);
+    if (result == EAGAIN){
+    	LOG_ERROR("[SPELLconditionPOSIX.create] Error creating condition! The system lacked the necessary resources (other than memory) to initialise another condition variable.");
+    } else if (result == ENOMEM) {
+    	LOG_ERROR("[SPELLconditionPOSIX.create] Error creating condition! Insufficient memory exists to initialise the condition variable.");
+    } else if (result == EBUSY) {
+    	LOG_ERROR("[SPELLconditionPOSIX.create] Error creating condition! The implementation has detected an attempt to re-initialise the object referenced by cond, a previously initialised, but not yet destroyed, condition variable.");
+    } else if (result == EINVAL) {
+    	LOG_ERROR("[SPELLconditionPOSIX.create] Error creating condition! The value specified by attr is invalid.");
+    }
+//#ifdef WITH_DEBUG
+//    std::stringstream buf;
+//    buf << "SPELLconditionPOSIX create " << &m_condition;
+//    DEBUG( buf.str());
+//#endif
 }
 
 //=============================================================================
@@ -44,7 +58,12 @@ SPELLconditionPOSIX::SPELLconditionPOSIX()
 //=============================================================================
 SPELLconditionPOSIX::~SPELLconditionPOSIX()
 {
-    pthread_cond_destroy(&m_condition);
+//#ifdef WITH_DEBUG
+//    std::stringstream buf;
+//    buf << "SPELLconditionPOSIX destroy " << &m_condition;
+//    DEBUG( buf.str());
+//#endif
+	pthread_cond_destroy(&m_condition);
 }
 
 //=============================================================================
@@ -73,8 +92,23 @@ bool SPELLconditionPOSIX::wait( SPELLmutex* m, unsigned long timeoutMsec )
     clock_gettime(CLOCK_REALTIME, &abstime);
     abstime.tv_sec += timeoutMsec / 1000;
     abstime.tv_nsec += ( timeoutMsec  - (timeoutMsec / 1000)*1000 ) * 1000;
+    if (abstime.tv_nsec >= 1000000000){
+    	DEBUG("[SPELLconditionPOSIX.wait] abstime.tv_nsec is >= 1000000000. This may cause Condition error EINVAL. Value will be corrected.");
+    	abstime.tv_sec += abstime.tv_nsec / 1000000000;
+    	abstime.tv_nsec = abstime.tv_nsec % 1000000000;
+    }
+    if (abstime.tv_nsec < 0) {
+    	DEBUG("[SPELLconditionPOSIX.wait] abstime.tv_nsec is < 0. This may cause Condition error EINVAL. Value will be corrected.");
+    	abstime.tv_sec -= 1;
+    	abstime.tv_nsec = (abstime.tv_nsec + 1000000000) % 1000000000;
+    }
     SPELLmutexPOSIX* pmutex = dynamic_cast<SPELLmutexPOSIX*>(m->getImpl());
     assert(pmutex->get() != 0);
+//#ifdef WITH_DEBUG
+//    std::stringstream buf;
+//    buf << "SPELLconditionPOSIX pthread_cond_timedwait " << &m_condition;
+//    DEBUG( buf.str());
+//#endif
     int ret = pthread_cond_timedwait(&m_condition, pmutex->get(), &abstime);
     if (ret == ETIMEDOUT)
     {

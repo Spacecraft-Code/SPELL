@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Logger (temporary)
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -31,17 +31,18 @@
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
 import time,os,sys,inspect
 from datetime import datetime
+from spell.config.constants import COMMON
 
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -56,29 +57,29 @@ LOG_ERROR = '[ ERROR ]'
 
 LOG_MAIN = '[ MAIN ]'
 LOG_INIT = '[ INIT ]'
-LOG_CNFG = '[ CNFG ]' 
+LOG_CNFG = '[ CNFG ]'
 LOG_PROC = '[ PROC ]'
 LOG_LANG = '[ LANG ]'
 LOG_COMM = '[ COMM ]'
 
-SHOW_LEVELS = [ LOG_MAIN, LOG_INIT, LOG_CNFG, LOG_PROC, LOG_LANG, LOG_COMM ] 
+SHOW_LEVELS = [ LOG_MAIN, LOG_INIT, LOG_CNFG, LOG_PROC, LOG_LANG, LOG_COMM ]
 
 ################################################################################
 class LoggerClass(object):
-    
+
     __filename = None
     __fileobj = None
     __showToLevel = LOG_COMM
-    showlog = True
-    
+
     LOG_MAXLENGTH = 35
 
     #===========================================================================
     def __init__(self):
         self.__filename = None
-        self.__fileobj = None 
+        self.__fileobj = None
         self.__showToLevel = SHOW_LEVELS.index(LOG_COMM)
         self.showLog = True
+        self._redirect = None
 
     #===========================================================================
     def setLogFile(self, fileName, timestamp = None ):
@@ -102,26 +103,35 @@ class LoggerClass(object):
         if not os.path.exists(home):
             raise BaseException("Cannot find log directory")
         if timestamp is None:
-            timestamp = time.strftime('%Y-%m-%d_%H%M%S') 
+            timestamp = time.strftime('%Y-%m-%d_%H%M%S')
         self.__filename = home + os.sep + timestamp + "_" + filename + ".log"
-        self.__fileobj = file(self.__filename, 'wt')
+        self.__fileobj = open(self.__filename, 'wt')
 
     #===========================================================================
     def getLogFile(self):
         return self.__fileobj
-        
+
+    def setRedirectMethod(self,func):
+        self._redirect = func
+
+    def setShowLog(self, val):
+        self.showLog = val
+
     #===========================================================================
     def __call__(self, msg, severity = LOG_INFO, level = LOG_PROC):
-        return
+        if self._redirect:
+            if not self._redirect(msg,severity,level):
+                return
+
         if severity not in [LOG_ERROR,LOG_WARN]:
             if not (SHOW_LEVELS.index(level)<=self.__showToLevel): return
 
         if not level in SHOW_LEVELS:
             sys.stderr.write("ERROR: unknown log level: " + repr(level))
-            sys.stderr.write(logStr)
+            sys.stderr.write(msg)
             return
-                    
-        if self.showlog or self.__fileobj:
+
+        if self.showLog or self.__fileobj:
             timestamp = self._getTimeFormat()
             try:
                 stack = inspect.stack()
@@ -134,12 +144,12 @@ class LoggerClass(object):
             len = LoggerClass.LOG_MAXLENGTH
             logname = origLogname[0:len - 2]
             if logname != origLogname: logname = logname + '..'
-        
+
             fileStr = "%s\t%s\t%s\t%s\t%s\n" % ( logname.ljust(len),\
                      severity, timestamp, level, msg)
             self.write(fileStr)
-            
-        if self.showlog:
+
+        if self.showLog:
             logStr = "[ %s ] %s [ %s ] %s: %s\n" % ( logname.ljust(len),\
                      severity, timestamp, level, msg)
             sys.stderr.write(logStr)
@@ -152,7 +162,8 @@ class LoggerClass(object):
 
     #===========================================================================
     def _getTimeFormat(self):
-        tdsTimeFormat = spell.config.reader.Config.instance().getProperty( COMMON, "TdsTimeFormat" )
+        from spell.config.reader import Config
+        tdsTimeFormat = Config.instance().getProperty( COMMON, "TdsTimeFormat" )
 
         val=datetime.now()
         microsecond=val.microsecond
@@ -168,7 +179,7 @@ class LoggerClass(object):
             notificationTime=val.strftime("%d-%m-%Y %H:%M:%S")
             notificationTime = notificationTime + ":%03i" % millisecond
 
-        return notificationTime    
+        return notificationTime
 
 ################################################################################
 LOG = LoggerClass()

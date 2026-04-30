@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the context execution defaults.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -42,14 +42,17 @@ SPELLexecutorDefaults::SPELLexecutorDefaults( const SPELLexecutorDefaults& from 
 	LOG_INFO("[CTX] Copied Executor Defaults for " + m_ctxName);
 
 	m_execDelay = from.getExecDelay();
-	m_promptWarningDelay = from.getpromptWarningDelay();
+	m_promptWarningDelay = from.getPromptWarningDelay();
 	m_runInto = from.isRunInto();
 	m_byStep = from.isByStep();
 	m_browsableLib = from.getBrowsableLib();
 	m_maxVerbosity = from.getMaxVerbosity();
-	m_forceTcConfirm = from.getForceTcConfirm();
+	m_forceTcConfirm = from.isForceTcConfirm();
+	m_forcePromptConfirm = from.isForcePromptConfirm();
 	m_saveStateMode = from.getSaveStateMode();
 	m_watchVariables = from.isWatchVariables();
+	m_resourcesDisplay = from.isResourcesDisplay();
+	m_localResourceSupport = from.isLocalResourcesSupported();
 	m_ctxName = from.getCtxName();
 } //copy constructor
 

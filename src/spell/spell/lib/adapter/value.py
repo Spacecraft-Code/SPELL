@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Value helper class
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -62,7 +62,7 @@ class ValueClass:
 
     #==========================================================================
     def get(self):
-        return self._value 
+        return self._value
 
     #==========================================================================
     def format(self, fmt = None):
@@ -77,32 +77,32 @@ class ValueClass:
             return self._vtype
         else:
             self._vtype = vt
-    
+
     #==========================================================================
     def radix(self, rd = None):
         if rd is None:
             return self._radix
         else:
             self._radix = rd
-    
+
     #==========================================================================
     def units(self, u = None):
         if u is None:
             return self._units
         else:
             self._units = u
-    
+
     #==========================================================================
     def __repr__(self):
         return "[" + repr(self._value) + ",VType: " + self._vtype + ",Format: " +\
-         self._format + ", Radix: " + self._radix + ", Units: " + self._units + "]"
-    
+            self._format + ", Radix: " + self._radix + ", Units: " + self._units + "]"
+
     #==========================================================================
     def evaluate(self, radix = DEC):
         cnv = { DEC: '', HEX: '0x', OCT: '0' }
         trns = { HEX: hex, OCT: oct }
         res = None
-        
+
         try:
             if isinstance(self._value, str):
                 if self._radix == BIN:
@@ -111,11 +111,11 @@ class ValueClass:
                         res = res * 2 + eval(c)
                 elif self._radix in cnv:
                     res = eval(cnv[self._radix] + self._value)
-            elif isinstance(self._value, long) or isinstance(self._value, int) or isinstance(self._value, float):
+            elif isinstance(self._value, int) or isinstance(self._value, int) or isinstance(self._value, float):
                 res = self._value
         except:
             res = None
-        
+
         if res is None:
             return None
 
@@ -128,6 +128,5 @@ class ValueClass:
                 if res % 2 == 0: v = '0' + v
                 res >>= 1
             res = '0b' + v
-        
+
         return res
-    

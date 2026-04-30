@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the data writer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,15 +33,16 @@
 #include "SPELL_SYN/SPELLmonitor.H"
 #include "SPELL_UTIL/SPELLlog.H"
 #include "SPELL_UTIL/SPELLcompression.H"
+#include "SPELL_EXC/SPELLexecutor.H"
 // System includes ---------------------------------------------------------
 
 
 // DEFINES /////////////////////////////////////////////////////////////////
 
 #define NAME std::string("[ OUTPUT-KEY(") + ISTR(m_key) + ")-" + m_ifcName + " ] "
-#define SIZE sizeof(unsigned int)
+#define SIZE sizeof(uint32_t)
 #define MINIMUM_SIZE_FOR_COMPRESSION 512
-#define PING_PERIOD_SEC 250
+#define PING_PERIOD_SEC 10
 
 //=============================================================================
 // FUNCTION: encodeLength
@@ -70,7 +71,7 @@ SPELLipcOutput::SPELLipcOutput( const std::string& name, SPELLsocket& skt, int m
   m_channel(chan),
   m_connected(true)
 {
-    DEBUG( NAME + "Created");
+    //DEBUG( NAME + "Created");
     m_ping.setId("ping");
     m_ping.setType(MSG_TYPE_PING);
 }
@@ -80,7 +81,9 @@ SPELLipcOutput::SPELLipcOutput( const std::string& name, SPELLsocket& skt, int m
 //=============================================================================
 SPELLipcOutput::~SPELLipcOutput()
 {
-    DEBUG( NAME + "Destroyed");
+    //DEBUG( NAME + "Destroyed");
+    m_connected = false;
+    this->join();
 }
 
 //=============================================================================
@@ -88,20 +91,21 @@ SPELLipcOutput::~SPELLipcOutput()
 //=============================================================================
 void SPELLipcOutput::send( SPELLipcMessage& msg )
 {
-    msg.setKey( m_key );
-    DEBUG( NAME + "SEND " + msg.dataStr() );
     try
     {
-    	std::string data = msg.data();
-    	bool doCompression = (msg.getCompressed() && (data.size()>= MINIMUM_SIZE_FOR_COMPRESSION));
+        SPELLmonitor m(m_lock);
+        msg.setKey(m_key);
+        //DEBUG(NAME + "SEND " + msg.dataStr());
+        std::string data = msg.data();
+        bool doCompression = (msg.getCompressed() && (data.size()>= MINIMUM_SIZE_FOR_COMPRESSION));
         if (doCompression)
         {
         	int origSize = data.size();
         	std::cerr << "Compressing message of length " << data.size() << " bytes (" << msg.getId() << ")" << std::endl;
-            DEBUG("Raw data: " + SPELLutils::dumpString(data) + " size " + ISTR(data.length()) );
+            //DEBUG("Raw data: " + SPELLutils::dumpString(data) + " size " + ISTR(data.length()) );
             SPELLcompression compressor(data);
         	data = compressor.compress();
-            DEBUG("Compressed data: " + SPELLutils::dumpString(data) + " size " + ISTR(data.length()) );
+            //DEBUG("Compressed data: " + SPELLutils::dumpString(data) + " size " + ISTR(data.length()) );
             double ratio = ((double) origSize - (double) data.size())/((double)origSize) * 100.0;
         	std::cerr << "Compressed to " << data.size() << " bytes (ratio " << std::setprecision(2) << ratio << "%)" << std::endl;
         }
@@ -109,6 +113,8 @@ void SPELLipcOutput::send( SPELLipcMessage& msg )
         data = (doCompression ? COMPRESSION_FLAG_TRUE_STR : COMPRESSION_FLAG_FALSE_STR) + data;
 
 		writeData( data );
+
+		//DEBUG( NAME + "SEND DONE" );
     }
     catch(SPELLipcError& err)
     {
@@ -118,10 +124,11 @@ void SPELLipcOutput::send( SPELLipcMessage& msg )
             LOG_ERROR( NAME + " Connection lost at output " + std::string(err.what()) );
             LOG_ERROR( NAME + " Data being sent: " + msg.dataStr());
             m_channel.outputFailed(errNo, err.getError());
+            throw;
         }
         else
         {
-            DEBUG( NAME + "Send failed, not connected: " + err.what() + ", errno=" + ISTR(errNo) );
+            //DEBUG( NAME + "Send failed, not connected: " + err.what() + ", errno=" + ISTR(errNo) );
         }
     }
     catch(...)
@@ -135,10 +142,10 @@ void SPELLipcOutput::send( SPELLipcMessage& msg )
         }
         else
         {
-            DEBUG( NAME + "Send failed, not connected, errno=" + ISTR(errNo) );
+            //DEBUG( NAME + "Send failed, not connected, errno=" + ISTR(errNo) );
         }
     }
-    DEBUG( NAME + "SEND DONE" );
+
 }
 
 //=============================================================================
@@ -147,8 +154,8 @@ void SPELLipcOutput::send( SPELLipcMessage& msg )
 void SPELLipcOutput::disconnect( bool send_eoc )
 {
     if (!m_connected) return;
-
-    DEBUG( NAME + "SPELLipcOutput disconnect");
+    SPELLmonitor m(m_lock);
+    //DEBUG( NAME + "SPELLipcOutput disconnect");
 
     if (send_eoc)
     {
@@ -157,9 +164,10 @@ void SPELLipcOutput::disconnect( bool send_eoc )
         eoc.setType( MSG_TYPE_EOC );
         eoc.setKey(m_key);
         send(eoc);
-        DEBUG( NAME + "EOC sent");
+        //DEBUG( NAME + "EOC sent");
     }
     m_connected = false;
+
 }
 
 //=============================================================================
@@ -167,13 +175,13 @@ void SPELLipcOutput::disconnect( bool send_eoc )
 //=============================================================================
 void SPELLipcOutput::writeData( std::string data )
 {
-    DEBUG( NAME + "Write data TRY-IN");
-    SPELLmonitor m(m_lock);
-    DEBUG( NAME + "Write data IN");
+    ////DEBUG( NAME + "Write data TRY-IN");
+
+    ////DEBUG( NAME + "Write data IN");
     if (m_connected)
     {
         unsigned int sizeData = data.size();
-        //DEBUG( NAME + "Packet length " + ISTR(sizeData));
+        ////DEBUG( NAME + "Packet length " + ISTR(sizeData));
 
         int success = 0;
 
@@ -198,11 +206,11 @@ void SPELLipcOutput::writeData( std::string data )
         numBytes = sizeData;
         success = 0;
         offset = 0;
-        //DEBUG("writeData sending message: " + SPELLutils::dumpString(data));
+        ////DEBUG("writeData sending message: " + SPELLutils::dumpString(data));
         while( numBytes > 0 )
         {
             success = m_socket.send(&data[offset],numBytes);
-            if (success == -1 || errno != 0)
+            if (success == -1)
             {
                 throw SPELLipcError( NAME + "Error while sending data, errno " + ISTR(errno) );
             }
@@ -214,7 +222,7 @@ void SPELLipcOutput::writeData( std::string data )
 
         m_lastSentTime.setCurrent();
     }
-    DEBUG( NAME + "Write data OUT");
+    ////DEBUG( NAME + "Write data OUT");
 }
 
 //=============================================================================
@@ -234,21 +242,22 @@ void SPELLipcOutput::run()
 		delta = currentTime - lastTime;
 		if (delta.getSeconds() > PING_PERIOD_SEC)
 		{
-			std::cerr << "ping [" << NAME << "] " << currentTime.toString() << std::endl;
 			try
 			{
-				send(m_ping);
+				SPELLipcMessage ping = this->m_channel.m_ifc.getPingMessage();
+				if (ping.isVoid()) {
+					send(m_ping);
+				} else {
+					send(ping);
+				}
 			}
 			catch(...)
 			{
-		        DEBUG( NAME + "Abort ping loop");
 				return;
 			}
 		}
-        DEBUG( NAME + "1");
 		usleep(2000000); // 2 seconds
-        DEBUG( NAME + "2");
 	}
-    DEBUG( NAME + "Finish ping loop");
+    //DEBUG( NAME + "Finish ping loop");
 }
 

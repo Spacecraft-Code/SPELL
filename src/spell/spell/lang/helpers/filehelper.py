@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for generic features
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -42,7 +42,7 @@ from spell.lib.adapter.file import File
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from basehelper import *
+from .basehelper import *
 
 #*******************************************************************************
 # System Imports
@@ -56,24 +56,24 @@ class LoadDictionary_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the LoadDictionary wrapper.
-    """    
-    
+    """
+
     __prefix = None
     __database = None
     __retry    = False
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__database = None
         self.__retry = False
         self.__prefix = None
-        self._opName = "Database" 
-    
+        self._opName = "Database"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No dictionary given")
 
@@ -88,10 +88,10 @@ class LoadDictionary_Helper(WrapperHelper):
             self.__prefix = self.__database[0:idx]
         else:
             self.__retry = False
-        
+
         idx = self.__database.find("//")
         toShow = self.__database[idx+2:]
-        
+
         self._setActionString( ACTION_REPEAT ,  "Try to load the database " + repr(toShow) + " again")
 
         self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_PR, "Loading")
@@ -101,11 +101,11 @@ class LoadDictionary_Helper(WrapperHelper):
         try:
             db = REGISTRY['DBMGR'].loadDatabase(self.__database)
             self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_OK, "Loaded")
-        except DriverException,ex:
+        except DriverException as ex:
             self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_FL, "Failed")
             self._write("Failed to load database " + repr(toShow), {Severity:ERROR})
             raise ex
-        
+
         return [False,db,NOTIF_STATUS_OK,"Database loaded"]
 
     #===========================================================================
@@ -120,31 +120,253 @@ class LoadDictionary_Helper(WrapperHelper):
         self.__database = newName
         self.__retry = True
         return [True,None]
+    
+    
+################################################################################
+class LoadExternalData_Helper(WrapperHelper):
 
+    """
+    DESCRIPTION:
+        Helper for the LoadFromDataSource wrapper.
+    """
+
+    __prefix = None
+    __dataSource = None
+    __serviceName = None
+    __options = None
+    
+    __retry    = False
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self)
+        self.__dataSource = None
+        self.__serviceName = None
+        self.__options = None
+        self.__retry = False
+        self.__prefix = None
+        self._opName = "LoadExternalData"
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        # Parse arguments
+
+        if len(args) == 0:
+            raise SyntaxException("No data source given")
+
+        if not self.__retry:
+            # Get the database name
+            self.__dataSource = args[0]
+            if type(self.__dataSource)!=str:
+                raise SyntaxException("Expected a data source id")
+            if len(args) > 1:
+                self.__serviceName = args[1]
+            else:
+                self.__serviceName = None
+                
+            if self.__serviceName != None and type(self.__serviceName)!=str:
+                raise SyntaxException("Expected a service name")
+            
+            options = None
+            if 'options' in kargs:
+                options = kargs['options']
+                del kargs['options']
+            else:
+                options = {}
+                
+            if len(args) == 3 and type(args[2]) == dict:
+                options.update(args[2])
+        
+            if len(kargs) > 0:
+                options.update(kargs)
+                
+            self.__options = {k.lower() : v for k, v in options.items()}
+        else:
+            self.__retry = False
+
+        toShow = "%s %s"%(self.__dataSource,self.__serviceName)
+        self._setActionString( ACTION_REPEAT ,  "Try to load a different data source from " + self.__dataSource)
+
+        self._notifyValue( "Data source",toShow, NOTIF_STATUS_PR, "Loading")
+        self._write("Loading data source " + toShow)
+
+        db = None
+        try:
+            db = REGISTRY['DBMGR'].loadDataSource(self.__dataSource,self.__serviceName,config=self.__options)
+            self._notifyValue( "Data source", toShow, NOTIF_STATUS_OK, "Loaded")
+        except DriverException as ex:
+            self._notifyValue( "Data source", toShow, NOTIF_STATUS_FL, "Failed")
+            self._write("Failed to load data source " + toShow, {Severity:ERROR})
+            raise ex
+
+        return [False,db,NOTIF_STATUS_OK,"Data source loaded"]
+
+    #===========================================================================
+    def _doRepeat(self):
+        from spell.lang.functions import Prompt,Display
+        Display("Load data source failed.", WARNING )
+        try:
+            services = REGISTRY['DBMGR'].loadDataSource(self.__dataSource)  
+            
+            serviceList = [] 
+            for service in services:
+                comment = service["Name"]
+                if "Comment" in service:
+                    comment = service["Comment"].strip()
+                comment = comment.replace('\n\t',' ').replace('\n',' ')
+                if len(comment) > 160:
+                    comment = comment[:160] + '...'
+                serviceList += ['%s:%s'%(service["Name"], comment)]
+            toShow = "%s %s"%(self.__dataSource,self.__serviceName)
+            self.__serviceName = str(Prompt("Please select the correct target Service (previously " + str(self.__serviceName) + "): ", serviceList,Type=LIST, Notify=False ))
+            
+        except DriverException as ex:
+            toShow = "%s"%(self.__dataSource)
+            self._notifyValue( "Data source", toShow, NOTIF_STATUS_FL, "Failed")
+            self._write("Failed to get services from data source " + toShow + "!", {Severity:ERROR})
+            raise ex
+#         idx = self.__database.find("//")
+#         toShow = self.__database[idx+2:]
+#         newName = str(Prompt("Enter new database name (previously " + repr(toShow) + "): ", Type=ALPHA, Notify=False ))
+#         if not newName.startswith(self.__prefix):
+#             newName =  self.__prefix + "://" + newName
+#         self.__database = newName
+        self.__retry = True
+        return [True,None]
+    
+
+################################################################################
+class SaveExternalData_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+        Helper for the SaveToDataSource wrapper.
+    """
+
+    __prefix = None
+    __dataSource = None
+    __serviceName = None
+    __options = None
+    __object = None
+    
+    __retry    = False
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self)
+        self.__dataSource = None
+        self.__serviceName = None
+        self.__options = None
+        self.__object = None
+        
+        self.__retry = False
+        self.__prefix = None
+        self._opName = "SaveExternalData"
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        # Parse arguments
+
+        if len(args) < 2 and ('Target' not in kargs or 'Data' not in kargs or 'Object' not in kargs):
+            raise SyntaxException("Missing Parameters!")
+
+        if not self.__retry:         
+            if 'Source' in kargs:
+                self.__dataSource = kargs['Source']
+            else:
+                self.__dataSource = args[0]
+                
+            if type(self.__dataSource) != str:
+                raise SyntaxException("Expected a data source id")
+            
+            if 'Source' in kargs:
+                self.__dataSource = kargs['Data']
+            else:
+                self.__dataSource = args[1]
+                
+            if self.__serviceName != None and type(self.__serviceName) != str:
+                raise SyntaxException("Expected a service name")
+            
+            if 'Object' in kargs:
+                self.__object = kargs['Object']
+            else:
+                self.__object =  args[2]
+                
+            options = None
+            if 'options' in kargs:
+                options = kargs['options']
+                del kargs['options']
+            else:
+                options = {}
+                
+            if type(args[-1]) == dict:
+                options.update(args[3])
+        
+            if len(kargs) > 0:
+                options.update(kargs)
+                
+            self.__options = {k.lower() : v for k, v in options.items()}
+            
+        else:
+            self.__retry = False
+
+        toShow = "%s %s"%(self.__dataSource,self.__serviceName)
+
+        self._setActionString( ACTION_SKIP   ,  "Skip saving to data source " + repr(toShow) + " and return success (True)")
+        self._setActionString( ACTION_CANCEL ,  "Skip saving to data source " + repr(toShow) + " and return failure (False)")
+        self._setActionString( ACTION_REPEAT ,  "Try to save to data source " + repr(toShow) + " again")
+        returnValue = None
+        try:
+            returnValue = REGISTRY['DBMGR'].saveToDataSource(self.__dataSource, self.__serviceName, self.__object, self.__options)
+
+            self._notifyValue( "Data source", repr(toShow), NOTIF_STATUS_OK, "SUCCESS")
+            self._write("Data source " + repr(toShow) + " saved")
+        except BaseException as ex:
+            self._notifyValue( "Data source", repr(toShow), NOTIF_STATUS_FL, "FAILED")
+            self._write("Failed to save data source " + str(ex) , {Severity:ERROR})
+            raise DriverException(str(ex))
+
+        return [False, returnValue, NOTIF_STATUS_OK, "Data source saved"]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Save dictionary skipped", {Severity:WARNING} )
+        return [False,True]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Save dictionary skipped", {Severity:WARNING} )
+        return [False,False]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry saving dictionary", {Severity:WARNING} )
+        return [True,None]
+    
 ################################################################################
 class SaveDictionary_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the SaveDictionary wrapper.
-    """    
-    
+    """
+
     __prefix = None
     __database = None
     __retry    = False
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__database = None
         self.__retry = False
         self.__prefix = None
-        self._opName = "Database" 
-    
+        self._opName = "Database"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No dictionary given")
 
@@ -154,9 +376,9 @@ class SaveDictionary_Helper(WrapperHelper):
                 raise SyntaxException("Expected a database object (%s)" % repr(self.__database))
         else:
             self.__retry = False
-        
+
         toShow = self.__database.id()
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip saving the dictionary " + repr(toShow) + " and return success (True)")
         self._setActionString( ACTION_CANCEL ,  "Skip saving the dictionary " + repr(toShow) + " and return failure (False)")
         self._setActionString( ACTION_REPEAT ,  "Try to save the dictionary " + repr(toShow) + " again")
@@ -165,23 +387,23 @@ class SaveDictionary_Helper(WrapperHelper):
             self.__database.commit()
             self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_OK, "SUCCESS")
             self._write("Database " + repr(toShow) + " saved")
-        except BaseException,ex:
+        except BaseException as ex:
             self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_FL, "FAILED")
             self._write("Failed to save database " + str(ex) , {Severity:ERROR})
             raise DriverException(str(ex))
-        
+
         return [False, True, NOTIF_STATUS_OK, "Database saved"]
 
     #===========================================================================
     def _doSkip(self):
         self._write("Save dictionary skipped", {Severity:WARNING} )
-        return [False,True]        
+        return [False,True]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Save dictionary skipped", {Severity:WARNING} )
-        return [False,False]        
-                
+        return [False,False]
+
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry saving dictionary", {Severity:WARNING} )
@@ -194,17 +416,17 @@ class CreateDictionary_Helper(LoadDictionary_Helper):
     """
     DESCRIPTION:
         Helper for the CreateDictionary wrapper.
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         super(CreateDictionary_Helper, self).__init__()
         self.__retry    = False
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No dictionary given")
 
@@ -219,10 +441,10 @@ class CreateDictionary_Helper(LoadDictionary_Helper):
             self.__prefix = self.__database[0:idx]
         else:
             self.__retry = False
-            
+
         idx = self.__database.find("//")
         toShow = self.__database[idx+2:]
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip creating the dictionary " + repr(toShow) + " and return None")
         self._setActionString( ACTION_REPEAT ,  "Try to create the dictionary " + repr(toShow) + " again")
 
@@ -232,17 +454,17 @@ class CreateDictionary_Helper(LoadDictionary_Helper):
         try:
             db = REGISTRY['DBMGR'].createDatabase(self.__database)
             self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_OK, "Created")
-        except DriverException,ex:
+        except DriverException as ex:
             self._notifyValue( "Database", repr(toShow), NOTIF_STATUS_FL, "Failed")
             raise ex
-        
+
         return [False,db,NOTIF_STATUS_OK,"Database created"]
 
     #===========================================================================
     def _doSkip(self):
         self._write("Create dictionary skipped", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
@@ -255,17 +477,17 @@ class OpenFile_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the OpenFile wrapper.
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         super(OpenFile_Helper, self).__init__()
         self._opName = ""
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No path given")
 
@@ -286,19 +508,19 @@ class OpenFile_Helper(WrapperHelper):
         self._setActionString( ACTION_REPEAT ,  "Try to open the file " + repr(baseName) + " again")
 
         self._notifyValue( "File", repr(baseName), NOTIF_STATUS_PR, "Opening")
-        
+
         try:
             mode = READ
             if self.hasConfig(Mode):
                 mode = self.getConfig(Mode)
 
             self._write("Opening file " + repr(baseName) + " in mode " + mode, config={Severity:INFORMATION})
-            
+
             theFile.open(mode)
 
             self._write("File open")
-                
-        except DriverException,ex:
+
+        except DriverException as ex:
             self._notifyValue( "File", repr(baseName), NOTIF_STATUS_FL, "Open failed")
             raise ex
 
@@ -310,7 +532,7 @@ class OpenFile_Helper(WrapperHelper):
     def _doSkip(self):
         self._write("Open file skipped", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
@@ -323,17 +545,17 @@ class CloseFile_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the CloseFile wrapper.
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         super(CloseFile_Helper, self).__init__()
         self._opName = ""
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)==0:
             raise SyntaxException("No file object given")
 
@@ -349,16 +571,16 @@ class CloseFile_Helper(WrapperHelper):
         self._setActionString( ACTION_REPEAT ,  "Try to close the file " + repr(theFile.basename()) + " again")
 
         self._notifyValue( "File", repr(theFile.basename()), NOTIF_STATUS_PR, "Closing")
-        
+
         try:
-            
+
             self._write("Closing file: " + repr(theFile.basename()), config={Severity:INFORMATION})
 
             theFile.close()
 
             self._write("File closed", config={Severity:INFORMATION})
-                
-        except DriverException,ex:
+
+        except DriverException as ex:
             self._notifyValue( "File", repr(theFile.basename()), NOTIF_STATUS_FL, "Close failed")
             raise ex
 
@@ -370,13 +592,13 @@ class CloseFile_Helper(WrapperHelper):
     def _doSkip(self):
         self._write("Close file skipped", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Close file cancelled", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
@@ -389,24 +611,24 @@ class WriteFile_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the WriteFile wrapper.
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         super(WriteFile_Helper, self).__init__()
         self._opName = ""
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)<2:
             raise SyntaxException("Incorrect arguments")
 
         theFile = args[0]
         if not isinstance(theFile, File):
             raise SyntaxException("Expected a file object as first argument")
-        
+
         theData = args[1]
         if type(theData) != str and type(theData) != list:
             raise SyntaxException("Expected a string or list of strings as second argument")
@@ -424,8 +646,8 @@ class WriteFile_Helper(WrapperHelper):
             else:
                 for d in theData:
                     theFile.writeln(str(d))
-                
-        except DriverException,ex:
+
+        except DriverException as ex:
             raise ex
 
         return [False,True,NOTIF_STATUS_OK,"Data written"]
@@ -434,13 +656,13 @@ class WriteFile_Helper(WrapperHelper):
     def _doSkip(self):
         self._write("Write to file skipped", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Write to file cancelled", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
@@ -453,34 +675,34 @@ class ReadFile_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the ReadFile wrapper.
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         super(ReadFile_Helper, self).__init__()
         self._opName = ""
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)<1:
             raise SyntaxException("Incorrect arguments")
 
         theFile = args[0]
         if not isinstance(theFile, File):
             raise SyntaxException("Expected a file object as argument")
-        
+
         if theFile.isDir():
             raise DriverException("Cannot read file", "A directory has been provided")
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip reading from file " + repr(theFile.basename()) + " and return None")
         self._setActionString( ACTION_REPEAT ,  "Try to read from file " + repr(theFile.basename()) + " again")
 
         data = None
         try:
             data = theFile.read()
-        except DriverException,ex:
+        except DriverException as ex:
             raise ex
 
         return [False,data,NOTIF_STATUS_OK,"Data read"]
@@ -489,7 +711,7 @@ class ReadFile_Helper(WrapperHelper):
     def _doSkip(self):
         self._write("Read from file skipped", {Severity:WARNING} )
         self._write("CAUTION: procedure logic may become invalid!", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
@@ -502,31 +724,31 @@ class DeleteFile_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the ReadFile wrapper.
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         super(DeleteFile_Helper, self).__init__()
         self._opName = ""
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)<1:
             raise SyntaxException("Incorrect arguments")
 
         theFile = args[0]
-        
+
         if not isinstance(theFile,File) and type(theFile)!= str:
             raise SyntaxException("Cannot delete", "Expected a file object or string")
-        
+
         if type(theFile)==str:
             theFile = File(theFile)
-        
+
         if theFile.isDir():
             raise DriverException("Cannot delete file", "A directory has been provided")
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip deleting file " + repr(theFile) + " and return None")
         self._setActionString( ACTION_REPEAT ,  "Try to delete file " + repr(theFile) + " again")
 
@@ -538,7 +760,7 @@ class DeleteFile_Helper(WrapperHelper):
     #===========================================================================
     def _doSkip(self):
         self._write("Delete file skipped", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
@@ -552,24 +774,24 @@ class ReadDirectory_Helper(WrapperHelper):
     def __init__(self):
         super(ReadDirectory_Helper, self).__init__()
         self._opName = ""
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         # Parse arguments
-        
+
         if len(args)<1:
             raise SyntaxException("Incorrect arguments")
 
         theDir = args[0]
         if not isinstance(theDir,File) and type(theDir)!= str:
             raise SyntaxException("Cannot read directory", "Expected a file object or string")
-        
+
         if type(theDir)==str:
             theDir = File(theDir)
-        
+
         if not theDir.isDir():
             raise DriverException("Cannot read directory", "A file has been provided")
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip reading directory " + repr(theDir) + " and return None")
         self._setActionString( ACTION_REPEAT ,  "Try to read the directory " + repr(theDir) + " again")
 
@@ -581,10 +803,9 @@ class ReadDirectory_Helper(WrapperHelper):
     #===========================================================================
     def _doSkip(self):
         self._write("Read directory skipped", {Severity:WARNING} )
-        return [False,None]        
+        return [False,None]
 
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry read directory", {Severity:WARNING} )
         return [True,None]
-

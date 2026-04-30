@@ -1,0 +1,25 @@
+
+FROM centos:7 as base
+
+RUN yum-config-manager --save --disable base && rm /etc/yum.repos.d/*
+COPY etc/yum.repos.d/* /etc/yum.repos.d/
+
+RUN yum makecache fast && yum update -y
+RUN yum-config-manager --save --disable base --disable extras --disable updates
+RUN yum clean all && yum install -y \
+  openssl net-tools \
+  nss-pam-ldapd nscd openldap-clients openssh-server openssh-clients rsyslog authconfig \
+  && yum clean all
+
+RUN  groupadd spell && useradd -rm -d /home/spell -s /sbin/nologin -g spell -G spell -u 1001 spell
+
+RUN mkdir -p /var/run/sshd
+ADD init.sh /init.sh
+RUN chmod u+x /init.sh
+
+
+EXPOSE 8422
+RUN chmod u+rwx -R /home/ &&  chmod g+rx -R /home/
+
+CMD /init.sh
+

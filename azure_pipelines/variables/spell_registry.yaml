@@ -1,0 +1,8 @@
+variables:
+  DOCKER_FILEPATH: docker/spell-registry
+  DOCKER_IMAGE: spell/spell-registry
+  NEXUS_APPLICATION: spell-registry
+  DOCKER_BUILD_CONTEXT: "."
+  BUILD_IMAGE:  docker-weu.spo.internal.ses.com/sbtscala/scala-sbt:eclipse-temurin-19_36_1.8.0_3.2.1
+  #scala-sbt:eclipse-temurin-focal-17.0.10_7_1.9.9_3.4.0
+ 

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the logger bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -88,8 +88,7 @@ static PyMethodDef Log_Methods[] =
 //============================================================================
 static PyTypeObject Log_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL, 0)
     "executor.LOG",                    //tp_name
     sizeof(PyLogObject),               //tp_basicsize
     0,                                 //tp_itemsize
@@ -143,7 +142,7 @@ static int Log_Init( PyLogObject* self, PyObject* args, PyObject* kwds )
 //============================================================================
 static void Log_Dealloc( PyLogObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+	Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -231,6 +230,8 @@ static PyObject* Log_Call( PyObject* self, PyObject* args, PyObject* kargs )
     	break;
     case LOG_ERROR:
     	LOG_ERROR_PY(message);
+    	break;
+    default:
     	break;
     }
 

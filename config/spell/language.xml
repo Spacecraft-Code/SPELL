@@ -29,6 +29,70 @@
         <modifier name="AdjLimits">False</modifier>
         <modifier name="ConfirmCritical">False</modifier>
     </defaults>
+    
+    <!-- PCS language specifics -->
+    
+    <defaults interface="PCS">
+        <modifier name="OnFailure">ABORT|SKIP|RESEND|CANCEL</modifier>
+        <modifier name="PromptFailure">True</modifier>
+        <modifier name="Time">0</modifier>
+        <modifier name="Timeout">30</modifier>
+        <modifier name="Tolerance">0.1</modifier>
+        <modifier name="SendDelay">None</modifier>
+        <modifier name="Confirm">False</modifier>
+        <modifier name="PromptUser">True</modifier>
+        <modifier name="OnFalse">ABORT|SKIP|RESEND|CANCEL</modifier>
+        <modifier name="OnTrue">NOACTION</modifier>
+        <modifier name="AdjLimits">False</modifier>
+        <modifier name="ConfirmCritical">False</modifier>
+    </defaults>
+    
+    <defaults function="PCS_GetStatus">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+    
+    <defaults function="PCS_IsArqEnabled">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+    
+    <defaults function="PCS_IsVerifyModeEnabled">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+
+    <defaults function="PCS_AbortPtc">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+
+    <defaults function="PCS_Send">
+        <modifier name="OnFailure">ABORT|REPEAT|RESEND|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="OnFalse">ABORT|REPEAT|RESEND|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+
+    <defaults function="PCS_Control">
+        <modifier name="OnFailure">ABORT|REPEAT|RESEND|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="OnFalse">ABORT|REPEAT|RESEND|RECHECK|SKIP|CANCEL</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+    
+    <defaults function="PCS_ReadyToCommand">
+        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+        <modifier name="Wait">True</modifier>
+        <modifier name="Delay">1</modifier>
+    </defaults>
+    
+    
+    <!-- EV Interface specifics -->
 
     <defaults interface="EV">
         <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
@@ -209,6 +273,18 @@
 
     <defaults function="MemoryLookup">
        <modifier name="OnFailure">ABORT|SKIP|REPEAT</modifier>
+    </defaults>
+    
+    <defaults function="DataObjectLookup">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+    
+    <defaults function="DataItemLookup">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
+    </defaults>
+    
+    <defaults function="GetObjectIDs">
+       <modifier name="OnFailure">ABORT|SKIP|REPEAT|CANCEL</modifier>
     </defaults>
 
     <defaults function="TMTCLookup">

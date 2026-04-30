@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of library model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -48,9 +48,6 @@ SPELLlibrary::SPELLlibrary( const std::string& libPath, const std::string& filen
 
     // The remove the lib base path, not the subfolders
     m_libId = m_libId.substr( libPath.size()+1, m_libId.size()-libPath.size()-1 );
-
-    // Parse the file to get properties and source code
-    parseFile(filename);
 }
 
 //=============================================================================
@@ -58,29 +55,4 @@ SPELLlibrary::SPELLlibrary( const std::string& libPath, const std::string& filen
 //=============================================================================
 SPELLlibrary::~SPELLlibrary()
 {
-}
-
-//=============================================================================
-// METHOD    : SPELLlibrary::parseFile
-//=============================================================================
-void SPELLlibrary::parseFile( const std::string& path )
-{
-    // Will be composed during parsing
-    m_source.clear();
-
-    std::ifstream file;
-    file.open( path.c_str() );
-    if (!file.is_open())
-    {
-        THROW_EXCEPTION("Cannot parse file " + path, "Unable to open", SPELL_ERROR_FILESYSTEM);
-    }
-    // Stores the last key found
-    std::string lastKey;
-    while(!file.eof())
-    {
-        std::string line = "";
-        std::getline(file,line);
-        m_source.addSourceCodeLine(line);
-    }
-    file.close();
 }

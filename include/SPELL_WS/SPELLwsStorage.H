@@ -5,7 +5,7 @@
 // DESCRIPTION: WS storage model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -151,7 +151,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Check if the storage is ready
 		**////////////////////////////////////////////////////////////////////
-		bool isReady() { return m_file != NULL; };
+		bool isReady() { return m_file.is_open(); };
 
 		//////////////////////////////////////////////////////////////////////
 		/** Reset the persistent storage and set the mode (empty the file)

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Base classes for configuration
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,18 +33,18 @@ from spell.lib.exception import *
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
 import xml.dom.minidom
 from xml.dom.minidom import Node
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
 class ConfigError(SpellException): pass
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -55,31 +55,31 @@ class PropertyList(object):
     """
     Generic class for storing properties (key/value pairs) easily
     """
-    
+
     # Holds the property map
     __properties = {}
-    
+
     #===========================================================================
     def __init__(self):
         self.__properties = {}
-        
+
     #===========================================================================
     def __setitem__(self, key, value):
         self.__properties[key] = value
-        
+
     #===========================================================================
     def __getitem__(self, key):
-        if not self.__properties.has_key(key):
+        if key not in self.__properties:
             return None
         return self.__properties.get(key)
-    
+
     #===========================================================================
     def get(self, key):
         return self.__properties.get(key)
 
     #===========================================================================
     def keys(self):
-        return self.__properties.keys()
+        return list(self.__properties.keys())
 
     #===========================================================================
     def all(self):
@@ -99,7 +99,7 @@ class ConfigItem(PropertyList):
                     ...
                 </complex_property>
             </node>
-            
+
     The __parseName() method extracts the 'name' attribute of the node. The
     __parseProperties() method receives a list of known property names (in the
     example, this list should be [ 'property1', 'property2', 'property3' ]).
@@ -107,7 +107,7 @@ class ConfigItem(PropertyList):
     item. Other XML child nodes like 'complex_property' will be ignored by
     these methods, and are suposed to be parsed by child classes.
     """
-    
+
     #===========================================================================
     def __init__(self, node, properties):
         PropertyList.__init__(self)
@@ -120,7 +120,7 @@ class ConfigItem(PropertyList):
         if value is None or len(value)==0:
             raise ConfigError("Could not parse item id")
         self["id"] = str(value)
-    
+
     #===========================================================================
     def __parseProperties(self, node, properties):
         for propertyName in properties:
@@ -128,7 +128,7 @@ class ConfigItem(PropertyList):
             for child in node.childNodes:
                 if (child.nodeType == Node.ELEMENT_NODE and
                     child.nodeName == propertyName):
-                    
+
                     for schild in child.childNodes:
                         if schild.nodeType == Node.TEXT_NODE:
                             value = str(schild.data)
@@ -140,4 +140,3 @@ class ConfigItem(PropertyList):
                     break
             if not foundProperty:
                 LOG("WARNING: Did not find property: '" + propertyName + "' on item '" + self['id'] + "'", level = LOG_CNFG )
-            

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the AST analyzer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -43,6 +43,8 @@
 //============================================================================
 SPELLastAnalyzer::SPELLastAnalyzer()
 {
+	m_lastLineType = NONE;
+	m_openLineNo = 0;
 	DEBUG("[ASTN] AST analyzer created");
 };
 

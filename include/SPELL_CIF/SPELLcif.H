@@ -5,7 +5,7 @@
 // DESCRIPTION: Main CIF object interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -37,6 +37,7 @@
 #include "SPELL_CIF/SPELLcifStartupInfo.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_EXC/SPELLvarInfo.H"
+#include "SPELL_EXC/SPELLresourceInfo.H"
 #include "SPELL_PRD/SPELLprocedureSourceCode.H"
 
 #include "SPELL_SYN/SPELLevent.H"
@@ -226,6 +227,8 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void setVerbosity( int verbosity );
 
+		void setForcePromptConfirm( bool force );
+
 		//////////////////////////////////////////////////////////////////////
 		/** Set the current verbosity to the maximum allowed value
 		**////////////////////////////////////////////////////////////////////
@@ -344,7 +347,7 @@ public: //--------------------------------------------------------------------
 		 * \param definition IN: prompt parameters
 		**////////////////////////////////////////////////////////////////////
 		//virtual std::string prompt( const SPELLpromptDefinition& definition ) = 0;
-		virtual std::string prompt( const SPELLpromptDefinition& definition );
+		virtual std::string prompt( const SPELLpromptDefinition& definition,bool doPromptConfirm = true );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify a variable change.
@@ -359,6 +362,18 @@ public: //--------------------------------------------------------------------
 		virtual void notifyVariableScopeChange( const std::string& scopeName,
 				                                const std::vector<SPELLvarInfo>& globals,
 				                                const std::vector<SPELLvarInfo>& locals );
+
+
+		//////////////////////////////////////////////////////////////////////
+		/** Notify a resource change.
+		**////////////////////////////////////////////////////////////////////
+		virtual void notifyResourceChange( const std::vector<SPELLresourceInfo>& changed );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Notify a resource list.
+		**////////////////////////////////////////////////////////////////////
+		virtual void notifyResourceList( const std::vector<SPELLresourceInfo>& resources );
+
 
 		//////////////////////////////////////////////////////////////////////
 		/** Substitute the current ASRUN file by the given one
@@ -536,6 +551,16 @@ protected: //-----------------------------------------------------------------
 
 
 		//////////////////////////////////////////////////////////////////////
+		/** See Notify a resource change.
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyResourceChange( const std::vector<SPELLresourceInfo>& changed ) {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** See Notify a resource list.
+		**////////////////////////////////////////////////////////////////////
+		virtual void specificNotifyResourceList( const std::vector<SPELLresourceInfo>& resources ) {;};
+
+		//////////////////////////////////////////////////////////////////////
 		/** See OpenSubprocedure
 		**////////////////////////////////////////////////////////////////////
 		virtual std::string specificOpenSubprocedure( const std::string& procId,
@@ -595,6 +620,8 @@ private: //-------------------------------------------------------------------
 		std::string m_procId;
 		/** True if manual mode is enabled */
 		bool m_manualMode;
+
+		bool m_forcePromptConfirm;
 		/** Current verbosity level */
 		int m_verbosity;
 

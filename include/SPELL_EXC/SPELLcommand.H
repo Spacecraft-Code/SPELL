@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor command definition
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -86,6 +86,8 @@ ExecutorCommand;
 #define CMD_ACTION      "CMD_ACTION"
 /** Identifier for the FINISH command */
 #define CMD_FINISH      "CMD_FINISH"
+/** Identifier for the RESOURCE DISPLAY command */
+#define CMD_RESOURCES   "CMD_RESOURCES"
 
 /*@}*/
 #endif

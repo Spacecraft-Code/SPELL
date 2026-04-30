@@ -5,7 +5,7 @@
 // DESCRIPTION: Data reader
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -42,6 +42,7 @@
 
 // FORWARD REFERENCES //////////////////////////////////////////////////////
 class SPELLipcChannel;
+class SPELLipcInterface;
 // TYPES ///////////////////////////////////////////////////////////////////
 // DEFINES /////////////////////////////////////////////////////////////////
 
@@ -95,6 +96,11 @@ public: //--------------------------------------------------------------------
 		 * \returns True if it is connected.
 		**////////////////////////////////////////////////////////////////////
 		bool isConnected();
+
+		void setHandleEOC(bool eocValue)
+		{
+			m_requestedEOC = eocValue;
+		}
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

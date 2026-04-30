@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Empty ranging interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -54,12 +54,12 @@ superClass = spell.lib.adapter.ranging.RngInterface
 
 ###############################################################################
 class RngInterface( superClass ):
-    
+
     #==========================================================================
     def __init__(self):
         superClass.__init__(self)
         LOG("Created")
-            
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         superClass.setup(self, ctxConfig,drvConfig)
@@ -69,11 +69,11 @@ class RngInterface( superClass ):
     def cleanup(self):
         superClass.cleanup(self)
         LOG("Cleanup empty RNG interface")
-    
+
     #==========================================================================
     def _enableRanging(self, config ):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-    
+
     #==========================================================================
     def _disableRanging(self, config ):
         raise DriverException("Cannot perform operation", "Not supported by driver")

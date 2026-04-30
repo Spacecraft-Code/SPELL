@@ -5,7 +5,7 @@
 // DESCRIPTION: Defines the controller interface.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -253,6 +253,13 @@ public: //--------------------------------------------------------------------
 		/** Remove a controller listener
 		**////////////////////////////////////////////////////////////////////
 		virtual void removeControllerListener( SPELLcontrollerListener* listener ) {;};
+
+		virtual void refreshStatus() {;};
+
+		//////////////////////////////////////////////////////////////////////
+		/** Inject a information event message to GCS
+		**////////////////////////////////////////////////////////////////////
+		virtual void raiseInformationEventToGCS( const std::string& message ) = 0;
 };
 
 /*@}*/

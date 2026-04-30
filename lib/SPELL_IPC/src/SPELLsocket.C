@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the socket wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -38,14 +38,16 @@
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
-
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <algorithm>
 
 // DEFINES /////////////////////////////////////////////////////////////////
 
 //=============================================================================
 // CONSTRUCTOR: SPELLsocket::SPELLsocket
 //=============================================================================
-SPELLsocket::SPELLsocket( int fd )
+SPELLsocket::SPELLsocket( int fd , std::string user, std::vector<std::string> groups) : user(user), groups(groups)
 {
     m_socketFd = fd;
     m_connected = true;
@@ -90,9 +92,13 @@ int SPELLsocket::send( const void* buffer, int size )
 {
     //DEBUGX(std::string tmp);
     if (!m_connected) return 0;
-    int numWritten = write(m_socketFd,buffer,size);
+    int numWritten = ::send(m_socketFd,buffer,size,MSG_NOSIGNAL);
     //DEBUGX(tmp.assign((char*) buffer, ((char*)buffer) + numWritten));
-    //DEBUG("SPELL SOCKET WROTE (" + ISTR(numWritten) + "):" + SPELLutils::dumpString(tmp));
+
+    if (errno > 0) {
+    	//perror("send");
+    	LOG_ERROR("[SKT] Socket " + ISTR(m_socketFd) + " encountered error: " + ISTR(errno) + " bytes written: " + ISTR(numWritten) + "/" + ISTR(size));
+    }
     return numWritten;
 }
 
@@ -139,6 +145,63 @@ void SPELLsocket::close()
     ::close(m_socketFd);
 }
 
+std::string _exec(std::string cmd) {
+    char buffer[128];
+    std::string result = "";
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) 
+        return "";
+    try {
+        while (fgets(buffer, sizeof buffer, pipe) != NULL) {
+            result += buffer;
+        }
+    } catch (...) {
+        pclose(pipe);
+        throw;
+    }
+    pclose(pipe);
+    std::string::size_type i = 0;
+    while (i < result.length()) {
+        i = result.find('\n', i);
+        if (i == std::string::npos) {
+            break;
+        }
+        result.erase(i);
+    }
+    return result;
+
+}
+
+std::vector<std::string> split(std::string& s, const std::string& delimiter) {
+    std::vector<std::string> tokens;
+    size_t pos = 0;
+    std::string token;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        tokens.push_back(token);
+        s.erase(0, pos + delimiter.length());
+    }
+    tokens.push_back(s);
+
+    return tokens;
+}
+template<typename T>
+std::string str(T begin, T end)
+{
+    std::stringstream ss;
+    bool first = true;
+    ss << "[";
+    for (; begin != end; begin++)
+    {
+        if (!first)
+            ss << ", ";
+        ss << *begin;
+        first = false;
+    }
+    ss << "]";
+    return ss.str();
+}
+
 //=============================================================================
 // METHOD: SPELLsocket::isConnected
 //=============================================================================
@@ -169,10 +232,11 @@ SPELLsocket* SPELLsocket::acceptClient( bool* disconnected )
     timeout.tv_usec = 0;
 
     // Wait on the file descriptors
-    int numfds = select( m_socketFd+1, &read_fds, NULL, NULL, &timeout);
+    int numfds = select( FD_SETSIZE, &read_fds, NULL, NULL, &timeout);
 
     if( numfds == -1)
     {
+        perror("select");
         if (m_connected)
         {
             LOG_ERROR("Error on socket select: " + ISTR(errno));
@@ -196,8 +260,32 @@ SPELLsocket* SPELLsocket::acceptClient( bool* disconnected )
         }
         else
         {
+            
+            in_port_t port = ntohs(client_addr.sin_port);
+#ifdef WITH_KUBERNETES
+            DEBUG("Incoming Client from port: " + ISTR(port));
+            std::string user = _exec("cat ~spell/procs/users | grep "+ISTR(port)+" | awk -F= '{print $2}'");
+            int tries = 10;
+            while (user == "" && tries-- > 0){
+              user = _exec("cat ~spell/procs/users | grep "+ISTR(port)+" | awk -F= '{print $2}'");
+              if (user == "") {
+                usleep(500000);
+              } 
+            }
+            std::string groupsStr = _exec("cat ~spell/procs/groups/" + user);
+            tries = 10;
+            while (groupsStr == "" && tries-- > 0){
+              groupsStr = _exec("cat ~spell/procs/groups/" + user);
+              if (groupsStr == "") {
+                usleep(500000);
+              } 
+            }
+            groups = split(groupsStr, " ");
+            
+            DEBUG("Incoming Client for user: " + user + " groups:" + str(groups.begin(), groups.end()));
+#endif
             *disconnected = false;
-            return new SPELLsocket( newfd );
+            return new SPELLsocket( newfd, user, groups);
         }
     }
 
@@ -236,9 +324,10 @@ SPELLsocket* SPELLsocket::connect( const std::string& server, const int& port )
     DEBUG("   - Connecting to server at port " + ISTR(port));
     if (::connect(socketFd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
     {
+        // perror("connect");
         throw SPELLipcError("Error on socket connect: errno " + ISTR(errno));
     }
-    return new SPELLsocket(socketFd);
+    return new SPELLsocket(socketFd, "spell",{});
 }
 
 //=============================================================================
@@ -246,64 +335,78 @@ SPELLsocket* SPELLsocket::connect( const std::string& server, const int& port )
 //=============================================================================
 SPELLsocket* SPELLsocket::listen( int* port )
 {
-
-    struct sockaddr_in serv_addr;
-    bzero( (char*) &serv_addr, sizeof(serv_addr));
-
-    int socketFd;
-    // Get the listener socket
-    if((socketFd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    int retries = 0;
+    while (retries < 3)
     {
-        throw SPELLipcError("Error on socket creation, errno " +ISTR(errno) );
-    }
+        if (retries)
+            usleep(250);
+        ++retries;
 
-    // Set reuse address
-    int yes = 1;
-    if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-    {
-        throw SPELLipcError("Error on socket configuration (reuse addr), errno " + ISTR(errno));
-    }
+        struct sockaddr_in serv_addr;
+            bzero( (char*) &serv_addr, sizeof(serv_addr));
 
-    // Set no linger
-    struct linger linger;
-    linger.l_onoff = 1; /*0 = off (l_linger ignored), nonzero = on */
-    linger.l_linger =0; /*0 = discard data, nonzero = wait for data sent */
-    if(setsockopt(socketFd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1)
-    {
-        throw SPELLipcError("Error on socket configuration (linger), errno " + ISTR(errno));
-    }
+            int socketFd;
+            // Get the listener socket
+            if((socketFd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error on socket creation, errno " +ISTR(errno) );
+            }
 
-    // Set keep alive
-    if(setsockopt(socketFd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int)) == -1)
-    {
-        throw SPELLipcError("Error on socket configuration (keep alive), errno " + ISTR(errno));
-    }
+            // Set reuse address
+            int32_t yes = 1;
+            if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error on socket configuration (reuse addr), errno " + ISTR(errno));
+            }
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(*port);
-    memset(&(serv_addr.sin_zero), '\0', 8);
+            // Set no linger
+            struct linger linger;
+            linger.l_onoff = 1; /*0 = off (l_linger ignored), nonzero = on */
+            linger.l_linger =0; /*0 = discard data, nonzero = wait for data sent */
+            if(setsockopt(socketFd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error on socket configuration (linger), errno " + ISTR(errno));
+            }
 
-    if (bind(socketFd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-    {
-        throw SPELLipcError("Error on socket bind, errno " + ISTR(errno));
-    }
+            // Set keep alive
+            if(setsockopt(socketFd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int32_t)) == -1)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error on socket configuration (keep alive), errno " + ISTR(errno));
+            }
 
-    socklen_t address_len = sizeof serv_addr;
-    // Get the actual port (chosen by OS if m_serverPort was zero for bind)
-    if (getsockname( socketFd, (struct sockaddr*) &serv_addr, &address_len )<0)
-    {
-        std::cerr << errno << std::endl;
-        throw SPELLipcError("Error getting socket address, errno " + ISTR(errno) );
-    }
-    *port = ntohs(serv_addr.sin_port);
-    DEBUG("Listening on port " + ISTR(*port));
+            serv_addr.sin_family = AF_INET;
+            serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            serv_addr.sin_port = htons(*port);
+            memset(&(serv_addr.sin_zero), '\0', 8);
 
-    if (::listen(socketFd,5) == -1)
-    {
-        throw SPELLipcError("Error on listen, errno " + ISTR(errno));
+            if (bind(socketFd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error on socket bind, errno " + ISTR(errno));
+            }
+
+            socklen_t address_len = sizeof serv_addr;
+            // Get the actual port (chosen by OS if m_serverPort was zero for bind)
+            if (getsockname( socketFd, (struct sockaddr*) &serv_addr, &address_len )<0)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error getting socket address, errno " + ISTR(errno) );
+            }
+            *port = ntohs(serv_addr.sin_port);
+            DEBUG("Listening on port " + ISTR(*port));
+
+            if (::listen(socketFd,5) == -1)
+            {
+                if (retries < 3) continue;
+                throw SPELLipcError("Error on listen, errno " + ISTR(errno));
+            }
+            return new SPELLsocket( socketFd , "spell",{});
     }
-    return new SPELLsocket( socketFd );
+    throw SPELLipcError("Error on listen, errno " + ISTR(errno));
 }
 
 //=============================================================================

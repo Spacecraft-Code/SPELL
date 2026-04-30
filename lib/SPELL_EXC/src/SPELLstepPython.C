@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Step Python bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -80,8 +80,7 @@ static PyMethodDef Step_Methods[] =
 //============================================================================
 static PyTypeObject Step_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "executor.Step",                   //tp_name
     sizeof(PyStepObject),              //tp_basicsize
     0,                                 //tp_itemsize
@@ -135,7 +134,7 @@ static int Step_Init( PyStepObject* self, PyObject* args, PyObject* kwds )
 //============================================================================
 static void Step_Dealloc( PyStepObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+   Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the context configuration model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -37,6 +37,7 @@
 
 // GLOBALS /////////////////////////////////////////////////////////////////
 const std::string SPELLcontextConfig::ExecutorProgram = "ExecutorProgram";
+const std::string SPELLcontextConfig::ServiceProgram = "ServiceProgram";
 const std::string SPELLcontextConfig::ExecutorStartTimeout = "ExecutorStartTimeout";
 const std::string SPELLcontextConfig::ExecutorLoginTimeout = "ExecutorLoginTimeout";
 const std::string SPELLcontextConfig::UseDriverTime = "UseDriverTime";
@@ -57,6 +58,7 @@ SPELLcontextConfig::SPELLcontextConfig( const std::string& contextFile )
     m_gcs = "unknown";
     m_family = "unknown";
     m_procPath = "unknown";
+    m_servicePath = "unknown";
     m_libPath = "unknown";
     m_outputDir = "";
     m_inputDir = "";
@@ -176,6 +178,18 @@ void SPELLcontextConfig::loadBasics()
     else
     {
         m_libPath = "";
+    }
+
+    list = m_reader->findElementsByName( XMLTags::TAG_CTX_SPATH );
+    if (list.size()==1)
+    {
+        node = *(list.begin());
+        m_servicePath = node->getValue();
+        dealloc_list(list);
+    }
+    else
+    {
+        m_servicePath = "Services";
     }
 
     list = m_reader->findElementsByName( XMLTags::TAG_CTX_OPATH );

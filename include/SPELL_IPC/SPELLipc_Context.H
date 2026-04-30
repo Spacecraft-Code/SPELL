@@ -5,7 +5,7 @@
 // DESCRIPTION: Inter process communication, data definitions for context process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -100,8 +100,11 @@ namespace MessageField
 	static const std::string FIELD_PROMPT_DELAY("PromptWarningDelay");
 	static const std::string FIELD_BY_STEP("ByStep");
 	static const std::string FIELD_FORCE_TC_CONFIRM("ForceTcConfirm");
+	static const std::string FIELD_FORCE_PROMPT_CONFIRM("ForcePromptConfirm");
 	static const std::string FIELD_SAVE_STATE_MODE("SaveStateMode");
 	static const std::string FIELD_WATCH_VARIABLES("WatchVariables");
+	static const std::string FIELD_RESOURCES_DISPLAY("ResourcesDisplay");
+	static const std::string FIELD_LOCAL_RESOURCE_SUPPORTED("LocalResourcesSupported");
 	static const std::string FIELD_MAX_VERBOSITY("MaxVerbosity");
 	static const std::string FIELD_BROWSABLE_LIB("BrowsableLib");
 
@@ -178,13 +181,18 @@ namespace MessageValue
 namespace ContextMessages
 {
 	/** Request list of available executors (running procedures) */
-	static const std::string  REQ_EXEC_LIST("REQ_EXEC_LIST");
+    static const std::string  REQ_EXEC_LIST("REQ_EXEC_LIST");
+    static const std::string  REQ_SERVICE_LIST("REQ_SERVICE_LIST");
+
 	/** Response to REQ_EXEC_LIST */
 	static const std::string  RSP_EXEC_LIST("RSP_EXEC_LIST");
+	static const std::string  RSP_SERVICE_LIST("RSP_SERVICE_LIST");
 
 	/** Request executor (procedure) information */
-	static const std::string  REQ_EXEC_INFO("REQ_EXEC_INFO");
-	/** Response to REQ_EXEC_INFO */
+    static const std::string REQ_EXEC_INFO("REQ_EXEC_INFO");
+    /** Request service information */
+    static const std::string REQ_SERVICE_INFO("REQ_SERVICE_INFO");
+    /** Response to REQ_EXEC_INFO */
 	static const std::string  RSP_EXEC_INFO("RSP_EXEC_INFO");
 
 	/** Request opening a new executor (procedure)

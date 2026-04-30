@@ -5,7 +5,7 @@
 // DESCRIPTION: Shell main program
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -49,7 +49,12 @@
 #include "SPELLshellCallstack.H"
 // System includes ---------------------------------------------------------
 #include <signal.h>
-
+#ifdef WITH_KUBERNETES
+#include <sys/prctl.h>
+#endif
+#ifdef WITH_BACKTRACE
+#include <backward.hpp>
+#endif
 // GLOBALS ///////////////////////////////////////////////////////////////////
 
 // Initialization/configuration variables
@@ -127,7 +132,8 @@ public:
         SPELLpythonHelper::instance().initialize();
     };
     ~UsingPython() {
-        SPELLpythonHelper::instance().finalize();
+        // RSA: There is a bug in lock retrieval
+        //SPELLpythonHelper::instance().finalize();
     };
 };
 
@@ -167,10 +173,19 @@ void signalHandler( int signal )
 //============================================================================
 int main( int argc, char** argv )
 {
+    #ifdef WITH_KUBERNETES
+    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+    #endif
+
+    #ifdef WITH_BACKTRACE
+    backward::SignalHandling sh;
+    std::cout << "Singal Handlers loaded: " << sh.loaded() << std::endl;
+    #endif
     if ( parseArgs(argc,argv) != 0 ) return 1;
 
     // Initialize the Python environment. Will clean it up when destroyed.
     UsingPython usingPython;
+    PyGILState_Ensure();
 
     // Load the readline module if available
     if (isatty(fileno(stdin)))
@@ -189,8 +204,14 @@ int main( int argc, char** argv )
 
     SPELLlog::instance().setLogFile("SHELL","SHELL");
 
-    // Install log support
+	std::cerr << "Loading logger" << std::endl;
+
+    // Install log and CIF support
     Log_Install();
+    ClientIF_Install();
+
+    // Create the CIF
+    SPELLcif* cif = new SPELLshellCif();
 
     try
     {
@@ -221,7 +242,14 @@ int main( int argc, char** argv )
                 {
                 	std::cerr << "    - library " << filename << std::endl;
                     std::string module = filename.substr(0,idx);
-                    SPELLpythonHelper::instance().importAllFrom(module);
+                    try
+                    {
+                    	SPELLpythonHelper::instance().importAllFrom(module);
+                    }
+                    catch(SPELLcoreException& ex)
+					{
+						std::cerr << "FATAL ERROR: Could not import module " << module << ": " << ex.what() << std::endl;
+					}
                 }
             }
         }
@@ -238,6 +266,11 @@ int main( int argc, char** argv )
 
     try
     {
+
+        // Install the CIF object in the SPELL registry
+        std::cerr << "Installing client interface" << std::endl;
+        ShellClientIF_Install( cif );
+
         // Load the driver
         SPELLdriverManager::instance().setup(contextName);
     }
@@ -259,12 +292,10 @@ int main( int argc, char** argv )
     	SPELLdatabaseManager::instance().loadBuiltinDatabases();
     }
 
-
     signal(SIGABRT, signalHandler);
     signal(SIGTERM, signalHandler);
 
     SPELLexecutorIF* executor = new SPELLshellExecutor();
-    SPELLcif* cif = new SPELLshellCif();
     SPELLschedulerIF* scheduler = new SPELLscheduler(true);
     SPELLcontrollerIF* controller = new SPELLshellController();
     SPELLcallstackIF* callstack = new SPELLshellCallstack();
@@ -272,7 +303,6 @@ int main( int argc, char** argv )
     SPELLexecutor::setInstance(executor);
 
     ShellExecutor_Install();
-    ShellClientIF_Install( cif );
 
     // Launch the interactive loop
     int status = 0;

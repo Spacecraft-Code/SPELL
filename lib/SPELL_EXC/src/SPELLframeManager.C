@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Python frame manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -46,6 +46,7 @@
 //=============================================================================
 SPELLframeManager::SPELLframeManager()
 : 	SPELLdispatchListener(),
+  	m_resourceMonitor(new SPELLresourceChangeListener()),
 	m_modelMap()
 {
     m_warmStart = NULL;
@@ -56,6 +57,8 @@ SPELLframeManager::SPELLframeManager()
     m_model = NULL;
     m_filename = "";
     m_definitions = NULL;
+    m_inError = false;
+    m_terminated = false;
 }
 
 //=============================================================================
@@ -88,6 +91,7 @@ void SPELLframeManager::initialize( const std::string& scriptFile )
 
     // Enable or disable monitoring according to configuration
     SPELLvariableMonitor::s_enabled = SPELLexecutor::instance().getConfiguration().isWatchEnabled();
+    SPELLresourceMonitor::s_enabled = SPELLexecutor::instance().getConfiguration().isResourcesDisplayEnabled();
 
     // Compile the script and create the Python frame
     // to execute bytecode
@@ -242,8 +246,8 @@ void SPELLframeManager::createInitialFrame()
         Py_XDECREF(m_currentFrame);
         m_currentFrame = NULL;
     }
-
-    updateCurrentFrame( m_initialFrame, true );
+    m_currentFrame = m_initialFrame;
+    //updateCurrentFrame( m_initialFrame, true );
 
     DEBUG("[EF] Initial frame ready");
 }
@@ -305,7 +309,7 @@ void SPELLframeManager::terminate()
 	if (!m_terminated)
 	{
 		DEBUG("[EF] Terminating execution");
-		SPELLpythonHelper::instance().acquireGIL();
+		SPELLsafePythonOperations ops("SPELLframeManager::terminate");
 		// Note: we substract 3 bytes since the last two instructions are always
 		// resembling a "return None" statement. We want the instruction previous
 		// to the last one here.
@@ -316,9 +320,16 @@ void SPELLframeManager::terminate()
 			int lasti = it->second->getLastAddress() -3 ;
 			int lineno = it->second->getLastLine();
 			DEBUG("[EF] Setting lasti " + ISTR(lasti) + " lineno " + ISTR(lineno) + " on " + PYCREPR(frame));
-			SPELLpythonHelper::instance().setNewLine(frame,lineno,lasti);
-			DEBUG("Frame stack top " + PSTR(frame->f_stacktop));
-			DEBUG("Frame value stack " + PSTR(frame->f_valuestack));
+			try
+			{
+				SPELLpythonHelper::instance().setNewLine(frame,lineno,lasti);
+				DEBUG("Frame stack top " + PSTR(frame->f_stacktop));
+				DEBUG("Frame value stack " + PSTR(frame->f_valuestack));
+			}
+			catch(SPELLcoreException& ex)
+			{
+				LOG_ERROR("Unable to set lasti in frame " + PYCREPR(frame));
+			}
 		}
 		m_terminated = true;
 		DEBUG("[EF] Terminating execution finished");
@@ -338,6 +349,7 @@ const SPELLexecutionResult SPELLframeManager::execute()
     while(frame!= NULL)
     {
         DEBUG("[EF] Running frame " + PYCREPR(frame));
+        SPELLpythonHelper::instance().checkError();
         PyEval_EvalFrame( frame );
         DEBUG("[EF] Frame finished " + PYCREPR(frame));
         DEBUG("[EF] Next frame " + PYCREPR(frame));
@@ -543,7 +555,14 @@ const bool SPELLframeManager::goNextLine()
         else
         {
             DEBUG("[F] Go next line " + ISTR(new_lineno) + " at " + ISTR(new_lasti));
-			controllerContinue = setNewLine( new_lineno, new_lasti );
+            try
+            {
+            	controllerContinue = setNewLine( new_lineno, new_lasti );
+            }
+            catch (SPELLcoreException& ex)
+            {
+            	controllerContinue = false;
+            }
         }
     }
 
@@ -586,7 +605,24 @@ const bool SPELLframeManager::goLine( const int& new_lineno, bool report )
 {
 	SPELLsafePythonOperations ops("SPELLframeManager::goLine()");
     DEBUG("[F] Go-to line " + ISTR(new_lineno) + " on model " + PSTR(m_model));
+#if PY_MAJOR_VERSION >= 3
+    bool result = false;
+    try
+    {
+    	result = setNewLine( new_lineno, 0 );
+        DEBUG("[F] Go new line " + ISTR(new_lineno));
+        if (report)
+        {
+        	SPELLexecutor::instance().getCIF().write("Jump to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
+        }
+    }
+    catch(SPELLcoreException& ex)
+    {
+    	SPELLexecutor::instance().getCIF().warning("Unable to go to line " + ISTR(new_lineno) + ", " + ex.what(), LanguageConstants::SCOPE_SYS );
+    }
 
+    return result;
+#else
     // We cannot jump in the middle of a block
 	if (m_ast.isInsideBlock(new_lineno))
 	{
@@ -610,7 +646,7 @@ const bool SPELLframeManager::goLine( const int& new_lineno, bool report )
 	}
 
 	// We cannot jump inside blocks
-	bool inTry = getModel().isInTryBlock(new_lineno);
+	/*bool inTry = getModel().isInTryBlock(new_lineno);
 	bool inExc = getModel().isInExceptBlock(new_lineno);
 	bool inFin = getModel().isInFinallyBlock(new_lineno);
 	if (inTry | inExc | inFin )
@@ -621,7 +657,7 @@ const bool SPELLframeManager::goLine( const int& new_lineno, bool report )
 	    	SPELLexecutor::instance().getCIF().warning("Unable to go to line " + ISTR(new_lineno), LanguageConstants::SCOPE_SYS );
 	    }
 		return false;
-	}
+	}*/
 
     int new_lasti = getModel().offset(new_lineno);
     if ( new_lasti == -1 )
@@ -650,6 +686,7 @@ const bool SPELLframeManager::goLine( const int& new_lineno, bool report )
     }
 
     return result;
+#endif
 }
 
 //=============================================================================
@@ -690,6 +727,8 @@ void SPELLframeManager::runScript( const std::string& script )
         SPELLpythonHelper::instance().checkError();
     	// See model update its information
     	getModel().update();
+		// Disable local resource analyze due to performance loss
+		//getResourceMonitor().analyze();
     	DEBUG("[EF] Executing script OUT");
     }
 	catch (SPELLcoreException& ex)
@@ -769,8 +808,10 @@ void SPELLframeManager::callbackEventLine( PyFrameObject* frame, const std::stri
 			m_warmStart->notifyLine();
 		}
 	}
-	// See model update its information (including variable monitor if enabled)
+	// See model update its information (including variable/resource monitor if enabled)
 	getModel().update();
+	// Disable local resource analyze due to performance loss
+	//getResourceMonitor().analyze();
 
 	DEBUG("[EF] Reset error mode");
 	m_inError = false;
@@ -964,11 +1005,12 @@ void SPELLframeManager::copyDatabase( const std::string& database, PyFrameObject
 	if (db == NULL)
 	{
 		// New reference
-		db = SPELLpythonHelper::instance().getObject("__main__", database);
+		db = SPELLpythonHelper::instance().getObject(BUILTINS, database);
 	}
 	if (db)
 	{
 		DEBUG("[EF] Copy database now");
+		Py_INCREF(db);
 		Py_INCREF(db);
 		PyDict_SetItemString(toFrame->f_globals, database.c_str(), db);
 		PyDict_SetItemString(toFrame->f_locals, database.c_str(), db);
@@ -977,6 +1019,7 @@ void SPELLframeManager::copyDatabase( const std::string& database, PyFrameObject
 	{
 		LOG_ERROR("Unable to copy database reference: " + database + " on " + PYCREPR(toFrame));
 	}
+	SPELLpythonHelper::instance().checkError();
 }
 
 //=============================================================================
@@ -1086,6 +1129,8 @@ void SPELLframeManager::createFrameModel( int callLine, PyFrameObject* frame )
 
         // Initialize the variable monitor
         m_model->getVariableMonitor().initialize();
+        // Initialize the resource monitor
+        getResourceMonitor().initialize();
 
 		m_modelMap.insert( std::make_pair( code_id, m_model ));
 

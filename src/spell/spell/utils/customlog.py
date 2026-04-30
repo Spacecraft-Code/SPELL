@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Custom logger (temporary)
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -31,7 +31,7 @@
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
@@ -39,9 +39,9 @@ import time,os,sys,inspect
 from datetime import datetime
 
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -56,27 +56,27 @@ LOG_ERROR = '[ ERROR ]'
 
 LOG_MAIN = '[ MAIN ]'
 LOG_INIT = '[ INIT ]'
-LOG_CNFG = '[ CNFG ]' 
+LOG_CNFG = '[ CNFG ]'
 LOG_PROC = '[ PROC ]'
 LOG_LANG = '[ LANG ]'
 LOG_COMM = '[ COMM ]'
 
-SHOW_LEVELS = [ LOG_MAIN, LOG_INIT, LOG_CNFG, LOG_PROC, LOG_LANG, LOG_COMM ] 
+SHOW_LEVELS = [ LOG_MAIN, LOG_INIT, LOG_CNFG, LOG_PROC, LOG_LANG, LOG_COMM ]
 
 ################################################################################
 class LoggerClass(object):
-    
+
     __filename = None
     __fileobj = None
     __showToLevel = LOG_COMM
     showlog = True
-    
+
     LOG_MAXLENGTH = 35
 
     #===========================================================================
     def __init__(self):
         self.__filename = None
-        self.__fileobj = None 
+        self.__fileobj = None
         self.__showToLevel = SHOW_LEVELS.index(LOG_COMM)
         self.showLog = True
 
@@ -102,15 +102,15 @@ class LoggerClass(object):
         if not os.path.exists(home):
             raise BaseException("Cannot find log directory")
         if timestamp is None:
-            timestamp = time.strftime('%Y-%m-%d_%H%M%S') 
+            timestamp = time.strftime('%Y-%m-%d_%H%M%S')
         self.__filename = home + os.sep + timestamp + "_" + filename + ".log"
-        self.__fileobj = file(self.__filename, 'wt')
+        self.__fileobj = open(self.__filename, 'wt')
         self.write('Created on ' + time.strftime('%d-%b-%Y %H:%M:%S') + '\n\n')
 
     #===========================================================================
     def getLogFile(self):
         return self.__fileobj
-        
+
     #===========================================================================
     def __call__(self, msg, severity = LOG_INFO, level = LOG_PROC):
         if severity not in [LOG_ERROR,LOG_WARN]:
@@ -120,7 +120,7 @@ class LoggerClass(object):
             sys.stderr.write("ERROR: unknown log level: " + repr(level))
             sys.stderr.write(logStr)
             return
-                    
+
         if self.showlog or self.__fileobj:
             timestamp = str(datetime.now())[:-3]
             try:
@@ -134,11 +134,11 @@ class LoggerClass(object):
             len = LoggerClass.LOG_MAXLENGTH
             logname = origLogname[0:len - 2]
             if logname != origLogname: logname = logname + '..'
-        
+
             fileStr = "%s\t%s\t%s\t%s\t%s\n" % ( logname.ljust(len),\
                      severity, timestamp, level, msg)
             self.write(fileStr)
-            
+
         if self.showlog:
             logStr = "[ %s ] %s [ %s ] %s: %s\n" % ( logname.ljust(len),\
                      severity, timestamp, level, msg)

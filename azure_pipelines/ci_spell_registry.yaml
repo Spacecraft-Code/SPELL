@@ -1,0 +1,158 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+
+trigger:
+  branches:
+    include:
+      - develop
+  paths:
+    include:
+      - azure_pipelines/variables/spell_registry.yaml
+      - azure_pipelines/variables/baseline.yaml
+      - azure_pipelines/ci_spell_registry.yaml
+      - docker/spell-registry/**
+      
+name: "SPELL Registry CI Pipeline"
+
+pool:
+  name: weu1-d-keda
+
+variables:
+- template: variables/baseline.yaml
+- name: tags
+  value: "$(Build.DefinitionName)_$(Build.DefinitionVersion)_$(Build.BuildId)_$(Build.BuildNumber)"
+- name: DOCKER_BUILDKIT
+  value: 1
+- name: NODE_TLS_REJECT_UNAUTHORIZED
+  value: 0
+- template: variables/spell_registry.yaml
+- group: nexus-auth
+- name: NEXUS_CONTAINER_SCANNING_SCANNER_IMAGE
+  value: neuvector/scanner
+- name: NEXUS_CONTAINER_SCANNING_REGISTRY_URL
+  value: https://docker-weu.spo.internal.ses.com 
+- name: NEXUS_CONTAINER_IMAGE_REGISTRY_USER
+  value: $(NEXUS_USER)
+- name: NEXUS_CONTAINER_IMAGE_REGISTRY_PASSWORD
+  value: $(NEXUS_PASSWORD)
+- name: NEXUS_CONTAINER_SCANNING_REGISTRY_USER
+  value: $(NEXUS_USER)
+- name: NEXUS_CONTAINER_SCANNING_REGISTRY_PASSWORD
+  value: $(NEXUS_PASSWORD)
+
+stages:
+- stage:
+  displayName: Nexus IQ Check
+  jobs:
+  - job:
+    displayName: Docker image
+    steps:
+    - task: Bash@3
+      displayName: Extract Version
+      inputs:
+        targetType: inline
+        script: |
+            get_next_version() {
+              local increment_type="$1"
+              local RE='v?[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
+
+              if [ -z "$increment_type" ]; then
+                increment_type="patch"
+              fi
+
+              local base=$(node -pe 'require("./package.json")["version"]')
+
+              local MAJOR=$(echo $base | sed -e "s#$RE#\1#")
+              local MINOR=$(echo $base | sed -e "s#$RE#\2#")
+              local PATCH=$(echo $base | sed -e "s#$RE#\3#")
+              local HOTFIX=$(echo $base | sed -e "s#$RE#\4#")
+              
+              case "$increment_type" in
+              major)
+                ((MAJOR += 1))
+                ((MINOR = 0))
+                ((PATCH = 0))
+                ((HOTFIX = 0))
+                ;;
+              minor)
+                ((MINOR += 1))
+                ((PATCH = 0))
+                ((HOTFIX = 0))
+                ;;
+              patch)
+                ((PATCH += 1))
+                ((HOTFIX = 0))
+                ;;
+              hotfix)
+                ((HOTFIX += 1))
+                ;;
+              esac
+
+              local NEXT_VERSION="$MAJOR.$MINOR.$PATCH.$HOTFIX"
+              echo "$NEXT_VERSION"
+            }
+
+            HEAD=`git rev-parse --short HEAD` && echo HEAD: ${HEAD}
+            VERSION_TAG=`git describe --abbrev=0 --tags ${HEAD} 2>/dev/null || true` && echo VERSION_TAG: ${VERSION_TAG}
+            TAG_COMMIT=`git rev-list -n 1 --abbrev-commit ${VERSION_TAG}` && echo TAG_COMMIT: ${TAG_COMMIT}
+            if [[ "$HEAD" != "$TAG_COMMIT" ]]
+            then
+              VERSION_TAG=${VERSION_TAG}-dev
+            fi
+            echo "##vso[task.setvariable variable=VERSION_TAG]$VERSION_TAG"
+            echo "ADO Tag: $(tags)"
+
+        workingDirectory: "$(system.defaultWorkingDirectory)/"
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'nexus-docker-weu'
+        command: 'login'
+    - task: Bash@3
+      displayName: Build
+      inputs:
+        targetType: inline
+        script: |
+          export HTTP_PROXY=$(PROXY)
+          export HTTPS_PROXY=$(PROXY)
+          export NO_PROXY=$(NO_PROXY)
+          cd $(DOCKER_FILEPATH)
+          ls -al
+          echo $(PWD)
+          docker pull docker-weu.spo.internal.ses.com/eclipse-temurin:19.0.1_10-jre-alpine
+          docker run --rm -e VERSION=$(VERSION_TAG) -e http_proxy=$(PROXY) -e https_proxy=$(PROXY) -e no_proxy=$(NO_PROXY) -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker -v  `pwd`:/app -w /app $(BUILD_IMAGE) sbt docker:publishLocal
+
+        workingDirectory: "$(system.defaultWorkingDirectory)/"
+
+    # - task: Docker@2
+    #   displayName: Build
+    #   inputs:
+    #     command: build
+    #     repository: "$(DOCKER_IMAGE)"
+    #     containerRegistry: "$(NEXUS_REGISTRY)"
+    #     buildContext: "**$(DOCKER_BUILD_CONTEXT)"
+    #     Dockerfile: "$(DOCKER_FILEPATH)/Dockerfile"
+    #     tags: "$(VERSION_TAG)"
+    #     arguments: "--build-arg http_proxy=$(PROXY) --build-arg https_proxy=$(PROXY) --build-arg no_proxy=$(NO_PROXY)"
+    - task: Docker@2
+      displayName: Push
+      inputs:
+        command: push
+        repository: "$(DOCKER_IMAGE)"
+        containerRegistry: "$(NEXUS_REGISTRY)"
+        tags: "$(VERSION_TAG)"
+    - task: NexusIqPipelineTask@1
+      env:
+        NEXUS_CONTAINER_IMAGE_REGISTRY_PASSWORD: $(NEXUS_PASSWORD) 
+        NEXUS_CONTAINER_SCANNING_REGISTRY_PASSWORD: $(NEXUS_PASSWORD)
+      inputs:
+        nexusIqService: 'nexus-iq'
+        organizationId: 'b57c0bd6dfd247fa964dbc4cbfdf2f2a'
+        applicationId: '$(NEXUS_APPLICATION)'
+        stage: 'Build'
+        scanTargets: 'container:https://$(NEXUS_REGISTRY_URL)/$(DOCKER_IMAGE):$(VERSION_TAG)'
+        enableDebugLogging: true
+        ignoreSystemError: true
+        ignoreScanningError: true        

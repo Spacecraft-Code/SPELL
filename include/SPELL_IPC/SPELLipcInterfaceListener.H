@@ -5,7 +5,7 @@
 // DESCRIPTION: Interface IPC message listener
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -89,6 +89,12 @@ public:
     /** Peer has closed the connection (end of conversation)
     **////////////////////////////////////////////////////////////////////
     virtual void processConnectionClosed( int clientKey ) = 0;
+
+    virtual SPELLipcMessage getPingMessage()
+    {
+        static SPELLipcMessage empty = SPELLipcMessage();
+        return empty;
+    };
 };
 
 /*@}*/

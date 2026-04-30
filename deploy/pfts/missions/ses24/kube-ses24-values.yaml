@@ -1,0 +1,65 @@
+# Default values for spell-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+serviceAccountName: spell-sa
+image:
+  registry: bzengnexus1.idmz.eng.ses
+spell_server:
+  version: v2.6.6.5-dev # {"$imagepolicy": "spell:spell-server:tag"}
+  driver:
+    name: scorpio
+    env:
+      NODE_ID_ddcntl: "3369"
+      NODE_NAME_3369: ddcntl
+    properties:
+      key: value
+    settings:
+      archiva: "ddcntl"
+      FLEETLIMITS: limitsdb-api.limitsdb.svc:8080
+      SATDB: satdb-api.satdb.svc:8080
+      cws: "ddcntl"
+      obus: obus-server.obus.svc:54407
+  maxprocs: 15
+  ssh_port: 22
+  mission: SES24
+  family: SBNEO
+  seat: SIMP
+  applicable_missions:
+    SBNEO: SES24
+  input_folder: "{{ .Values.spell_server.mission }}/InputFiles"
+  output_folder: "{{ .Values.spell_server.mission }}/OutputFiles"
+  additionalInitSteps: "cd /etc/pki/tls/private/wrapped_keys/ && unzip -u ses24-keys.zip "
+  additionalVolumeMounts: 
+  - mountPath: /etc/pki/tls/private/wrapped_keys/
+    name: ses24-certs-folder
+  - mountPath: /etc/pki/tls/private/wrapped_keys/ses24-keys.zip
+    name: ses24-encryption-keys
+    subPath: ses24-keys.zip
+  - mountPath: /etc/pki/tls/ses24_keys/ses24_rsa.pem
+    name: ses24-encryption-cert
+    subPath: ses24_rsa.pem
+  additionalVolumes: 
+  - name: ses24-certs-folder
+    emptyDir:
+      sizeLimit: 100Mi
+      medium: Memory
+  - name: ses24-encryption-cert
+    secret:
+      secretName: ses24-encryption-cert
+      optional: false 
+      defaultMode: 0400
+  - name: ses24-encryption-keys
+    secret:
+      secretName: ses24-encryption-keys
+      optional: false 
+      defaultMode: 0400
+procedures:
+  size: 5Gi
+  repo_folder: SES24
+  branch: SIM
+  server: prengrcs1.idmz.eng.ses
+  known_hosts: |-
+    bzengrcs1.idmz.eng.ses,10.35.65.65 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA3Hjvq/uZqY8nxGeB8sQiq5sLaq4T8h3BTnHkElLjq1C6lJ+5hV9OgiYdf9NCMwZuES5ENQAFqB2GnHjDc0X4sz6K/tk3pqGXQ/wdwVA+ZylBunpv5CJqKyQO+mu+pbke9yhZNuGZeGi7x8cmhQgZ5xOYQdW2ijMecQ/hxO2+598hiIB1nsCWcVnX4zV07cpgViRkZd/cA8J/TekYG3058fDekPTtVwOVVnG25W1jSVzY/wuV0pSwraRCesiLkE4XSF59RDMn0HEqLgy6iy0Gj5nWY4cJ3Fct/VyDjqZhVM/Lr6d6avo3Io7c7rUM055fKfu2Xh8iMluYMK7PSrwMDQ==
+    prengrcs1.idmz.eng.ses,10.113.65.65 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCkcQiI+f8S43Yy8lyZ+mbCbJdMi4sH19yXXJ6BKemsm2wiVcX/q+cYrsjYLCayd8/AJdS4tBzGZegXgQ3YSnhzuoNlKFg4UqRnnsU4ynwa+VU38dbxrSTZKUhumFYvZ749d55GIwHZnardMb0ZROYO+mga8beYRbe7bWLlqCUpRgsNkz8wuzS2fd/u+J9T+I7Z7iYNpD91IIeqlch6EXPix4piD/beoD4W+1tXSd6UKDEARANqAsF+mdv6OfOVsfzV06A65+XuoR8gZn0W6ieojm6CdlIU/8i+q7EyVf0q9TMjPCVEvZOdNI1x9a06fezQdQpETDtVuVJDbr/TpDRT
+

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for data functions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -40,7 +40,7 @@ from spell.lib.adapter.interface import Interface
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from basehelper import *
+from .basehelper import *
 
 #*******************************************************************************
 # System Imports
@@ -53,12 +53,12 @@ NO_EXPECTED  = "__NONE__"
 
 ################################################################################
 class SetSharedData_Helper(WrapperHelper):
-    
+
     __name = None
     __value = None
     __scope = None
     __expected = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
@@ -66,7 +66,7 @@ class SetSharedData_Helper(WrapperHelper):
         self.__value = None
         self.__scope = GLOBAL
         self.__expected = NO_EXPECTED
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
@@ -78,7 +78,7 @@ class SetSharedData_Helper(WrapperHelper):
             # Ensure that the argument is a list
             if type(args[0])!= list:
                 raise SyntaxException("Expected a list with at least name and value as elements")
-            
+
             # If it is a list of lists:
             if type(args[0][1])==list:
                 self.__name = []
@@ -89,8 +89,8 @@ class SetSharedData_Helper(WrapperHelper):
                         raise SyntaxException("Malformed list item")
                     self.__name.append(item[0])
                     self.__value.append(item[1])
-                    
-                    # In this case the expected values for test-and-set 
+
+                    # In this case the expected values for test-and-set
                     # shall be given in the list items
                     if len(item)==3:
                         self.__expected.append(item[2])
@@ -100,12 +100,12 @@ class SetSharedData_Helper(WrapperHelper):
                 # Ensure that the list contains name and value
                 if len(args[0])<2:
                     raise SyntaxException("Expected a list with at least name and value as elements")
-                
+
                 if len(args[0])==2:
                     self.__name = args[0][0]
                     self.__value = args[0][1]
                     # In this case the expected value shall be given as modifier
-                    if Expected in useConfig.keys():
+                    if Expected in list(useConfig.keys()):
                         self.__expected = useConfig[Expected]
                         self.delConfig(Expected)
                     else:
@@ -126,19 +126,19 @@ class SetSharedData_Helper(WrapperHelper):
                 self.delConfig(Value)
             else:
                 raise SyntaxException("Malformed arguments")
-            
+
             # In this case the expected value shall be given as modifier
             if Expected in useConfig:
                 self.__expected = useConfig[Expected]
                 self.delConfig(Expected)
             else:
                 self.__expected = NO_EXPECTED
-            
+
         else:
             raise SyntaxException("Malformed arguments")
-        
+
         # Process scope
-        if Scope in useConfig.keys():
+        if Scope in list(useConfig.keys()):
             self.__scope = useConfig[Scope]
             # Remove scope from configuration,as this modifier is used in notifications and prompts
             self.delConfig(Scope)
@@ -147,22 +147,22 @@ class SetSharedData_Helper(WrapperHelper):
 
         # Check value types
         self._checkValidType(self.__value)
-                
+
     #===========================================================================
     def _checkValidType(self, value ):
-        
+
         tt = type(value)
         if tt in [str,int,float,bool]:
-            return 
+            return
         elif tt == list:
             for element in value:
                 self._checkValidType(element)
         elif tt == dict:
-            for element in value.keys():
+            for element in list(value.keys()):
                 self._checkValidType(value.get(element))
         else:
             raise SyntaxException("Type error: only Python primitive types can be used in blackboard")
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -187,7 +187,7 @@ class SetSharedData_Helper(WrapperHelper):
                 self._notifyValue( repr(self.__name), "[...]", ntype, " ")
             else:
                 self._notifyValue( repr(self.__name), repr(self.__value), ntype, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             self._notifyValue( repr(self.__name), "???", NOTIF_STATUS_FL, " ")
             raise ex
 
@@ -221,16 +221,16 @@ class SetSharedData_Helper(WrapperHelper):
 
 ################################################################################
 class ClearSharedData_Helper(WrapperHelper):
-    
+
     __name = None
     __scope = ""
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__name = None
         self.__scope = ""
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
@@ -249,23 +249,22 @@ class ClearSharedData_Helper(WrapperHelper):
                 self.__name = None
         else:
             raise SyntaxException("Malformed arguments")
-        
+
         # Process scope
-        if Scope in useConfig.keys():
+        if Scope in list(useConfig.keys()):
             self.__scope = useConfig[Scope]
             # Remove scope from configuration,as this modifier is used in notifications and prompts
             self.delConfig(Scope)
         else:
             self.__scope = GLOBAL
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
-        
         if self.__name:
 
             self.setFailureInfo("DATA", self.__name)
-            
+
             if type(self.__name) == list:
                 self._setActionString( ACTION_REPEAT , "Try to remove the shared variables again")
                 self._setActionString( ACTION_SKIP   , "Skip the removal of the shared variables and return True")
@@ -274,18 +273,18 @@ class ClearSharedData_Helper(WrapperHelper):
                 self._setActionString( ACTION_REPEAT , "Try to remove the shared variable " + repr(self.__name) + " again")
                 self._setActionString( ACTION_SKIP   , "Skip the removal of the shared variable " + repr(self.__name) + " and return True")
                 self._setActionString( ACTION_CANCEL , "Skip the removal of the shared variable " + repr(self.__name) + " and return False")
-            
+
         elif self.__scope != GLOBAL:
-            
+
             scName = str(self.__scope)
             if scName == GLOBAL: scName = "Global"
-            
+
             # Store information for possible failures
             self.setFailureInfo("DATA", scName)
             self._setActionString( ACTION_REPEAT , "Try to clear all shared variables in scope " + scName + " again")
             self._setActionString( ACTION_SKIP   , "Skip clearing all shared variables in scope " + scName + " and return True")
             self._setActionString( ACTION_CANCEL , "Skip clearing all shared variables in scope " + scName + " and return False")
-            
+
         else:
             # Store information for possible failures
             self.setFailureInfo("DATA", GLOBAL)
@@ -307,7 +306,7 @@ class ClearSharedData_Helper(WrapperHelper):
                 scName = str(self.__scope)
                 if scName == GLOBAL: scName = "Global"
                 self._notifyValue( "Scope", scName, ntype, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             if self.__name:
                 self._notifyValue( repr(self.__name), "", NOTIF_STATUS_FL, " ")
             else:
@@ -361,16 +360,16 @@ class ClearSharedData_Helper(WrapperHelper):
 
 ################################################################################
 class GetSharedData_Helper(WrapperHelper):
-    
+
     __name = None
     __scope = ""
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__name = None
         self.__scope = GLOBAL
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
@@ -390,19 +389,19 @@ class GetSharedData_Helper(WrapperHelper):
         else:
             raise SyntaxException("Malformed arguments")
 
-        if Scope in useConfig.keys():
+        if Scope in list(useConfig.keys()):
             self.__scope = useConfig[Scope]
             # Remove scope from configuration,as this modifier is used in notifications and prompts
             self.delConfig(Scope)
         else:
             self.__scope = GLOBAL
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
         # Store information for possible failures
         self.setFailureInfo("DATA", self.__name)
-        
+
         if type(self.__name)==list:
             self._setActionString( ACTION_REPEAT , "Try to read the value of the shared variables again")
             self._setActionString( ACTION_SKIP   , "Skip reading the value of the shared variables and return None")
@@ -414,7 +413,7 @@ class GetSharedData_Helper(WrapperHelper):
         try:
             value = REGISTRY['CIF'].getSharedData( self.__name, self.__scope )
             self._notifyValue( repr(self.__name), repr(value), NOTIF_STATUS_OK, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             self._notifyValue( repr(self.__name), "???", NOTIF_STATUS_FL, " ")
             raise ex
 
@@ -439,31 +438,31 @@ class GetSharedData_Helper(WrapperHelper):
 
 ################################################################################
 class GetSharedDataKeys_Helper(WrapperHelper):
-    
+
     __scope = ""
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__scope = GLOBAL
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
 
         if len(args)!=0:
             raise SyntaxException("Malformed arguments")
-        
+
         useConfig = {}
         useConfig.update(self.getConfig())
 
-        if Scope in useConfig.keys():
+        if Scope in list(useConfig.keys()):
             self.__scope = useConfig[Scope]
             # Remove scope from configuration,as this modifier is used in notifications and prompts
             self.delConfig(Scope)
         else:
             self.__scope = GLOBAL
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -477,7 +476,7 @@ class GetSharedDataKeys_Helper(WrapperHelper):
         try:
             keys = REGISTRY['CIF'].getSharedDataKeys( self.__scope )
             self._notifyValue( "Keys", repr(keys), NOTIF_STATUS_OK, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             self._notifyValue( "Keys", "???", NOTIF_STATUS_FL, " ")
             raise ex
 
@@ -496,18 +495,18 @@ class GetSharedDataKeys_Helper(WrapperHelper):
 
 ################################################################################
 class GetSharedDataScopes_Helper(WrapperHelper):
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
 
         if len(args)!=0:
             raise SyntaxException("Malformed arguments")
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -521,7 +520,7 @@ class GetSharedDataScopes_Helper(WrapperHelper):
         try:
             scopes = REGISTRY['CIF'].getSharedDataScopes()
             self._notifyValue( "Scopes", repr(scopes), NOTIF_STATUS_OK, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             self._notifyValue( "Scopes", "???", NOTIF_STATUS_FL, " ")
             raise ex
 
@@ -541,14 +540,14 @@ class GetSharedDataScopes_Helper(WrapperHelper):
 
 ################################################################################
 class AddSharedDataScope_Helper(WrapperHelper):
-    
+
     __scope = ""
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__scope = None
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
@@ -558,11 +557,11 @@ class AddSharedDataScope_Helper(WrapperHelper):
 
         if type(args[0])!=str:
             raise SyntaxException("Malformed arguments (expected scope name as string)")
-        
+
         useConfig = {}
         useConfig.update(self.getConfig())
         self.__scope = args[0]
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -581,7 +580,7 @@ class AddSharedDataScope_Helper(WrapperHelper):
             scName = str(self.__scope)
             if scName == GLOBAL: scName = "Global"
             self._notifyValue( "Scope", scName, ntype, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             scName = str(self.__scope)
             if scName == GLOBAL: scName = "Global"
             self._notifyValue( "Scope", scName, NOTIF_STATUS_FL, " ")
@@ -612,14 +611,14 @@ class AddSharedDataScope_Helper(WrapperHelper):
 
 ################################################################################
 class ClearSharedDataScopes_Helper(WrapperHelper):
-    
+
     __scope = ""
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__scope = None
-        self._opName = None 
+        self._opName = None
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
@@ -629,15 +628,15 @@ class ClearSharedDataScopes_Helper(WrapperHelper):
 
         if len(args)==1 and type(args[0])!=str:
             raise SyntaxException("Malformed arguments (expected scope name as string)")
-        
+
         useConfig = {}
         useConfig.update(self.getConfig())
-        
+
         if len(args)==1:
             self.__scope = args[0]
         else:
             self.__scope = None
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -662,7 +661,7 @@ class ClearSharedDataScopes_Helper(WrapperHelper):
                 ntype = NOTIF_STATUS_OK
                 if not result: ntype = NOTIF_STATUS_FL
                 self._notifyValue( "Remove", "all scopes", ntype, " ")
-        except DriverException,ex:
+        except DriverException as ex:
             if self.__scope:
                 scName = str(self.__scope)
                 if scName == GLOBAL: scName = "Global"
@@ -699,4 +698,3 @@ class ClearSharedDataScopes_Helper(WrapperHelper):
             self._notifyValue( "Remove", "all scopes", NOTIF_STATUS_CL, " ")
         self._write("Cancel removing shared variable scope(s)", {Severity:WARNING} )
         return [False, False]
-

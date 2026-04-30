@@ -5,7 +5,7 @@
 // DESCRIPTION: Socket wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -60,7 +60,7 @@ public: //--------------------------------------------------------------------
 		*
 		* \param fd IN: socket file descriptor.
 		*/////////////////////////////////////////////////////////////////////
-		SPELLsocket( int fd );
+		SPELLsocket(int fd, std::string user, std::vector<std::string> groups);
 
 		/*////////////////////////////////////////////////////////////////////
 		* Destructor
@@ -115,6 +115,11 @@ public: //--------------------------------------------------------------------
 		* \return True if there is a timeout.
 		*/////////////////////////////////////////////////////////////////////
 		bool waitData( int timeout );
+
+
+		std::string getUser() {
+			return user;
+		};
 
 		/*////////////////////////////////////////////////////////////////////
 		* Shutdown the socket input.
@@ -183,6 +188,9 @@ private: //-------------------------------------------------------------------
 		int m_socketFd;
 		/** Socket connected flag */
 		bool m_connected;
+
+		std::string user;
+		std::vector<std::string> groups;
 };
 
 /*@}*/

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ses24prod
+  labels:
+    app.kubernetes.io/name: spell-cws-scorpio-ses24cntl
+    app.kubernetes.io/instance: spell
+    app.kubernetes.io/version: "v2.6.6.5-dev" # {"$imagepolicy": "spell:spell-server:tag"}
+spec:
+  type: ExternalName
+  externalName: cws-lb.scorpio-ses24.svc.cluster.local
+

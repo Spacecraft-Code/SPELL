@@ -5,7 +5,7 @@
 // DESCRIPTION: Library model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -120,7 +120,7 @@ protected: //-----------------------------------------------------------------
 		 *
 		 * \param path IN: the path to the procedure file.
 		**////////////////////////////////////////////////////////////////////
-		void parseFile( const std::string& path );
+		void parseFile( const std::string& path ) {};
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

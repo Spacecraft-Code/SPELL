@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+import "header.proto";
+
+package MsgBus;
+
+enum StatusType {
+    STATUS_UNDEF = 0;               // DO NOT USE
+    STATUS_TOPIC_NOT_FOUND = 2;
+    STATUS_KEY_NOT_FOUND = 3;
+    STATUS_EOT = 4;
+};
+
+enum RequestType {
+    REQ_KEYLIST = 0;
+}
+
+message KeyList {
+    repeated string keys = 1;       // key list
+};
+
+message Status {
+    StatusType status = 1;
+    string info = 2;
+};
+
+// Topic creation
+message CreateNewTopic {
+    uint32 queueSize = 1;           // retention size (1 for last value only, more for history)
+};
+
+// Request value(s) from a topic
+message RequestValues {
+    repeated string keys = 1;       // keys
+};
+
+message Item {
+    Messages.Header header = 1;
+
+    oneof these {
+        CreateNewTopic newtopic = 2;
+        RequestValues request_values = 3;
+        KeyList keylist = 4;
+        Status status = 5;
+        RequestType request = 9;
+    };
+};

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for ranging management
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -24,7 +24,7 @@
 ##
 ###################################################################################
 
-from basehelper import *
+from .basehelper import *
 from spell.lang.constants import *
 from spell.lang.modifiers import *
 from spell.lib.adapter.constants.notification import *
@@ -37,8 +37,8 @@ class EnableRanging_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -47,7 +47,7 @@ class EnableRanging_Helper(WrapperHelper):
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
         pass
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -59,7 +59,7 @@ class EnableRanging_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "ENABLE")
 
         result = REGISTRY['RNG'].enableRanging( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -82,8 +82,8 @@ class DisableRanging_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -92,7 +92,7 @@ class DisableRanging_Helper(WrapperHelper):
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
         pass
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -104,7 +104,7 @@ class DisableRanging_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "DISABLE")
 
         result = REGISTRY['RNG'].disableRanging( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -127,10 +127,10 @@ class StartRanging_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """ 
+    """
     __bbe = []
-    __antenna = []   
-    
+    __antenna = []
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -138,18 +138,18 @@ class StartRanging_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
-        
+
         if len(args)!=2:
             raise SyntaxException("Expected a baseband name and an antenna name")
-        
+
         if type(args[0])!=str:
             raise SyntaxException("Expected a baseband name and an antenna name")
         if type(args[1])!=str:
             raise SyntaxException("Expected a baseband name and an antenna name")
-        
+
         self.__bbe = args[0]
         self.__antenna = args[1]
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -161,7 +161,7 @@ class StartRanging_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "START")
 
         result = REGISTRY['RNG'].startRanging( self.__bbe, self.__antenna, config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -184,10 +184,10 @@ class StartRangingCalibration_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """ 
+    """
     __bbe = []
-    __antenna = []   
-    
+    __antenna = []
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -195,10 +195,10 @@ class StartRangingCalibration_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
-        
+
         if len(args)==0:
             raise SyntaxException("Expected at least a baseband and an antenna name (no arguments given)")
-        
+
         usingStrings = False
         usingLists = False
         if type(args[0])==str:
@@ -209,7 +209,7 @@ class StartRangingCalibration_Helper(WrapperHelper):
             usingLists = True
         else:
             raise SyntaxException("Expected a baseband name or a list as first argument")
-        
+
         count = 0
         for element in args:
             if usingLists and type(element)!=list:
@@ -235,7 +235,7 @@ class StartRangingCalibration_Helper(WrapperHelper):
                 self.__bbe.append(element[0])
                 self.__antenna.append(element[1])
                 count = count + 1
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -247,7 +247,7 @@ class StartRangingCalibration_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "CALIBRATION")
 
         result = REGISTRY['RNG'].startRangingCalibration( self.__bbe, self.__antenna, config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -270,11 +270,11 @@ class SetBasebandConfig_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """ 
+    """
     __bbe = None
     __param = None
-    __value = None   
-    
+    __value = None
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -282,13 +282,13 @@ class SetBasebandConfig_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
-        
+
         if len(args)==0:
             raise SyntaxException("Expected a baseband name, a parameter and a value")
 
         if type(args[0])!=str:
             raise SyntaxException("Expected a baseband name as first argument")
-        
+
         usingList = False
         if len(args)==3:
             if type(args[1])!=str:
@@ -301,7 +301,7 @@ class SetBasebandConfig_Helper(WrapperHelper):
             raise SyntaxException("Wrong number of arguments given")
 
         self.__bbe = args[0]
-        
+
         if usingList:
             self.__param = []
             self.__value = []
@@ -315,7 +315,7 @@ class SetBasebandConfig_Helper(WrapperHelper):
         else:
             self.__param = args[1]
             self.__value = args[2]
-        
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -327,7 +327,7 @@ class SetBasebandConfig_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "BBE_SET")
 
         result = REGISTRY['RNG'].setBasebandConfig( self.__bbe, self.__param, self.__value, config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -350,10 +350,10 @@ class GetBasebandConfig_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """ 
+    """
     __bbe = None
     __param = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -361,7 +361,7 @@ class GetBasebandConfig_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
-        
+
         if len(args)!=2:
             raise SyntaxException("Expected a baseband name and a parameter name")
 
@@ -370,10 +370,10 @@ class GetBasebandConfig_Helper(WrapperHelper):
 
         if type(args[1])!=str:
             raise SyntaxException("Expected a parameter name as second argument")
-        
+
         self.__bbe = args[0]
         self.__param = args[1]
-        
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -385,7 +385,7 @@ class GetBasebandConfig_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "BBE_GET")
 
         result = REGISTRY['RNG'].getBasebandConfig( self.__bbe, self.__param, config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -408,8 +408,8 @@ class GetRangingStatus_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """ 
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -417,7 +417,7 @@ class GetRangingStatus_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs):
-        
+
         if len(args)!=0:
             raise SyntaxException("Expected no arguments")
 
@@ -431,7 +431,7 @@ class GetRangingStatus_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "STATUS_GET")
 
         result = REGISTRY['RNG'].getRangingStatus( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -449,8 +449,8 @@ class AbortRanging_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -461,7 +461,7 @@ class AbortRanging_Helper(WrapperHelper):
 
         if len(args)!=0:
             raise SyntaxException("Expected no arguments")
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -473,7 +473,7 @@ class AbortRanging_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "ABORT")
 
         result = REGISTRY['RNG'].abortRanging( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -496,8 +496,8 @@ class GetBasebandNames_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -508,7 +508,7 @@ class GetBasebandNames_Helper(WrapperHelper):
 
         if len(args)!=0:
             raise SyntaxException("Expected no arguments")
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -519,7 +519,7 @@ class GetBasebandNames_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "BBE_NAMES")
 
         result = REGISTRY['RNG'].getBasebandNames( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -537,8 +537,8 @@ class GetAntennaNames_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -549,7 +549,7 @@ class GetAntennaNames_Helper(WrapperHelper):
 
         if len(args)!=0:
             raise SyntaxException("Expected no arguments")
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -560,7 +560,7 @@ class GetAntennaNames_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "ATN_NAMES")
 
         result = REGISTRY['RNG'].getAntennaNames( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -578,8 +578,8 @@ class GetRangingPaths_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
-    """    
-    
+    """
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "RNG")
@@ -590,7 +590,7 @@ class GetRangingPaths_Helper(WrapperHelper):
 
         if len(args)!=0:
             raise SyntaxException("Expected no arguments")
-            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -601,7 +601,7 @@ class GetRangingPaths_Helper(WrapperHelper):
         self.setFailureInfo("RNG", "RNG_PATHS")
 
         result = REGISTRY['RNG'].getRangingPaths( config = self.getConfig() )
-                
+
         return [False,result,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -614,7 +614,47 @@ class GetRangingPaths_Helper(WrapperHelper):
         self._write("Skip get ranging paths", {Severity:WARNING} )
         return [False, None]
 
+################################################################################
+class UpdateCortexConf_Helper(WrapperHelper):
 
+    """
+    DESCRIPTION:
+    """
 
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "RNG")
+        self._opName = "Update Cortex Configuration"
 
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs):
+        pass
 
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+
+        self._setActionString( ACTION_SKIP   ,  "Skip update cortex configuration and return success (True)")
+        self._setActionString( ACTION_CANCEL ,  "Skip update cortex configuration and return failure (False)")
+        self._setActionString( ACTION_REPEAT ,  "Try to update cortex configuration again")
+
+        # Store information for possible failures
+        self.setFailureInfo("RNG", "ENABLE")
+
+        result = REGISTRY['RNG'].updateCortexConf( config = self.getConfig() )
+
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry enable ranging", {Severity:WARNING} )
+        return [True, None]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip enable ranging", {Severity:WARNING} )
+        return [False, True]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Cancel enable ranging", {Severity:WARNING} )
+        return [False, False]

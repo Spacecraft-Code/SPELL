@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the data reader
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -38,7 +38,7 @@
 // DEFINES /////////////////////////////////////////////////////////////////
 
 #define NAME std::string("[ INPUT-KEY(") + ISTR(m_key) + ")-" + m_ifcName + " ] "
-#define SIZE sizeof(unsigned int)
+#define SIZE sizeof(uint32_t)
 
 // store the diagnostics config
 #pragma GCC diagnostic push
@@ -58,6 +58,9 @@ SPELLipcInput::SPELLipcInput( const std::string& name, SPELLsocket& skt, int pee
     m_ifcName = name;
     m_key = peerKey;
     m_connected = true;
+    m_totalPacketLength = 0;
+    m_requestedEOC = false;
+    m_lastByte = 0;
     DEBUG( NAME + "Created");
 }
 
@@ -89,7 +92,10 @@ int SPELLipcInput::readPacketLength( int numRead )
     m_totalPacketLength = length;
 
     //DEBUG( NAME + " readPacketLength length: " + ISTR(m_totalPacketLength) + " " + SPELLutils::dumpString(tmp));
-    assert(m_totalPacketLength < 9999000);
+    // Kill connection in case a client sends more then 1000MB in a single packet
+    if (m_totalPacketLength > 1000000000){ 
+    	throw SPELLipcError( NAME + "Peer has sent bad data disconnecting!", 0);
+    }
 
     // Remove the length bytes from buffer
     for( unsigned int byte=0; byte<(numRead-SIZE); byte++)
@@ -126,6 +132,7 @@ int SPELLipcInput::readMoreBytes()
 				{
 					LOG_WARN( NAME + "WARNING: retrying read...");
 					retries++;
+					usleep(50000);
 					if (retries ==3) throw SPELLipcError(NAME + "Peer has disconnected (errno " + ISTR(errNo) + ")", errNo );
 				}
 				else break;
@@ -147,8 +154,8 @@ int SPELLipcInput::completeLength( int numRead )
 {
     int more = m_socket.receive( m_buffer+numRead, IPC_BUFFER_SIZE-numRead );
     int errNo = errno;
-    assert( more >= 0 );
-    if (more == 0 && m_connected)
+    //assert( more >= 0 );
+    if (more <= 0 && m_connected)
     {
         DEBUG( NAME + "Read 0, peer has disconnected");
         // When we receive zero it means that the peer has invoked
@@ -156,6 +163,7 @@ int SPELLipcInput::completeLength( int numRead )
         // interface is in charge of that, we shall not touch the
         // socket file descriptor here in SPELLipcInput. Just finish the
         // loop.
+        // If more < 0 there was an during the receive call => disconect the client
         throw SPELLipcError( NAME + "Peer has disconnected (errno " + ISTR(errNo) + ")", errNo);
     }
     return more;
@@ -344,7 +352,7 @@ void SPELLipcInput::run()
 			{
 			case IPC_ERROR_UNKNOWN_MSG_TYPE:
 				{
-					LOG_ERROR( NAME + "Unable to process packet. " + ex.getError())
+					LOG_ERROR( NAME + "Unable to process packet. " + ex.getError());
 					DEBUG("Packet size: " + ISTR(m_packet.size()));
 					DEBUG("Packet expected length: " + ISTR(m_totalPacketLength));
 					DEBUG(SPELLutils::dumpString(m_packet));
@@ -407,7 +415,7 @@ void SPELLipcInput::disconnect()
 //=============================================================================
 void SPELLipcInput::dispatch()
 {
-	DEBUG( NAME + " Dispatch TRY IN");
+	//DEBUG( NAME + " Dispatch TRY IN");
     if (!m_connected) return;
     //DEBUG( NAME + "Dispatching: '" + m_packet + "'");
     assert( m_packet.size() == m_totalPacketLength );
@@ -436,8 +444,9 @@ void SPELLipcInput::dispatch()
 	msg.fromData( dataForMsg );
 	msg.setCompressed(compression);
     msg.setKey(m_key);
-
-    DEBUG( NAME + "DISPATCH: " + msg.dataStr());
+    msg.setSender(msg.getSender());
+    msg.set("User",m_socket.getUser());
+    //DEBUG( NAME + "DISPATCH: " + msg.dataStr());
 
     switch(msg.getType())
     {
@@ -478,7 +487,7 @@ void SPELLipcInput::dispatch()
     m_packet = "";
     m_lastByte = NULL;
     m_totalPacketLength = 0;
-	DEBUG( NAME + "DISPATCH OUT");
+	//DEBUG( NAME + "DISPATCH OUT");
 }
 
 #pragma GCC diagnostic pop // restore diagnostics mode

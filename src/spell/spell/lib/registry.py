@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Adapter components registry
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,16 +33,16 @@
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
 class RegistryError(BaseException): pass
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -53,13 +53,13 @@ __instance__ = None
 
 ################################################################################
 class RegistryClass(object):
-    
+
     __objects = {}
-    
+
     #===========================================================================
     def __init__(self):
         self.__objects  = {}
-        
+
     #==========================================================================
     @staticmethod
     def instance():
@@ -67,29 +67,29 @@ class RegistryClass(object):
         if __instance__ is None:
             __instance__ = RegistryClass()
         return __instance__
-        
+
     #===========================================================================
     def __getitem__(self, key):
-        if not self.__objects.has_key(key):
+        if key not in self.__objects:
             raise RegistryError("No such object: " + repr(key))
         return self.__objects.get(key)
-        
+
     #===========================================================================
     def __setitem__(self, key, object):
         self.__objects[key] = object
 
     #===========================================================================
     def exists(self, key):
-        return self.__objects.has_key(key)
+        return key in self.__objects
 
     #===========================================================================
     def remove(self, key):
-        if self.__objects.has_key(key):
+        if key in self.__objects:
             self.__objects.pop(key)
 
     #===========================================================================
     def interfaces(self):
-        return self.__objects.keys()
-    
+        return list(self.__objects.keys())
+
 ################################################################################
 REGISTRY = RegistryClass.instance()

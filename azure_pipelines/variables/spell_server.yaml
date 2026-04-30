@@ -1,0 +1,5 @@
+variables:
+  DOCKER_FILEPATH: docker/spell-server
+  DOCKER_IMAGE: spell/spell-server-ubuntu
+  NEXUS_APPLICATION: spell-server
+  DOCKER_BUILD_CONTEXT: "/../"

@@ -5,7 +5,7 @@
 // DESCRIPTION: Base includes for SPELL framework
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -58,6 +58,7 @@
 #include <sys/stat.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <cstdint>
 #include "log4cplus/appender.h"
 #include "log4cplus/fileappender.h"
 #include "log4cplus/layout.h"
@@ -88,6 +89,51 @@
 // TYPES ///////////////////////////////////////////////////////////////////
 // DEFINES /////////////////////////////////////////////////////////////////
 #define BYTE unsigned char
+
+//Python 3 Compatibility
+#if PY_MAJOR_VERSION >= 3
+#define PyString_AsString PyUnicode_AsUTF8
+#define PyString_CheckExact PyUnicode_CheckExact
+#define PyString_FromString PyUnicode_FromString
+#define PyString_Check PyUnicode_Check
+#define PyString_Size PyUnicode_GetLength
+#define PyString_AsStringAndSize PyBytes_AsStringAndSize
+#define CHAR wchar_t
+#define PyInt_Check PyLong_Check
+#define PyInt_AsLong PyLong_AsLong
+#define PyInt_FromSize_t PyLong_FromSize_t
+#define PyInt_FromLong PyLong_FromLong
+#define PyClass_Check(value) PyObject_IsInstance(value, (PyObject *)&PyType_Type)
+#define PyInstance_Check(value) PyObject_IsInstance(value, (PyObject *)&PyBaseObject_Type)
+#define PyInt_CheckExact PyLong_CheckExact
+#define PyInt_AS_LONG PyLong_AS_LONG
+
+#define PyFloat_FromString(floatObj,pend) PyFloat_FromString(floatObj)
+
+#define PyEval_EvalCode(code,globals,locals) PyEval_EvalCode((PyObject*)code,globals,locals)
+
+#define MOD_ERROR_VAL NULL
+#define MOD_SUCCESS_VAL(val) val
+#define MOD_NAME(name) #name"_v3"
+#define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name##_v3(void)
+#define MOD_DEF(ob, name, doc, methods) \
+	  static struct PyModuleDef moduledef = { \
+		PyModuleDef_HEAD_INIT, name, doc, -1, methods, }; \
+	  ob = PyModule_Create(&moduledef); \
+      if (ob == NULL) \
+    	  return  NULL;
+#define BUILTINS "builtins"
+#else
+#define BUILTINS "__builtin__"
+#define CHAR char
+#define MOD_ERROR_VAL
+#define MOD_SUCCESS_VAL(val)
+#define MOD_NAME(name) #name"_v2"
+#define MOD_INIT(name) PyMODINIT_FUNC init##name##_v2(void)
+#define MOD_DEF(ob, name, doc, methods) \
+	  ob = Py_InitModule3(name, methods, doc);
+#define _Py_CODEUNIT unsigned char
+#endif
 
 /*@}*/
 #endif

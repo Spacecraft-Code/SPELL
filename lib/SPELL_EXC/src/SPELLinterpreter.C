@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the custom interpreter
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -161,6 +161,7 @@ void SPELLinterpreter::mainLoop()
     // Create and connect all execution control objects
     if (prepareObjects())
     {
+        SPELLsafePythonOperations ops("Executor execute");
         // Now try to initialize (compile) the execution frame.
         if (prepareExecution())
         {
@@ -346,7 +347,7 @@ const bool SPELLinterpreter::prepareObjects()
     {
         DEBUG("   Initializing Python interface");
         SPELLpythonHelper::instance().initialize();
-
+        SPELLsafePythonOperations ops("Executor Init");
         // Install log support asap
         Log_Install();
 
@@ -377,6 +378,8 @@ const bool SPELLinterpreter::prepareObjects()
         m_callstack = new SPELLcallstack();
         // Create and initialize the execution frame
         m_frameManager = new SPELLframeManager();
+        
+        DEBUG("   Initializing executor");
 
         // Setup the CIF now
         try
@@ -391,9 +394,9 @@ const bool SPELLinterpreter::prepareObjects()
         	::exit(EIO);
         }
 
-        DEBUG("   Initializing executor");
         // Initialize the executor with the objects
         m_executor->initialize(m_cif, m_controller, m_scheduler, m_callstack, m_frameManager);
+
 
         // Prepare and configure warm start mechanism now
         DEBUG("   Preparing warm start");

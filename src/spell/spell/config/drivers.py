@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Driver configuration model
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -31,20 +31,20 @@
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from base import ConfigItem, ConfigError
-from constants import *
- 
+from .base import ConfigItem, ConfigError
+from .constants import *
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
 import os
 import xml.dom.minidom
 from xml.dom.minidom import Node
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
@@ -55,38 +55,38 @@ PROPERTIES=['name', 'interfaces', 'lib', 'maxproc', 'path']
 
 ################################################################################
 class DriverConfig(ConfigItem):
-    
+
     """
     Configuration entity for Drivers. 
     @see: ConfigItem for details.
     """
-    
-    #===========================================================================            
+
+    #===========================================================================
     def __init__(self, configFile):
         if not os.path.exists(configFile):
-            raise ConfigError("Cannot find driver configuration file: " + configFile) 
+            raise ConfigError("Cannot find driver configuration file: " + configFile)
         document = xml.dom.minidom.parse(configFile)
         node = document.getElementsByTagName(DRIVER)[0]
         ConfigItem.__init__(self,node, PROPERTIES)
         # Load the driver properties node
         self.__loadDriverProperties(node)
-        
-    #===========================================================================            
+
+    #===========================================================================
     def getName(self):
         return self["name"]
-    
-    #===========================================================================            
+
+    #===========================================================================
     def getId(self):
         return self["id"]
 
-    #===========================================================================            
+    #===========================================================================
     def getInterfaces(self):
         ifc = self['interfaces']
         if ifc is None:
             return ""
         return ifc
 
-    #===========================================================================            
+    #===========================================================================
     def getLibraries(self):
         lib = self['lib']
         if lib is None:
@@ -100,17 +100,38 @@ class DriverConfig(ConfigItem):
             return ""
         return path
 
-    #===========================================================================            
+    #===========================================================================
     def getMaxProcs(self):
         maxp = self['maxproc']
         if maxp is None:
             return 10
         return maxp
-    
-    #===========================================================================            
+
+    #===========================================================================
+    def getGRPCTimeout(self):
+        timeout = self['grpctimeout']
+        if timeout is None:
+            return 60.0
+        return float(timeout)
+
+    #===========================================================================
+    def getGRPCRetry(self):
+        retryCount = self['grpcretrycount']
+        if retryCount is None:
+            return 3
+        return int(retryCount)
+
+    #===========================================================================
+    def getGRPCPingTime(self):
+        pingTime = self['grpcpingtime']
+        if pingTime is None:
+            return 10.0
+        return float(pingTime)
+
+    #===========================================================================
     def __loadDriverProperties(self, node):
         for properties in node.getElementsByTagName("properties"):
-            
+
             for property in properties.getElementsByTagName("property"):
                 name = str(property.getAttribute("name"))
                 if name is None or len(name)==0:
@@ -120,6 +141,5 @@ class DriverConfig(ConfigItem):
                         value = pchild.data
                         if value is None or len(value)==0:
                             raise ConfigError("Cannot find driver property value")
-                        self[name] = str(value)
+                        self[name.lower()] = str(value)
                         break
-

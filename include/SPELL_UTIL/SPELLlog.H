@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor logging mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -30,6 +30,7 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
 // Project includes --------------------------------------------------------
+#include "SPELL_UTIL/SPELLutils.H"
 #include "SPELL_SYN/SPELLmutex.H"
 // System includes ---------------------------------------------------------
 
@@ -202,19 +203,19 @@ static const std::string LOG_LEVEL_LBL[] =
  ** \brief Log an information message.
  **
  *////////////////////////////////////////////////////////////////////////////
-#define LOG_INFO(x)  log4cplus::Logger::getRoot().log(log4cplus::INFO_LOG_LEVEL, x, __FILE__, __LINE__ )
+#define LOG_INFO(x)  log4cplus::Logger::getRoot().log(log4cplus::INFO_LOG_LEVEL, x, __FILE__, __LINE__, NULL )
 //////////////////////////////////////////////////////////////////////////////
 /**
  ** \brief Log a warning message.
  **
  *////////////////////////////////////////////////////////////////////////////
-#define LOG_WARN(x)  log4cplus::Logger::getRoot().log(log4cplus::WARN_LOG_LEVEL, x, __FILE__, __LINE__ )
+#define LOG_WARN(x)  log4cplus::Logger::getRoot().log(log4cplus::WARN_LOG_LEVEL, x, __FILE__, __LINE__, NULL )
 //////////////////////////////////////////////////////////////////////////////
 /**
  ** \brief Log an error message.
  **
  *////////////////////////////////////////////////////////////////////////////
-#define LOG_ERROR(x) log4cplus::Logger::getRoot().log(log4cplus::ERROR_LOG_LEVEL, x, __FILE__, __LINE__ )
+#define LOG_ERROR(x) log4cplus::Logger::getRoot().log(log4cplus::ERROR_LOG_LEVEL, x, __FILE__, __LINE__, NULL )
 //////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
@@ -242,8 +243,9 @@ static const std::string LOG_LEVEL_LBL[] =
  ** the \c WITH_DEBUG macro is defined.
  **
  *////////////////////////////////////////////////////////////////////////////
+
 #ifdef WITH_DEBUG
-#define DEBUG(x)     log4cplus::Logger::getRoot().log(log4cplus::DEBUG_LOG_LEVEL, x, __FILE__, __LINE__ )
+#define DEBUG(x)     log4cplus::Logger::getRoot().log(log4cplus::DEBUG_LOG_LEVEL, x, __FILE__, __LINE__ );
 #else
 #define DEBUG(x)
 #endif

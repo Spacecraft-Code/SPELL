@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Resources interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -54,17 +54,17 @@ superClass = spell.lib.adapter.resources.ResourceInterface
 
 ###############################################################################
 class ResourceInterface(superClass):
-    
+
     """
     DESCRIPTION:
         Empty resource management interface. 
     """
-    
+
     #==========================================================================
     def __init__(self):
         superClass.__init__(self)
         LOG("Created")
-            
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         superClass.setup(self, ctxConfig,drvConfig)
@@ -74,25 +74,27 @@ class ResourceInterface(superClass):
     def cleanup(self):
         superClass.cleanup(self)
         LOG("Cleanup empty RSC interface")
-    
+
     #==========================================================================
     def _setLink(self, name, enable, config = {}):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-        
+
     #==========================================================================
     def _checkLink(self, name):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-    
+
     #==========================================================================
-    def _setResource(self, name, value):
+    def _setResource(self, name, value, isLocal):
         raise DriverException("Cannot perform operation", "Not supported by driver")
 
     #==========================================================================
-    def _getResource(self, name):
+    def _getResource(self, name, isLocal):
+        raise DriverException("Cannot perform operation", "Not supported by driver")
+
+    #==========================================================================
+    def _getResources(self, isLocal):
         raise DriverException("Cannot perform operation", "Not supported by driver")
 
 ################################################################################
 # Interface handle
 RSC = ResourceInterface()
-        
-            

@@ -6,7 +6,7 @@ PACKAGE: spell.lang.helpers.tchelper
 
 PROJECT: SPELL
 
- Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.a.r.l.
+ Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 
  This file is part of SPELL.
 
@@ -45,7 +45,7 @@ from spell.lib.registry import *
 #===============================================================================
 # Local imports
 #===============================================================================
-from basehelper import *
+from .basehelper import *
 
 #===============================================================================
 # System imports
@@ -58,15 +58,15 @@ class Send_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the SendAndVerify wrapper.
-    """    
-    
+    """
+
     _isGroup = False
     _isSequence = False
     _cmdName = None
     _cmdDef = None
     _cmdArgs = None
     # This flag is used in case of failures. The user may want to resend the
-    # command AND verify the parameters, or only repeat the parameters 
+    # command AND verify the parameters, or only repeat the parameters
     # verification.
     __doSendCommand = True
     # This flag is used in case of failures. The user may want to resend the
@@ -76,7 +76,7 @@ class Send_Helper(WrapperHelper):
     __doCheckTelemetry = True
     # True if adjusting limits is feasible
     __canAdjustLimits = False
-    # Holds the current stage of the function (TC,TM,LIM) 
+    # Holds the current stage of the function (TC,TM,LIM)
     __section = None
     __actionTaken = None
     __verifyCondition = None
@@ -114,6 +114,7 @@ class Send_Helper(WrapperHelper):
         self.__actionTaken = None
         self.__verifyCondition = None
         self.__doCheckTelemetry = False
+        self.__confirmed = False
 
     #===========================================================================
     def _obtainVerificationDefinition(self,*args,**kargs):
@@ -126,7 +127,7 @@ class Send_Helper(WrapperHelper):
             self.__verifyCondition = args[2]
             if type(self.__verifyCondition) != list:
                 raise SyntaxException("Expected a list of verification steps")
-        elif kargs.has_key('verify'):
+        elif 'verify' in kargs:
             self.__verifyCondition = kargs.pop('verify')
         else:
             self.__verifyCondition = None
@@ -140,19 +141,19 @@ class Send_Helper(WrapperHelper):
             LOG("No positional arguments", level = LOG_LANG)
             # If no positional arguments are given, the command shall be
             # given with these keywords
-            if not kargs.has_key('command') and\
-               not kargs.has_key('sequence') and\
-               not kargs.has_key('group'): 
+            if 'command' not in kargs and\
+               'sequence' not in kargs and\
+               'group' not in kargs:
                 raise SyntaxException("Expected a command item or name")
             else:
-                if kargs.has_key('command'):
+                if 'command' in kargs:
                     LOG("Using keyword argument command", level = LOG_LANG)
                     self._isSequence = False
                     self._isGroup = False
                     self._cmdDef = kargs.pop('command')
                     if type(self._cmdDef)==list:
                         raise SyntaxException("Cannot accept list as single command")
-                elif kargs.has_key('group'):
+                elif 'group' in kargs:
                     LOG("Using keyword argument group", level = LOG_LANG)
                     self._isSequence = False
                     self._isGroup = True
@@ -168,7 +169,7 @@ class Send_Helper(WrapperHelper):
                         raise SyntaxException("Cannot accept command list as a sequence")
         else:
             raise SyntaxException("Expected keyword: command, group or sequence")
-    
+
         # Create the command item if necessary
         if type(self._cmdDef)==str:
             self._cmdDef = REGISTRY['TC'][self._cmdDef]
@@ -199,7 +200,7 @@ class Send_Helper(WrapperHelper):
             desc = self._cmdDef.desc()
             if desc != "": desc = ": " + desc
             self._cmdName = self._cmdDef.name() + desc
-            
+
         LOG("Got command definition: " + str(self._cmdName), level = LOG_LANG)
         LOG("Sequence flag: " + str(self._isSequence), level = LOG_LANG)
         LOG("Group flag   : " + str(self._isGroup), level = LOG_LANG)
@@ -213,14 +214,14 @@ class Send_Helper(WrapperHelper):
            not type(self._cmdDef) == str and\
            not type(self._cmdDef) == list:
             raise SyntaxException("Expected a TC name, TC item or TC list")
-        
+
     #===========================================================================
     def _obtainCommandArguments(self, *args, **kargs):
         # 3. Obtain the arguments
         self._cmdArgs = None
         if not self._isGroup:
             LOG("Getting arguments for single command", level = LOG_LANG)
-            if kargs.has_key('args'):
+            if 'args' in kargs:
                 LOG("Using keyword args", level = LOG_LANG)
                 self._cmdArgs = kargs.pop('args')
             else:
@@ -228,9 +229,9 @@ class Send_Helper(WrapperHelper):
                 self._cmdArgs = None
         # Using a group and args kword is not accepted (??)
         else:
-            if kargs.has_key('args'):
+            if 'args' in kargs:
                 raise SyntaxException("Cannot use args with TC lists")
-        
+
     #===========================================================================
     def _parseCommandArguments(self):
         # 6. Parse arguments if any
@@ -248,7 +249,7 @@ class Send_Helper(WrapperHelper):
                 argument = argument[1:]
                 LOG("Set argument: " + str(argName) + "=" + repr(argument), level = LOG_LANG)
                 self._cmdDef[argName] = argument
-        
+
     #===========================================================================
     def _checkCommandArguments(self):
         if not self._cmdArgs is None and type(self._cmdArgs)!=list:
@@ -256,7 +257,7 @@ class Send_Helper(WrapperHelper):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
-        
+
         #-----------------------------------------------------------------------
         # Parse the command information
         #-----------------------------------------------------------------------
@@ -270,7 +271,7 @@ class Send_Helper(WrapperHelper):
         self._checkCommandArguments()
         # 5. Parse command arguments
         self._parseCommandArguments()
-        
+
         # Some text messages, not needed if Confirm is activated as the confirmation
         # mechanism already displays the command
         if (not self.hasConfig(Confirm)) or (self.getConfig(Confirm)!=True):
@@ -299,23 +300,23 @@ class Send_Helper(WrapperHelper):
                             self.getConfig(AdjLimits)==True
         self.__doAdjustLimitsP = self.__doAdjustLimits
         self.__canAdjustLimits = self.__doAdjustLimits
-                 
+
         # Store information for possible failures
         self.setFailureInfo("TM", self._cmdDef)
-                 
+
     #==========================================================================
     def _buildCommandDescription(self):
         msg = "Please confirm execution of the following "
         if self._isGroup:
             msg += "command group:"
             for cmd in self._cmdDef:
-                msg += "\n    Command: " + cmd.name() 
+                msg += "\n    Command: " + cmd.name()
                 if (cmd.desc().strip() != ""): msg += " ('" + cmd.desc() + "')"
                 if len(cmd._getParams())>0:
                     msg += "\n    Arguments:"
                     for param in cmd._getParams():
                         msg += "\n         - " + repr(param.name) + " = " + str(param.value.get()) + " " + str(param.value.units())
-                    
+
         elif self._isSequence:
             msg += "sequence: " + self._cmdDef.name()
             if (self._cmdDef.desc().strip() != ""): msg += " ('" + self._cmdDef.desc() + "')"
@@ -329,21 +330,22 @@ class Send_Helper(WrapperHelper):
                 msg += "\n    Arguments:"
                 for param in self._cmdDef._getParams():
                     msg += "\n         - " + repr(param.name) + " = " + str(param.value.get()) + " " + str(param.value.units())
-                    
+
         else:
             msg += "command: " + self._cmdDef.name()
-            
+
             if (self._cmdDef.desc().strip() != ""): msg += " ('" + self._cmdDef.desc() + "')"
-            
+
             if len(self._cmdDef._getParams())>0:
                 msg += "\n    Arguments:"
                 for param in self._cmdDef._getParams():
                     msg += "\n         - " + repr(param.name) + " = " + str(param.value.get()) + " " + str(param.value.units())
         return msg
-                            
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
+        from spell.lang.functions import SetLimits
         repeat = False
         self.__originalOnFailure = self.getConfig(OnFailure)
 
@@ -353,17 +355,28 @@ class Send_Helper(WrapperHelper):
         # Confirm execution if needed
         confirm = REGISTRY['TC'].shouldForceTcConfirm()
         confirm = confirm or self.hasConfig(Confirm) and self.getConfig(Confirm) == True
-        
+        # Only do it if not confirmed already
+        confirm = confirm and not self.__confirmed
+
+        LOG("####################################")
+        LOG("START OF TC INJECTION CYCLE")
+        LOG("####################################")
+
+        LOG("Should confirm TC: " + repr(confirm))
+
         if confirm:
             self.__section = 'CONFIRM'
             msg = self._buildCommandDescription()
             if not self._prompt(msg, [], {Type:OK_CANCEL}):
                 return [ False, False, NOTIF_STATUS_CL, "Cancelled by user" ]
+            self.__confirmed = True
 
         #-----------------------------------------------------------------------
         # LIMIT ADJUSTMENT SECTION
         #-----------------------------------------------------------------------
+        LOG("Should adjust limits: " + repr(self.__canAdjustLimits) + "," + repr(self.__doAdjustLimitsP))
         if self.__canAdjustLimits and self.__doAdjustLimitsP:
+            LOG("Entering into LIM1 section")
             self.__section = 'LIM1'
             # We don't allow resend nor recheck, only repeat
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RESEND))
@@ -372,10 +385,10 @@ class Send_Helper(WrapperHelper):
             self._setActionString( ACTION_REPEAT ,  "Retry disabling limits")
             self._setActionString( ACTION_SKIP   ,  "Skip limits adjustment and command injection. Proceed with telemetry verification")
             self._setActionString( ACTION_CANCEL ,  "Skip the whole Send() operation and return failure (False)")
-            
+
             # Store information for possible failures
             self.setFailureInfo("TM", self.__verifyCondition)
-            
+
             # We need to enlarge the limit range to the maximum to
             # avoid alarms (analog parameters) or to allow any
             # status value (status parameters)
@@ -384,15 +397,15 @@ class Send_Helper(WrapperHelper):
                 paramName = condition[0]
                 paramValue = condition[2]
                 operator = condition[1]
-                
+
                 # Do not adjust limits if the condition config dict says the contrary
                 if type(condition[-1])==dict:
                     itemCfg = condition[-1]
-                    if itemCfg.has_key(AdjLimits) and itemCfg[AdjLimits] == False: continue
-                        
+                    if AdjLimits in itemCfg and itemCfg[AdjLimits] == False: continue
+
                 # Do not adjust limits if eq operator is not used
                 if operator != eq: continue
-                
+
                 # Proceed with limit adjustment
                 if type(paramValue)==str: #Status parameters
                     # First get the currentValue
@@ -405,8 +418,12 @@ class Send_Helper(WrapperHelper):
                     else:
                         continue
                     limits = {}
-                    limits[Expected] = expectedValues
-                    
+                    # Backwards compatibility
+                    # TODO: need to temporarily remove BC here - it does not work if both Expected and Nominal are provided
+                    #limits[Expected] = expectedValues
+                    # New format
+                    limits[Nominal] = [ currentValue, paramValue ]
+
                     # Adjust the limits accordingly
                     REGISTRY['CIF'].write("    - " + repr(paramName) + " adjusting to expected values: " + expectedValues)
                 else: #Analog parameters
@@ -417,18 +434,24 @@ class Send_Helper(WrapperHelper):
                     limits[HiRed] = 1.7e+308
                     limits[HiYel] = 1.7e+308
                     REGISTRY['CIF'].write("    - " + repr(paramName) + " enlarged analog limits to the maximum")
-                REGISTRY['TM'].setLimits( paramName, limits, config = self.getConfig() )
+
+                config = self.getConfig()
+                config.update(limits)
+                if Select not in config:
+                    config[Select] = ACTIVE
+                SetLimits( paramName, config )
 
         # Reset the OnFailure config
         self.addConfig(OnFailure, self.__originalOnFailure)
-                    
+
         #-----------------------------------------------------------------------
         # COMMAND SECTION
         #-----------------------------------------------------------------------
         # If we are repeating the operation due to an user action, check
         # the flag to see if we have to resend the command
-
+        LOG("Should do command: " + repr(self.__doSendCommand))
         if self.__doSendCommand:
+            LOG("Entering in TC section")
             self.__section = 'TC'
             # Store information for possible failures
             self.setFailureInfo("TC", self._cmdDef)
@@ -436,7 +459,7 @@ class Send_Helper(WrapperHelper):
             # We do not allow recheck or repeat yet, only resend
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~REPEAT))
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RECHECK))
-            
+
             # Adapt the action messages
             if self._isGroup:
                 self._setActionString( ACTION_RESEND ,  "Send the whole command group again")
@@ -444,7 +467,7 @@ class Send_Helper(WrapperHelper):
                 self._setActionString( ACTION_RESEND ,  "Send the command sequence again")
             else:
                 self._setActionString( ACTION_RESEND ,  "Send the command again")
-                
+
             if self.__verifyCondition:
                 self._setActionString( ACTION_SKIP   ,  "Skip the command injection. Proceed with telemetry verification")
             else:
@@ -453,19 +476,75 @@ class Send_Helper(WrapperHelper):
 
             try:
                 # Actually send the command
+                LOG("Invoking driver send")
                 tcIsSuccess = REGISTRY['TC'].send(self._cmdDef, config = self.getConfig() )
-                
-            except DriverException,ex:
-                raise ex
-
-            if tcIsSuccess:
                 self._write("Execution success")
-            else:
+                LOG("Driver injection finished with result " + repr(tcIsSuccess))
+            except DriverException as ex:
+                LOG("Driver injection failed with exception " + repr(ex))
                 self._write("Execution failed", {Severity:ERROR} )
-                raise DriverException("Command execution failed")
+                if not self._handleError: raise ex
+                action = self._handleException(ex)
+                LOG("Action is " + repr(action))
+                repeat, result = self._doAction(action)
+                LOG("Result of action is " + repr([repeat,result]))
+                if repeat:
+                    LOG("Will repeat cycle")
+                    if action == 'Q':
+                        LOG("Q==> AdjustP=False, Command=False, Telemetry=False, Adjust=False")
+                        self.__doSendCommand = False
+                        self.__doCheckTelemetry = False
+                        self.__doAdjustLimits = False
+                        self.__doAdjustLimitsP = False
+                        opStatus = NOTIF_STATUS_CL
+                    elif action == 'K':
+                        LOG("K==> AdjustP=False, Command=False, Telemetry=True, Adjust=True")
+                        self.__doSendCommand = False
+                        self.__doCheckTelemetry = True
+                        self.__doAdjustLimits = True
+                        opStatus = NOTIF_STATUS_SP
+                    elif action == 'S':
+                        LOG("S==> AdjustP=False, Command=True, Telemetry=True, Adjust=True")
+                        self.__doSendCommand = True
+                        self.__doCheckTelemetry = True
+                        self.__doAdjustLimits = True
+                        self.__doAdjustLimitsP = False
+                        opStatus = NOTIF_STATUS_PR
+                    elif action == 'R':
+                        LOG("S==> AdjustP=True, Command=True, Telemetry=True, Adjust=True")
+                        self.__doSendCommand = True
+                        self.__doCheckTelemetry = True
+                        self.__doAdjustLimits = True
+                        self.__doAdjustLimitsP = True
+                        opStatus = NOTIF_STATUS_PR
+                    else:
+                        LOG("Custom action with result " + repr(result))
+                        LOG("CA==> AdjustP=False, Command=False, Telemetry=" + str(result) + ", Adjust=" + str(result))
+                        self.__doAdjustLimitsP = False
+                        self.__doSendCommand = result
+                        self.__doCheckTelemetry = result
+                        self.__doAdjustLimits = result
+                        if result:
+                            opStatus = NOTIF_STATUS_SP
+                        else:
+                            opStatus = NOTIF_STATUS_CL
+                    return [repeat,result,opStatus,""]
+                else:
+                    LOG("Will NOT repeat cycle, TC success = " + repr(result))
+                    tcIsSuccess = result
+                    if action not in ['Q','K','S','R']:
+                        LOG("Custom action with result " + repr(result))
+                        LOG("CA==> AdjustP=False, Command=False, Telemetry=" + str(result) + ", Adjust=" + str(result))
+                        self.__doCheckTelemetry = result
+                        self.__doAdjustLimits = result
+                        if result:
+                            self.__actionTaken = "SKIP"
+                            opStatus = NOTIF_STATUS_SP
+
+
         else:
             tcIsSuccess = True
-        
+
         # Reset the OnFailure config
         self.addConfig(OnFailure, self.__originalOnFailure)
 
@@ -473,9 +552,11 @@ class Send_Helper(WrapperHelper):
         # TELEMETRY SECTION
         #-----------------------------------------------------------------------
         # If there are verification sets, verify them
+        LOG("Should perform telemetry part: " + repr(self.__doCheckTelemetry) + "," + repr(self.__verifyCondition) + "," + repr(tcIsSuccess))
         if self.__doCheckTelemetry and self.__verifyCondition and tcIsSuccess:
+            LOG("Entering in TM section")
             self.__section = 'TM'
-            
+
             # Store information for possible failures
             self.setFailureInfo("TM", self.__verifyCondition)
 
@@ -504,7 +585,7 @@ class Send_Helper(WrapperHelper):
             tmIsSuccess = REGISTRY['TM'].verify(self.__verifyCondition, config=self.getConfig())
 
             #repeat, tmIsSuccess = self._processActionOnResult(tmIsSuccess)
-            
+
         else:
             tmIsSuccess = True
 
@@ -514,29 +595,34 @@ class Send_Helper(WrapperHelper):
         #-----------------------------------------------------------------------
         # ADJUST LIMITS SECTION
         #-----------------------------------------------------------------------
+        LOG("Should adjust limits: " + repr(self.__canAdjustLimits) + "," + repr(self.__doAdjustLimits) + "," + repr(tmIsSuccess))
         if tmIsSuccess and self.__canAdjustLimits and self.__doAdjustLimits:
+            LOG("Entering in LIM2 section")
             self.__section = "LIM2"
-            
+
             # Store information for possible failures
             self.setFailureInfo("TM", self.__verifyCondition)
 
             # We dont allow recheck/resend for this, only repeat if the user wants
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RESEND))
             self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RECHECK))
-            
+
                         # Adapt the action messages
             self._setActionString( ACTION_REPEAT ,  "Repeat the final limit adjustment")
             self._setActionString( ACTION_SKIP   ,  "Skip the final limit adjustment and return success (True)")
             self._setActionString( ACTION_CANCEL ,  "Skip the final limit adjustment and return failure (False)")
-
 
             REGISTRY['CIF'].write("Adjusting limit definitions after TC execution")
             for condition in self.__verifyCondition:
                 paramName = condition[0]
                 paramValue = condition[2]
                 operator = condition[1]
-                
-                # Do not adjust limits if not eq operator used 
+                # Get the currentValue
+                paramItem = REGISTRY['TM'][paramName]
+                paramItem.refresh( Wait = False )
+                currentValue = paramItem.eng( Wait = False )
+
+                # Do not adjust limits if not eq operator used
                 if operator != eq: continue
 
                 # Do not adjust limits if the condition config dict says the contrary
@@ -544,12 +630,17 @@ class Send_Helper(WrapperHelper):
                 if type(condition[-1])==dict:
                     itemCfg = condition[-1]
                     conditionTolerance = itemCfg.get(Tolerance)
-                    if itemCfg.has_key(AdjLimits) and itemCfg[AdjLimits] == False: continue
-                        
+                    if AdjLimits in itemCfg and itemCfg[AdjLimits] == False: continue
+
                 if type(paramValue)==str: #Status parameters
                     # Build the expected value list
                     limits = {}
-                    limits[Expected] = paramValue
+                    # Backwards compatibility
+                    # TODO: need to temporarily remove BC here - it does not work if Expected and Nominal are both provided.
+                    #limits[Expected] = paramValue
+                    # New format
+                    limits[Nominal] = paramValue # expected by the verify
+                    limits[Error] = currentValue
                     # Adjust the limits accordingly
                     REGISTRY['CIF'].write("    - " + repr(paramName) + " adjusting to expected value: " + paramValue)
                 else: #Analog parameters
@@ -567,10 +658,17 @@ class Send_Helper(WrapperHelper):
                     REGISTRY['CIF'].write("    - " + repr(paramName) + " limits set to ( " + str(limits[LoRed]) +
                                           " , " + str(limits[LoYel]) + " | " + str(limits[HiYel]) + " , " + str(limits[HiRed]) + " )")
                     REGISTRY['CIF'].write("      Tolerance used: " + str(tolerance))
-                REGISTRY['TM'].setLimits( paramName, limits, config = self.getConfig() )
+
+                config = self.getConfig()
+                config.update(limits)
+                if Select not in config:
+                    config[Select] = ACTIVE
+                SetLimits( paramName, config )
 
         # Reset the OnFailure config
         self.addConfig(OnFailure, self.__originalOnFailure)
+
+        LOG("Finished all sections")
 
         # Depending on the result of both operations we decide to repeat the whole
         # or part of the operation.
@@ -585,16 +683,18 @@ class Send_Helper(WrapperHelper):
         elif result:
             opStatus = NOTIF_STATUS_OK
         else:
-            opStatus = NOTIF_STATUS_FL 
+            opStatus = NOTIF_STATUS_FL
+
+        LOG("Overall operation result: " + repr([ repeat, result, opStatus, "" ]))
 
         return [ repeat, result, opStatus, "" ]
 
     #===========================================================================
     def _driverUpdateActionList(self, theOptions, exception = None):
-        
+
         if self.__section == "TC":
             return REGISTRY['TC'].driverUpdateActionList( theOptions, exception )
-        
+
         return theOptions
 
     #===========================================================================
@@ -602,7 +702,7 @@ class Send_Helper(WrapperHelper):
 
         if self.__section == "TC":
             return REGISTRY['TC'].driverPerformAction(code)
-                
+
         return None # [False,False]
 
     #===========================================================================
@@ -617,7 +717,7 @@ class Send_Helper(WrapperHelper):
 
     #===========================================================================
     def _getExceptionFlag(self, exception ):
-        # Special case for verify, OnFalse            
+        # Special case for verify, OnFalse
         if exception.reason.find("evaluated to False")>0:
             return self.getConfig(PromptUser)
         else:
@@ -625,7 +725,7 @@ class Send_Helper(WrapperHelper):
 
     #===========================================================================
     def _getBehaviorOptions(self, exception):
-        
+
         # If the OnFailure parameter is not set, get the default behavior.
         # This default behavior depends on the particular primitive being
         # used, so it is implemented in child wrappers.
@@ -633,15 +733,15 @@ class Send_Helper(WrapperHelper):
             LOG("Using defaults")
             self.setConfig({OnFailure:ABORT})
 
-        # Special case for verify, OnFalse            
+        # Special case for verify, OnFalse
         if exception and (exception.reason.find("evaluated to False")>0):
             optionRef = self.getConfig(OnFalse)
         else:
             optionRef = self.getConfig(OnFailure)
-        
+
         # Get the desired behavior
         theOptions = self._getActionList( optionRef, exception )
-            
+
         return theOptions
 
     #===========================================================================
@@ -656,20 +756,24 @@ class Send_Helper(WrapperHelper):
             self.__doAdjustLimits = False
             self.__doSendCommand = False
             self.__doCheckTelemetry = True
+            LOG("Skip but check telemetry")
             return [True,False]
         elif self.__section == 'TM':
             self.__doAdjustLimitsP = False
             self.__doAdjustLimits = False
             self.__doSendCommand = False
             self.__doCheckTelemetry = False
+            LOG("Skip and not check telemetry")
             return [True,False]
         else:
+            LOG("Skip all returning True")
             return [False,True]
 
     #===========================================================================
     def _doCancel(self):
-        self._write("Operation cancelled", {Severity:WARNING} ) 
+        self._write("Operation cancelled", {Severity:WARNING} )
         self.__actionTaken = "CANCEL"
+        LOG("Cancel and dont check telemetry")
         return [False,False]
 
     #===========================================================================
@@ -685,7 +789,7 @@ class Send_Helper(WrapperHelper):
         self.__doAdjustLimitsP = False
         self.__doCheckTelemetry = True
         return [True,False]
-                
+
     #===========================================================================
     def _doRepeat(self):
         self.__actionTaken = "CANCEL"
@@ -712,12 +816,12 @@ class BuildTC_Helper(WrapperHelper):
     """
     DESCRIPTION:
         Helper for the Build TC wrapper.
-    """    
+    """
     _tcName = None
     _tcArguments = []
     _tcItem = None
     _isSequence = False
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TC")
@@ -729,25 +833,25 @@ class BuildTC_Helper(WrapperHelper):
 
     #===========================================================================
     def _obtainCommandName(self, *args, **kargs ):
-        if len(args)==1: 
+        if len(args)==1:
             if type(args[0])!=str:
                 raise SyntaxException("Expected a command name")
             self._tcName = args[0]
         elif len(args)==0:
-            if kargs.has_key('command'):
+            if 'command' in kargs:
                 self._tcName = kargs.get('command')
-            elif kargs.has_key('sequence'):
+            elif 'sequence' in kargs:
                 self._tcName = kargs.get('sequence')
                 self._isSequence = True
             else:
                 raise SyntaxException("Expected a command or sequence")
         else:
             raise SyntaxException("Expected a command name")
-        
+
     #===========================================================================
     def _obtainCommandArguments(self, *args, **kargs ):
-        if len(args)<=1: 
-            if kargs.has_key('args'):
+        if len(args)<=1:
+            if 'args' in kargs:
                 self._tcArguments = kargs.get('args')
         else:
             if type(args[1])!=list:
@@ -779,14 +883,14 @@ class BuildTC_Helper(WrapperHelper):
         self._tcItem.configure(self.getConfig())
         if self._isSequence:
             self._tcItem.addConfig(Sequence,True)
-        
+
         # Assign the arguments
         for tcArg in self._tcArguments:
             LOG("Parsed TC argument: " + repr(tcArg[0]), level = LOG_LANG)
             LOG("Argument config   : " + repr(tcArg[1:]), level = LOG_LANG)
             self._tcItem[ tcArg[0] ] = tcArg[1:]
             self._write("    - Argument " + repr(tcArg[0]) + " value " + repr(tcArg[1:]))
-            
+
         return [False,self._tcItem,NOTIF_STATUS_OK,""]
 
     #===========================================================================
@@ -800,14 +904,14 @@ class BuildTC_Helper(WrapperHelper):
     def _doRepeat(self):
         self._write("Repeat command construction", {Severity:WARNING} )
         return [True,False]
-        
+
 ################################################################################
 class BuildMemoryLoad_Helper(BuildTC_Helper):
 
     """
     DESCRIPTION:
         Helper for the BuildMemoryLoad wrapper.
-    """    
+    """
 
     #===========================================================================
     def __init__(self):
@@ -815,7 +919,7 @@ class BuildMemoryLoad_Helper(BuildTC_Helper):
 
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip the memory load construction and return None")
         self._setActionString( ACTION_REPEAT ,  "Repeat the memory load construction")
 
@@ -823,3 +927,111 @@ class BuildMemoryLoad_Helper(BuildTC_Helper):
         tcItem.addConfig('MemoryLoad',True)
 
         return [repeat,tcItem,status,msg]
+
+################################################################################
+class ResetDriver_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+        Helper for the ResetDriver wrapper.
+    """
+    __display = None
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "TC")
+        self.__display = None
+        self._opName = "Reset Driver"
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+        # Parse arguments
+        self._notifyValue( self.__display, "", NOTIF_STATUS_PR, "Resetting" )
+
+        result = REGISTRY['TC']._resetDriver(self.getConfig())
+
+        if not result:
+            self._notifyValue( self.__display, "", NOTIF_STATUS_FL, "Unable to reset" )
+        else:
+            self._notifyValue( self.__display, "", NOTIF_STATUS_OK, "Reset done" )
+
+        return [False,result,NOTIF_STATUS_OK,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry opening display", {Severity:WARNING} )
+        return [True, True]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip opening display", {Severity:WARNING} )
+        return [False, True]
+
+################################################################################
+class CallDriverFunction_Helper(WrapperHelper):
+
+    """
+    DESCRIPTION:
+        Helper for the CallDriverFunction wrapper.
+    """
+    __display = None
+    __parameter = None
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self, "TC")
+        self.__display = "TC"
+        self._opName = "Call Driver Function"
+        self.__parameter = None
+
+    #===========================================================================
+    def _doPreOperation(self, *args, **kargs ):
+        if len(args) == 0:
+            raise SyntaxException("Expecting at least one argument")
+        if type(args[0]) != str or len(args[0]) == 0:
+            raise SyntaxException("First argument must be a non-empty string")
+        self.__parameter = repr(args)
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs ):
+
+        self._notifyValue( self.__display, "", NOTIF_STATUS_PR, "Calling driver function \"%s\" with args %s" % (args[0], repr(args[1:])))
+
+        # Store information for possible failures
+        self.setFailureInfo("TC", self.__parameter)
+
+        # Disable unsupported prompts
+        self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RECHECK))
+        self.addConfig(OnFailure,self.getConfig(OnFailure) & (~REPEAT))
+        self.addConfig(OnFailure,self.getConfig(OnFailure) & (~RESEND))
+
+        self._notifyValue( self.__display, "", NOTIF_STATUS_PR, "Calling %s" % self.__parameter)
+        result, ok, err = REGISTRY['TC']._callDriverFunction(args)
+        if ok:
+            self._notifyValue( self.__display, repr(result), NOTIF_STATUS_OK, "Driver function call succeeded")
+            self._write("Calling driver function %s succeeded" % self.__parameter)
+            return [False,result,NOTIF_STATUS_OK,""]
+        else:
+            self._notifyValue( self.__display, "", NOTIF_STATUS_FL, err)
+            self._write("Calling driver function %s failed: %s" % (self.__parameter, err), {Severity:ERROR})
+            return [False,result,NOTIF_STATUS_FL,""]
+
+    #===========================================================================
+    def _doRepeat(self):
+        self._write("Retry not implemented", {Severity:WARNING} )
+        return [True, True]
+
+    #===========================================================================
+    def _doResend(self):
+        self._write("Resend not implemented", {Severity:WARNING} )
+        return [False, True]
+
+    #===========================================================================
+    def _doSkip(self):
+        self._write("Skip driver function call", {Severity:WARNING} )
+        return [False, True]
+
+    #===========================================================================
+    def _doCancel(self):
+        self._write("Driver function call cancelled", {Severity:WARNING} )
+        return [False,False]

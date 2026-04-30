@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the IPC message
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -104,6 +104,7 @@ SPELLipcMessage::SPELLipcMessage( SPELLipcMessage* msg )
 	m_key = msg->m_key;
 	m_compressed = msg->m_compressed;
 	m_properties = msg->m_properties;
+    set("User", msg->get("User"));
 }
 
 //=============================================================================
@@ -195,7 +196,13 @@ std::string SPELLipcMessage::get( std::string key ) const
     }
     return it->second;
 }
-
+void SPELLipcMessage::clear( )
+{
+	m_properties.clear();
+	m_id = "";
+	m_senderId = "";
+	m_receiverId = "";
+}
 //=============================================================================
 // METHOD: SPELLipcMessage:getRef
 //=============================================================================

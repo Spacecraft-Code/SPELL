@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the procedure variable monitor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -92,12 +92,16 @@ void SPELLvariableMonitor::retrieveGlobalVariables()
 		std::string varName = PYSSTR(key);
 		PyObject* object = PyDict_GetItem( dict, key );
 
+        if (object == NULL) continue;
+
+        Py_XINCREF(object);
+
 		if (shouldDiscard(varName,object)) continue;
 
 		DEBUG("[VM] Processing " + varName);
 
 		std::string type = PYSSTR( PyObject_Type(object) );
-		std::string value = PYREPR( object );
+		std::string value = PYCREPR( object );
 
 		DEBUG("[VM] Type      : " + type);
 		DEBUG("[VM] Value     : " + value);
@@ -107,6 +111,8 @@ void SPELLvariableMonitor::retrieveGlobalVariables()
 		if (value == "") value = EMPTY_STRING;
 
 		m_globalVariables.insert( std::make_pair(varName, SPELLvarInfo(varName, type, value, true)) );
+
+        Py_XDECREF(object);
 	}
 }
 
@@ -150,7 +156,7 @@ void SPELLvariableMonitor::retrieveLocalVariables()
 			DEBUG("[VM] Processing " + varName);
 			std::string type = PYSSTR( PyObject_Type(object) );
 			DEBUG("[VM] Type      : " + type);
-			std::string value = PYREPR( object );
+			std::string value = PYCREPR( object );
 			DEBUG("[VM] Value     : " + value);
 			DEBUG("[VM] Global    : " + BSTR(false));
 
@@ -312,6 +318,12 @@ PyObject* SPELLvariableMonitor::getVariableRef( const std::string& name )
 	{
 		return PyDict_GetItemString(m_frame->f_globals, name.c_str());
 	}
+	PyObject* builtins = PyEval_GetBuiltins();
+	if (PyDict_Contains(builtins, pyName.get()))
+    {
+        return PyDict_GetItemString(builtins, name.c_str());
+    }
+
 	return NULL;
 }
 
@@ -369,13 +381,15 @@ bool SPELLvariableMonitor::shouldDiscard( const std::string& varName, PyObject* 
 	// Ignore internal flags
 	if (varName == "__USERLIB__") return true;
 
+	if (varName.substr(0,2) == "__" ) return true;
+
+
 	// Ignore callables and complex objects
 	if (SPELLpythonHelper::instance().isInstance(value, "Database", "spell.lib.adapter.databases.database")) return true;
 	if (PyCallable_Check(value)) return true;
 	if (PyFunction_Check(value)) return true;
 	if (PyClass_Check(value)) return true;
 	if (PyModule_Check(value)) return true;
-	if (PyInstance_Check(value)) return true;
 
 	return false;
 }
@@ -406,7 +420,7 @@ void SPELLvariableMonitor::analyze()
 		PyObject* key = PyList_GetItem( globalsItemList.get(), index );
 		PyObject* object = PyDict_GetItem( dict, key );
 		std::string varName = PYSTR(key);
-
+		//std::cout << varName << " -> " << shouldDiscard(varName,object) << std::endl;
 		if (shouldDiscard(varName,object)) continue;
 
 		it = m_globalVariables.find(varName);

@@ -5,7 +5,7 @@
 // DESCRIPTION: Data variable implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -955,9 +955,13 @@ bool SPELLdtaVariable::promptForValue( std::string& message )
 		for(unsigned int idx = 0; idx < m_expected.size(); idx++)
 		{
 			std::string option = "";
-			if (m_type == LanguageConstants::STRING || m_type == LanguageConstants::DATETIME || m_type == LanguageConstants::RELTIME )
+			if (m_type == LanguageConstants::STRING)
 			{
 				option = "'" + m_expected[idx].str() + "'";
+			}
+			else if (m_type == LanguageConstants::DATETIME || m_type == LanguageConstants::RELTIME )
+			{
+				option = m_expected[idx].str();
 			}
 			else
 			{

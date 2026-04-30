@@ -14,7 +14,7 @@ Authoring
 
 @organization: SES ENGINEERING
 
-@copyright: Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+@copyright: Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
             
 @license:  This file is part of SPELL.
 
@@ -44,13 +44,13 @@ DataContainer = spell.lib.adapter.data.DataContainer
 Var           = spell.lib.adapter.data.Var
 
 ###############################################################################
-#: TM parameter value format RAW (uncalibrated). To be used tipically with ValueFormat 
+#: TM parameter value format RAW (uncalibrated). To be used tipically with ValueFormat
 #: modifier in all telemetry-related SPELL functions.
-RAW = "Raw format" 
-#: TM parameter value format ENG (calibrated). To be used tipically with ValueFormat 
+RAW = "Raw format"
+#: TM parameter value format ENG (calibrated). To be used tipically with ValueFormat
 #: modifier in all telemetry-related SPELL functions.
 ENG = "Eng format"
-#: TM parameter value format DEF (default). To be used tipically with ValueFormat 
+#: TM parameter value format DEF (default). To be used tipically with ValueFormat
 #: modifier in all telemetry-related SPELL functions.
 DEF = "Default format"
 
@@ -59,24 +59,24 @@ DEF = "Default format"
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: This behavior means that the procedure execution shall be immediately aborted.
-ABORT    = 1  
+ABORT    = 1
 #: Failure behavior CANCEL. When a failure occurs inside a SPELL function call,
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: This behavior means that the SPELL function shall be cancelled and the value
 #: False shall be returned.
-CANCEL   = 2  
+CANCEL   = 2
 #: Failure behavior SKIP. When a failure occurs inside a SPELL function call,
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: This behavior means that the SPELL function shall be cancelled and the value
 #: True shall be returned.
@@ -85,7 +85,7 @@ SKIP     = 4  # Ask the user if the check should be skipped
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: Applicable to SendAndVerify function only. It means that the TM verification
 #: should be repeated.
@@ -94,16 +94,16 @@ RECHECK  = 8  # Ask the user if the TM param should be rechecked
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
-#: Applicable to telecommand-related functions like Send or SendAndVerify. This 
+#: Applicable to telecommand-related functions like Send or SendAndVerify. This
 #: behavior means that the command shall be sent again.
 RESEND   = 16 # Try resending command
 #: Failure behavior REPEAT. When a failure occurs inside a SPELL function call,
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: This behavior means that the SPELL function call shall be retried.
 REPEAT   = 32 # Repeat generic operation
@@ -111,15 +111,15 @@ REPEAT   = 32 # Repeat generic operation
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
-#: Special behavior not intended to be used in procedure developments. 
+#: Special behavior not intended to be used in procedure developments.
 NOACTION = 64 # No behavior
 #: Failure behavior PROMPT. When a failure occurs inside a SPELL function call,
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: This behavior indicates that the user shall be prompted in case of failure.
 #: This is the default behavior of all SPELL functions.
@@ -128,7 +128,7 @@ PROMPT   = 128
 #: the user will be prompted to decide what to do after the failure. The set
 #: of options that will be shown to the user is determined by the OnFailure
 #: modifier whose value must be a combination of behavior constants like this.
-#: Behaviors are combined by using the pipe '|' character. 
+#: Behaviors are combined by using the pipe '|' character.
 #:
 #: This behavior indicates that the user shall not be prompted in case of failure.
 #: On the contrary, the action specified in the OnFailure modifier shall be
@@ -160,10 +160,10 @@ nbw = "not between"
 
 ###############################################################################
 #: Event scope indicating procedure level. Typically used when injecting events
-#: in relation to the procedure logic. Used with Scope modifier.            
+#: in relation to the procedure logic. Used with Scope modifier.
 SCOPE_PROC = 1
 #: Event scope indicating system level. Typically used when injecting events
-#: in relation to the controlled system status. Used with Scope modifier.            
+#: in relation to the controlled system status. Used with Scope modifier.
 SCOPE_SYS  = 2
 #: Event scope indicating configuration level. Typically used when injecting events
 #: in relation to SPELL configuration. Used with Scope modifier.
@@ -174,21 +174,21 @@ SCOPE_CFG  = 4
 ALL = 'ALL'
 
 ###############################################################################
-#: Event and message severity: warnings. Used with Severity modifier.        
+#: Event and message severity: warnings. Used with Severity modifier.
 WARNING     = 1
-#: Event and message severity: errors. Used with Severity modifier.      
+#: Event and message severity: errors. Used with Severity modifier.
 ERROR       = 2
-#: Event and message severity: fatal errors. Used with Severity modifier.          
+#: Event and message severity: fatal errors. Used with Severity modifier.
 FATAL       = 4
-#: Event and message severity: information messages. Used with Severity modifier.         
+#: Event and message severity: information messages. Used with Severity modifier.
 INFORMATION = 8
 
 ###############################################################################
-#: Notification statuses.        
+#: Notification statuses.
 ITEM_SUCCESS  = "SUCCESS"
-#: Event and message severity: errors. Used with Severity modifier.      
+#: Event and message severity: errors. Used with Severity modifier.
 ITEM_PROGRESS = "IN PROGRESS"
-#: Event and message severity: fatal errors. Used with Severity modifier.          
+#: Event and message severity: fatal errors. Used with Severity modifier.
 ITEM_FAILED   = "FAILED"
 
 ###############################################################################
@@ -199,9 +199,9 @@ OUTPUT_DATA = 'OUTPUT_DATA'
 INPUT_DATA = 'INPUT_DATA'
 
 ###############################################################################
-#: Value radix decimal. Used with Radix modifier.            
+#: Value radix decimal. Used with Radix modifier.
 DEC = 'dec'
-#: Value radix hexadecimal. Used with Radix modifier.            
+#: Value radix hexadecimal. Used with Radix modifier.
 HEX = 'hex'
 #: Value radix octal. Used with Radix modifier.
 OCT = 'oct'
@@ -232,39 +232,41 @@ LOGVIEW  = 'LOG'
 DIALOG   = 'DIALOG'
 
 ###############################################################################
-#: Prompt option type for accepting OK only as an answer. Used with Type modifier 
+#: Prompt option type for accepting OK only as an answer. Used with Type modifier
 #: in Prompt() function.
 OK        = 1
-#: Prompt option type for accepting CANCEL only as an answer. Used with Type modifier 
+#: Prompt option type for accepting CANCEL only as an answer. Used with Type modifier
 #: in Prompt() function.
 CANCEL    = 2
-#: Prompt option type for accepting YES only as an answer. Used with Type modifier 
+#: Prompt option type for accepting YES only as an answer. Used with Type modifier
 #: in Prompt() function.
 YES       = 4
-#: Prompt option type for accepting NO only as an answer. Used with Type modifier 
+#: Prompt option type for accepting NO only as an answer. Used with Type modifier
 #: in Prompt() function.
 NO        = 8
-#: Prompt option type for accepting numeric answers only. Used with Type modifier 
+#: Prompt option type for accepting numeric answers only. Used with Type modifier
 #: in Prompt() function.
 NUM       = 16
-#: Prompt option type for accepting any alphanumeric answer. Used with Type modifier 
+#: Prompt option type for accepting any alphanumeric answer. Used with Type modifier
 #: in Prompt() function.
 ALPHA     = 32
-#: Prompt option type for specifying lists of choices. Used with Type modifier 
+#: Prompt option type for specifying lists of choices. Used with Type modifier
 #: in Prompt() function.
 LIST      = 64
-#: Prompt option type for accepting YES or NO as an answer. Used with Type modifier 
+#: Prompt option type for accepting YES or NO as an answer. Used with Type modifier
 #: in Prompt() function.
 YES_NO    = 128
-#: Prompt option type for accepting OK or CANCEL as an answer. Used with Type modifier 
+#: Prompt option type for accepting OK or CANCEL as an answer. Used with Type modifier
 #: in Prompt() function.
 OK_CANCEL = 512
-#: Prompt option type for accepting a date/time string as an answer. Used with Type modifier 
+#: Prompt option type for accepting a date/time string as an answer. Used with Type modifier
 #: in Prompt() function.
 DATE      = 1024
-#: Prompt option type for list with drop-down list 
+#: Prompt option type for list with drop-down list
 #: in Prompt() function.
 COMBO     = 2048
+# Don't print Prompt Answer
+PASSWORD  = 4096
 
 ###############################################################################
 # Time access modes
@@ -305,5 +307,18 @@ ONBOARD = 'ONBOARD'
 PHYSICAL = 'Physical_Address'
 # Logical address
 LOGICAL = 'Logical_Address'
+################################################################################
+# Limit constants
+
+# Limit types
+HARDSOFT = 'HARDSOFT'
+STATUS = 'STATUS'
+SPIKE = 'SPIKE'
+ANALOG = 'ANALOG'
+#STEP = 'STEP'  //Constant already defined in PROC Constants.
+
 #: ACTIVE limit set
 ACTIVE = 'ACTIVE'
+
+NAME = 'NAME'
+ID = 'ID'

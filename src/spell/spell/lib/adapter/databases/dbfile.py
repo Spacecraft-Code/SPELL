@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Database based on local text files
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -26,24 +26,24 @@
 ##
 ###################################################################################
 
-from database import *
+from .database import *
 import sys,os
 from spell.lib.exception import DriverException
 
 ################################################################################
 class DatabaseFile(Database):
-    
+
     _name = None
     _filename = None
     _defaultExt = None
-    
+
     #===========================================================================
     def __init__(self, name, path, defaultExt = None):
         super(DatabaseFile, self).__init__()
-        
+
         self._name = name
         self._defaultExt = defaultExt
-        
+
         dataHome = os.getenv("SPELL_DATA", (os.getenv("SPELL_HOME") + os.sep + "data") ).replace('/', os.sep)
         if dataHome is None:
             raise DriverException("SPELL_DATA environment variable not defined")
@@ -54,13 +54,13 @@ class DatabaseFile(Database):
         # First check if there is an extension in the file. If there is no
         # extension, append the default extension (if there is one).
         filename = os.path.basename(thePath)
-        if (not len(filename.split("."))>1) and (defaultExt is not None): 
+        if (not len(filename.split("."))>1) and (defaultExt is not None):
             thePath += "." + defaultExt
-            
+
         self._filename = thePath
 
         LOG("Instanciated: " + name)
-    
+
     #===========================================================================
     def id(self):
         return os.path.basename(self._filename)
@@ -70,10 +70,10 @@ class DatabaseFile(Database):
         super(DatabaseFile, self).__init__()
         try:
             open(self._filename, 'w').close()
-        except Exception, ex:
+        except Exception as ex:
             raise DriverException('Cannot create database', str(ex))
         return self
-    
+
     #===========================================================================
     def load(self):
         LOG("Load DB from file: " + repr(self._filename))
@@ -95,80 +95,82 @@ class DatabaseFile(Database):
 
         if not os.path.exists(self._filename):
             raise DriverException("Cannot load: no such file: " + self._filename)
-        
+
         # Read the data from the file
         self._readData()
-        
+
     #===========================================================================
     def _readData(self):
         # Load the file contents
-        lines = file(self._filename).readlines()
-        self._vkeys = []
-        self._types = {}
-        self._properties = {}
-        # Will hold the line to be imported
-        lineToProcess = None
-        for line in lines:
-
-            # If there is something in the buffer, apend the next line
-            if lineToProcess:
-                # But remove the backslash ans spaces first
-                lineToProcess = lineToProcess[0:-1].strip()
-                lineToProcess += line.strip()
-            else:
-                # Else just add the current line
-                lineToProcess = line.strip()
-            
-            # Ignore comments and blank lines
-            if lineToProcess.startswith("#"):
-                lineToProcess = None 
-                continue
-            if (lineToProcess is None) or (len(lineToProcess)==0): continue
-
-            # If the line ends with backslash we need to concatenate 
-            # with the next line
-            if lineToProcess.find("\\")!=-1:
-                continue
-            
-            # Now we can process the line data
-            key = lineToProcess.split()[0]
-            orig_value = " ".join(lineToProcess.split()[1:])
-            value,vtype = ImportValue(orig_value)
-            
-            # Warn about duplicated data
-            if self._properties.has_key(key):
-                LOG("WARNING: duplicated database key: " + repr(key))
-            else:
-                self[key] = value
-                if vtype:
-                    self._types[key] = vtype
-                    
-            # Reset the line to process
-            lineToProcess = None 
-        # End for
+        with open(self._filename) as f:
+            lines = f.readlines()
+    
+            self._vkeys = []
+            self._types = {}
+            self._properties = {}
+            # Will hold the line to be imported
+            lineToProcess = None
+            for line in lines:
+    
+                # If there is something in the buffer, apend the next line
+                if lineToProcess:
+                    # But remove the backslash ans spaces first
+                    lineToProcess = lineToProcess[0:-1].strip()
+                    lineToProcess += line.strip()
+                else:
+                    # Else just add the current line
+                    lineToProcess = line.strip()
+    
+                # Ignore comments and blank lines
+                if lineToProcess.startswith("#"):
+                    lineToProcess = None
+                    continue
+                if (lineToProcess is None) or (len(lineToProcess)==0): continue
+    
+                # If the line ends with backslash we need to concatenate
+                # with the next line
+                if lineToProcess.find("\\")!=-1:
+                    continue
+    
+                # Now we can process the line data
+                key = lineToProcess.split()[0]
+                orig_value = " ".join(lineToProcess.split()[1:])
+                value,vtype = ImportValue(orig_value)
+    
+                # Warn about duplicated data
+                if key in self._properties:
+                    LOG("WARNING: duplicated database key: " + repr(key))
+                else:
+                    self[key] = value
+                    if vtype:
+                        self._types[key] = vtype
+    
+                # Reset the line to process
+                lineToProcess = None
+            # End for
 
     #===========================================================================
     def __delitem__(self, key):
         Database.__delitem__(self, key)
-        if key in self._types.keys():
+        if key in list(self._types.keys()):
             del self._types[key]
 
     #===========================================================================
     def _writeData(self, theFile):
         for key in self._vkeys:
             value = self._properties.get(key)
-            os.write( theFile, key + '\t')
-            if self._types.has_key(key):
+            os.write( theFile, (key + '\t').encode())
+            if key in self._types:
                 vtype = self._types.get(key)
                 value = ExportValue(value,vtype)
-                os.write( theFile, value )                    
+                os.write( theFile, value.encode() )
             else:
                 if type(value)==str:
-                    os.write( theFile, '"' + value + '"' )
+                    os.write( theFile, ('"' + value + '"' ).encode())
                 else:
-                    os.write( theFile, str(value))
+                    os.write( theFile, str(value).encode())
             # End if
-            os.write( theFile, '\n' )
+            os.write( theFile, b'\n' )
         # End for
 
     #===========================================================================
@@ -180,12 +182,12 @@ class DatabaseFile(Database):
         try:
             os.remove(self._filename)
             db = os.open(self._filename, os.O_CREAT | os.O_WRONLY)
-        except Exception, ex:
+        except Exception as ex:
             raise DriverException('Cannot write in database', str(ex))
 
         self._writeData(db)
         os.close(db)
-        
+
     #===========================================================================
     def keys(self):
         return self._vkeys
@@ -193,11 +195,11 @@ class DatabaseFile(Database):
     #===========================================================================
     def __repr__(self):
         representation = "{"
-        for key in self.keys():
+        for key in list(self.keys()):
             if (representation != "{"): representation += ",\n "
             try:
                 item = repr(self.get(key))
-            except BaseException,ex:
+            except BaseException as ex:
                 import traceback
                 traceback.print_exc( file = sys.stderr )
                 item = "<???>"

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the callstack model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -89,7 +89,7 @@ void SPELLcallstack::reset()
 //=============================================================================
 // METHOD    : SPELLcallstack::getStack()
 //=============================================================================
-const std::string& SPELLcallstack::getStack()
+const std::string SPELLcallstack::getStack()
 {
 	SPELLmonitor mon(m_lock);
 
@@ -108,7 +108,7 @@ const std::string SPELLcallstack::getFullStack()
 //=============================================================================
 // METHOD    : SPELLcallstack::getCodeName()
 //=============================================================================
-const std::string& SPELLcallstack::getCodeName()
+const std::string SPELLcallstack::getCodeName()
 {
 	SPELLmonitor mon(m_lock);
 
@@ -319,7 +319,8 @@ void SPELLcallstack::callbackEventReturn( PyFrameObject* frame, const std::strin
     // When moving the view node, we shall notify the client.
 
     // Do not remove the code on top. Just move the current node pointer.
-    m_currentNode = m_currentNode->getParent()->getParentCode();
+    if (m_currentNode->getParent() != NULL)
+        m_currentNode = m_currentNode->getParent()->getParentCode();
 
     // Store current line
     m_currentLine = line;

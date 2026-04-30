@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of a peer ipc channel
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -27,11 +27,13 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
 #include "SPELL_IPC/SPELLipcChannel.H"
+#include "SPELL_IPC/SPELLipcError.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_UTIL/SPELLlog.H"
 #include "SPELL_UTIL/SPELLutils.H"
 #include "SPELL_SYN/SPELLmonitor.H"
 #include "SPELL_SYN/SPELLsyncError.H"
+#include "SPELL_IPC/SPELLipcError.H"
 // System includes ---------------------------------------------------------
 
 
@@ -60,22 +62,24 @@ SPELLipcChannel::SPELLipcChannel( const std::string& name, SPELLsocket* socket, 
 SPELLipcChannel::~SPELLipcChannel()
 {
     DEBUG( NAME + "Destroying channel");
-	if (m_socket)
-	{
-		delete m_socket;
-		m_socket = NULL;
-	}
 	if (m_output)
 	{
+	    m_output->disconnect(false);
 		m_output->join();
 		delete m_output;
 		m_output = NULL;
 	}
 	if (m_input)
 	{
+        m_input->disconnect();
 		m_input->join();
 		delete m_input;
 		m_input = NULL;
+	}
+  	if (m_socket)
+	{
+		delete m_socket;
+		m_socket = NULL;
 	}
     DEBUG( NAME + "Channel destroyed");
 }
@@ -89,6 +93,7 @@ void SPELLipcChannel::connect()
 	m_output = createOutput();
 	m_input = createInput();
     m_input->start();
+    m_output->start();
     setConnected(true);
     DEBUG( NAME + "Connect done");
 }
@@ -138,8 +143,17 @@ void SPELLipcChannel::disconnect()
 	{
 		DEBUG( NAME + "Disconnect");
 		m_connected = false;
-		m_output->disconnect(true);
+		try
+		{
+		    m_output->disconnect(true);
+		}
+		catch (SPELLipcError& ex)
+		{
+
+		}
+		m_input->setHandleEOC(false);
 		m_input->disconnect();
+		m_input->join();
 		m_socket->close();
 		DEBUG( NAME + "Disconnect finished");
 	}
@@ -217,11 +231,18 @@ void SPELLipcChannel::requestedEOC()
 {
 	if (isConnected())
 	{
-		setConnected(false);
-		DEBUG( NAME + "Peer requested end of conversation");
-		m_output->disconnect(false);
-		m_socket->shutdown();
-		DEBUG( NAME + "Disconnected, reporting interface");
-		m_ifc.connectionClosed(m_key);
+		try
+        {
+            setConnected(false);
+		    DEBUG( NAME + "Peer requested end of conversation");
+		    m_output->disconnect(false);
+		    m_socket->shutdown();
+		    DEBUG( NAME + "Disconnected, reporting interface");
+		    m_ifc.connectionClosed(m_key);
+       }
+       catch (SPELLipcError& ex)
+       {
+           // Ignore the IPC error if it happens when requeting EOC
+       }
 	}
 }

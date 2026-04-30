@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Python error bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -101,8 +101,7 @@ static PyMethodDef ExecutionAborted_Methods[] =
 //============================================================================
 static PyTypeObject ExecutionAborted_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "executor.ExecutionAborted",       //tp_name
     sizeof(PyExecutionAbortedObject),  //tp_basicsize
     0,                                 //tp_itemsize
@@ -163,8 +162,7 @@ static PyMethodDef ExecutionTerminated_Methods[] =
 //============================================================================
 static PyTypeObject ExecutionTerminated_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "executor.ExecutionTerminated",    //tp_name
     sizeof(PyExecutionTerminatedObject),        //tp_basicsize
     0,                                 //tp_itemsize
@@ -232,7 +230,7 @@ static int ExecutionAborted_Init( PyExecutionAbortedObject* self, PyObject* args
 static void ExecutionAborted_Dealloc( PyExecutionAbortedObject* self )
 {
     Py_XDECREF(self->message);
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -269,7 +267,7 @@ static int ExecutionTerminated_Init( PyExecutionTerminatedObject* self, PyObject
 //============================================================================
 static void ExecutionTerminated_Dealloc( PyExecutionTerminatedObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -499,7 +497,7 @@ SPELLcoreException* SPELLerror::errorToException( PyObject* err, PyObject* ptype
     }
     else
     {
-    	message = " (no back trace information)\n";
+    	message = "";
     }
     LOG_ERROR("**************************************");
 
@@ -513,7 +511,7 @@ SPELLcoreException* SPELLerror::errorToException( PyObject* err, PyObject* ptype
     else
     {
 		PyObject* data = PyTuple_GetItem(pvalue, 1);
-		if (PyTuple_Size(data)==4)
+		if (data && PyTuple_Size(data)==4)
 		{
 			PyObject* filename = PyTuple_GetItem( data, 0);
 			PyObject* lineno   = PyTuple_GetItem( data, 1);
@@ -555,7 +553,7 @@ SPELLcoreException* SPELLerror::errorToException( PyObject* err, PyObject* ptype
     else if (PyErr_GivenExceptionMatches(err, PyExc_SyntaxError))
     {
         // It is a tuple like ('invalid syntax', ('file.py', lineno, offset, 'text'))
-		message = "Unknown syntax error (could not gather information)\n" + message;
+		message = "Syntax error\n" + message;
     	if (PyTuple_Size(pvalue)==2)
     	{
     		PyObject* data = PyTuple_GetItem(pvalue, 1);

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Value importer
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -47,31 +47,37 @@ def SpecialType( value, orig_value ):
             vtype = RELTIME
         else:
             vtype = DATETIME
-    return vtype        
+    return vtype
 
 ################################################################################
 def ImportValue( orig_value ):
     value = orig_value
     vtype = None
+    if value == '':
+        return [value,None]
     try:
-        value = TIME(orig_value)
-        if (value.isRel()):
-            vtype = RELTIME
-        else:
-            vtype = DATETIME
-        LOG("WARNING: converting " + orig_value + " to date: " + str(value))
-    except:
         try:
-            value = eval(orig_value,{},{})
-            vtype = SpecialType(value, orig_value)
+            from builtins import PROC
         except:
-            # Check for binary strings
-            if orig_value.startswith("0b"):
-                value = int(orig_value[2:],2)
-                length = len(orig_value)-2
-                vtype = BIN + str(length)
-                LOG("Converting to binary: " + repr(orig_value))
-            else:
+            PROC = {}
+        value = eval(orig_value,{'__builtins__':{'PROC' : PROC,'os':os,'True':True,'False':False}},{})
+        vtype = SpecialType(value, orig_value)
+    except:
+        # Check for binary strings
+        if orig_value.startswith("0b"):
+            value = int(orig_value[2:],2)
+            length = len(orig_value)-2
+            vtype = BIN + str(length)
+            LOG("Converting to binary: " + repr(orig_value))
+        else:
+            try:
+                value = TIME(orig_value)
+                if (value.isRel()):
+                    vtype = RELTIME
+                else:
+                    vtype = DATETIME
+                LOG("WARNING: converting " + orig_value + " to date: " + str(value))
+            except:
                 value = orig_value
                 vtype = None
                 LOG("WARNING: converting to string: " + repr(value))

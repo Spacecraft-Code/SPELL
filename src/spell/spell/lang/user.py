@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Special functions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -46,15 +46,15 @@ from spell.lib.adapter.config import Configurable
 #===============================================================================
 __all__ = [
            'SendAndVerifyAdjLim',
-	   'BuildMemoryLoad'
+           'BuildMemoryLoad'
           ]
 
 ################################################################################
 class FunctionSequence(object):
-    
+
     __functions = []
     tryAll = True
-    
+
     #===========================================================================
     def __init__(self, *args):
         self.__functions = []
@@ -62,7 +62,7 @@ class FunctionSequence(object):
         for f in args:
             if callable(f):
                 self.__functions.append(f)
-                
+
     #===========================================================================
     def execute(self, *args, **kargs ):
         result = True
@@ -98,74 +98,73 @@ def SendAndVerifyAdjLim(*args, **kargs):
     Send operations errors are manage internally by SendAndVerify, as usual 
     (RESEND, RECHECK, ABORT, SKIP, CANCEL)
     if EnableAlarm fails display an error message and propose to retry, abort or continue
-    
+
     """
-    
+
     Display('Disabling alarms')
     if not DisableAlarm(*args, **kargs):
         Display('Could not disable alarms', ERROR)
-        
+
     Display('Adjusting limits')
-    
+
     if not AdjustLimits(*args, **kargs):
-            Display('Could not adjust limits', ERROR)
-            user_choice = 'RETRY'
-            while user_choice <> 'CONTINUE':
-                Display('Re-enabling alarms')
-                if not EnableAlarm(*args, **kargs):
-                    user_choice = Prompt('Could not re-enable alarms. RETRY, ABORT or CONTINUE', 
-                                         [ 'RETRY', 'ABORT', 'CONTINUE' ], LIST|ALPHA)
-                    if user_choice == 'ABORT':
-                        Abort('Procedure aborted')
-                else:
-                    user_choice = 'CONTINUE'
+        Display('Could not adjust limits', ERROR)
+        user_choice = 'RETRY'
+        while user_choice != 'CONTINUE':
+            Display('Re-enabling alarms')
+            if not EnableAlarm(*args, **kargs):
+                user_choice = Prompt('Could not re-enable alarms. RETRY, ABORT or CONTINUE',
+                                     [ 'RETRY', 'ABORT', 'CONTINUE' ], LIST|ALPHA)
+                if user_choice == 'ABORT':
+                    Abort('Procedure aborted')
+            else:
+                user_choice = 'CONTINUE'
 
     result = SendAndVerify(*args, **kargs)
 
     user_choice = 'RETRY'
-    while user_choice <> 'CONTINUE':
+    while user_choice != 'CONTINUE':
         Display('Enabling alarms')
         if not EnableAlarm(*args, **kargs):
-            user_choice = Prompt('Could not re-enable alarms. RETRY, ABORT or CONTINUE', 
+            user_choice = Prompt('Could not re-enable alarms. RETRY, ABORT or CONTINUE',
                                  [ 'RETRY', 'ABORT', 'CONTINUE' ], LIST|ALPHA)
             if user_choice == 'ABORT':
                 Abort('Procedure aborted')
         else:
             user_choice = 'CONTINUE'
-               
+
     return result
 
-    
+
 ################################################################################
 def BuildMemoryLoad(*args, **kargs):
     """
     TODO
-    
+
     Syntax 1:
     =========
-                
+
     TODO
-    
+
         BuildMemoryLoad( arguments )
 
     Modifiers:
     ==========
-    
+
     TODO
-         
+
         1. Modifier - Description
-        
+
             - VALUE:           Description
 
            Default is Modifier:VALUE
 
     Result:
     =======
-    
+
     TODO
     """
-    from helpers.tchelper import BuildMemoryLoad_Helper
+    from .helpers.tchelper import BuildMemoryLoad_Helper
     helper = BuildMemoryLoad_Helper()
     helper.configure( *args, **kargs )
     return helper.execute( *args, **kargs )
-    

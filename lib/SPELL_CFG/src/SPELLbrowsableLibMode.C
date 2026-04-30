@@ -5,7 +5,7 @@
 // DESCRIPTION:
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -39,9 +39,6 @@ std::string s_BROWSABLELIB_MODE_STR[] =
 	"Disabled"
 };
 
-unsigned int s_NUM_MODES = sizeof(s_BROWSABLELIB_MODE_STR) / sizeof(std::string);
-
-
 // Methods
 
 
@@ -51,6 +48,7 @@ unsigned int s_NUM_MODES = sizeof(s_BROWSABLELIB_MODE_STR) / sizeof(std::string)
 SPELLbrowsableLibMode stringToBrowsableLibMode( const std::string& mode )
 {
 	unsigned int index = 0;
+	unsigned int s_NUM_MODES = sizeof(s_BROWSABLELIB_MODE_STR) / sizeof(std::string);
 
 	for( index = 0; index < s_NUM_MODES; index++)
 	{

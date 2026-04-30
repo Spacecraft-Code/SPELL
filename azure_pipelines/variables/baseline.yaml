@@ -1,0 +1,8 @@
+variables:
+  NEXUS_REGISTRY: nexus-docker-weu
+  NEXUS_REGISTRY_URL: docker-weu.spo.internal.ses.com
+  BUILD_IMAGE: docker-weu.spo.internal.ses.com/spell/spell-cots-ubuntu-build:1.0.1
+  RUNTIME_IMAGE: docker-weu.spo.internal.ses.com/spell/spell-cots-ubuntu-runtime:1.0.1
+  PROXY: "${HTTPS_PROXY}"
+  NO_PROXY: "${NO_PROXY}"
+  

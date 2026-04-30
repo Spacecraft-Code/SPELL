@@ -5,7 +5,7 @@
 // DESCRIPTION: Controls the command processing in a separate thread.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -268,6 +268,12 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void removeControllerListener( SPELLcontrollerListener* listener );
 
+		void refreshStatus();
+
+		//////////////////////////////////////////////////////////////////////
+		/** Inject a information event message to GCS
+		**////////////////////////////////////////////////////////////////////
+		void raiseInformationEventToGCS( const std::string& message );
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 protected: //-----------------------------------------------------------------

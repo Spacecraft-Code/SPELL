@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor persistency table
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -92,7 +92,7 @@ bool SPELLpersistencyTable::load()
 					pers.timeId = tokens[1];
 					pers.parentId = parentId;
 					pers.pid = STRI(tokens[4]);
-					m_data.insert( std::make_pair(tokens[0], pers) );
+					m_data[tokens[0]] = pers;
 				}
 				else
 				{
@@ -145,7 +145,7 @@ void SPELLpersistencyTable::registerExecutor( const std::string& instanceId, con
 		pers.timeId = timeId;
 		pers.parentId = parentId;
 		pers.pid = pid;
-		m_data.insert( std::make_pair(instanceId, pers) );
+		m_data[instanceId] = pers;
 		dumpToFile();
 	}
 }

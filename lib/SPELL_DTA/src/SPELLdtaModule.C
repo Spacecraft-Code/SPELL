@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of DTA module
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -54,7 +54,7 @@ static PyMethodDef SPELLdtaContainerObject_Methods[] =
     {"get",      	SPELLdtaContainerObject_Get,          METH_VARARGS, "Get a value"},
     {"has_key",   	SPELLdtaContainerObject_HasKey,       METH_VARARGS, "Check if the key exists"},
     {"keys",      	SPELLdtaContainerObject_Keys,         METH_NOARGS,  "Obtain the keys"},
-    {"values",      SPELLdtaContainerObject_Keys,         METH_NOARGS,  "Obtain the values"},
+    {"values",      SPELLdtaContainerObject_Values,       METH_NOARGS,  "Obtain the values"},
     {"enableNotifications",    SPELLdtaContainerObject_EnableNotifications,  METH_NOARGS, "Enable value notifications"},
     {"disableNotifications",    SPELLdtaContainerObject_DisableNotifications,  METH_NOARGS, "Disable value notifications"},
     {NULL, NULL, 0, NULL} /* Sentinel */
@@ -91,8 +91,7 @@ static PyMappingMethods SPELLdtaContainerObject_MappingMethods =
 //============================================================================
 static PyTypeObject SPELLdtaContainerObject_Type =
 {
-	PyObject_HEAD_INIT(NULL)					/* basic object head */
-	0,               							/* var objects */
+	PyVarObject_HEAD_INIT(NULL,0)					/* basic object head */
 	"spell.lib.adapter.data.DataContainer",	    /* type name */
 	sizeof(SPELLdtaContainerObject),    		/* type size */
 	0,											/* item size */
@@ -145,8 +144,7 @@ static PyTypeObject SPELLdtaContainerObject_Type =
 //============================================================================
 static PyTypeObject SPELLdtaVariableObject_Type =
 {
-	PyObject_HEAD_INIT(NULL)					/* basic object head */
-	0,               							/* var objects */
+	PyVarObject_HEAD_INIT(NULL,0)					/* basic object head */
 	"spell.lib.adapter.data.Var",         	    /* type name */
 	sizeof(SPELLdtaVariableObject),    				/* type size */
 	0,											/* item size */
@@ -197,8 +195,8 @@ static PyTypeObject SPELLdtaVariableObject_Type =
 //////////////////////////////////////////////////////////////////////////////
 // PYTHON MODULE INITIALIZATION
 //////////////////////////////////////////////////////////////////////////////
-PyMODINIT_FUNC
-initlibSPELL_DTA(void)
+
+MOD_INIT(libSPELL_DTA)
 {
     // Will hold the Python module
     PyObject* module;
@@ -210,7 +208,7 @@ initlibSPELL_DTA(void)
 		std::string err = "Unable to load type " + std::string(SPELLdtaContainerObject_Type.tp_name);
 		PyErr_SetString( PyExc_RuntimeError, err.c_str());
 		std::cerr << "ERROR: " << err << std::endl;
-		return;
+		return MOD_ERROR_VAL;
 	}
 
     // Allocate the new type for SPELL variable containers
@@ -220,15 +218,17 @@ initlibSPELL_DTA(void)
 		std::string err = "Unable to load type " + std::string(SPELLdtaVariableObject_Type.tp_name);
 		PyErr_SetString( PyExc_RuntimeError, err.c_str());
 		std::cerr << "ERROR: " << err << std::endl;
-		return;
+		return MOD_ERROR_VAL;
 	}
 
     // Initialize the module
-    module = Py_InitModule3("libSPELL_DTA", NULL, "Module for SPELL data containers");
+	MOD_DEF(module,MOD_NAME(libSPELL_DTA),"Module for SPELL data containers",NULL);
 
     Py_INCREF(&SPELLdtaContainerObject_Type);
 	PyModule_AddObject(module, "DataContainer", (PyObject *)&SPELLdtaContainerObject_Type);
 
     Py_INCREF(&SPELLdtaVariableObject_Type);
 	PyModule_AddObject(module, "Var", (PyObject *)&SPELLdtaVariableObject_Type);
+
+	return MOD_SUCCESS_VAL(module);
 }

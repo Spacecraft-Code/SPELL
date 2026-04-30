@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package tmtdata;
+
+option java_package = "com.ses.tmt.data.codec.protoc";
+option java_outer_classname = "TmTProtocCodec";
+
+enum MessageType {
+	UNDEF_TYPE = 0;
+	REQ = 1;
+	DATA = 2;
+	END = 3;
+	HBEAT = 4;
+    JOIN = 5;
+    PROCESSING_DONE = 6;
+    RECONNECT = 7;
+}
+
+enum STATEV {
+    VALID = 0;
+    INVALID = 1;
+    CRC_ERROR = 2;
+    INVALID_AND_CRC_ERROR = 3;
+    EXPIRED = 4;
+    INVALID_AND_EXPIRED = 5;
+    CRC_ERROR_AND_EXPIRED = 6;
+    INVALID_AND_CRC_ERROR_AND_EXPIRED = 7;
+}
+
+enum ErrorCode {
+	UNDEF_ERROR = 0;
+	NO_ERROR = 1;
+	UNKNOWN_SAT = 2;
+	UNKNOWN_SEAT = 3;
+	MAX_PIDS_EXCEEDED = 4;
+	INVALID_PID = 5;
+	START_AFTER_END = 6;
+	START_AFTER_NOW = 7;
+	WRONG_LEVELID = 8;
+	INVALID_PROTOCOL = 9;
+	SERVER_ERROR = 10;
+	HBEAT_TIMEOUT = 11;
+	BAD_REQUEST = 12;
+	CANCELED  = 13;
+	REQUEST_EXPIRED  = 14;
+	UNKNOWN_SAT_DRIVER_MAPPING  = 15;
+}
+
+enum ReqCode {
+	NO_REQ_CODE = 0;
+	NO_UPDATE_VALUE = 1;
+	INITIAL_VALUES	= 2;
+	INITIAL_VALUES_VALID = 3;
+}
+
+enum LIMIT {
+    NORMAL = 0;
+    INFO = 1;
+    WARNING = 2;
+    HAZARDOUS = 3;
+    CRITICAL = 4;
+    OOR = 5;
+}
+
+message Header {
+	MessageType msgType = 1;
+}
+
+message ReadyWorker {
+    string workerName = 1;
+    string workerHost = 2;
+    string workerState = 3;
+    string workerData = 4;
+    string workerRequest = 5;
+    string workerHb = 6;
+}
+
+message ProcessingDone {
+    string workerName = 1;
+    string clientId = 2;
+}
+
+message HeartBeat {
+	string workerName = 1;
+	uint32 hbCount = 2;
+	float cpuLoad = 3;
+}
+
+message HisRequest {
+	string satName = 1;
+	string seatName = 2;
+	ReqCode reqCode = 3;
+	repeated uint32 pids = 4;
+	int64 startTime = 5;
+	int64 endTime = 6;
+	int32 level = 7;
+	bool withOol = 8;
+	bool withRaw = 9;
+}
+
+message End {
+	ErrorCode errorCode = 1;
+}
+
+message Ool {
+	LIMIT level = 1;
+	uint32 limitSet = 2;
+}
+
+message TmSample {
+	int64 rawV = 1;
+	double engV = 2;
+	Ool ool = 3;
+}
+
+message TmStats {
+	double mean = 1;
+	double min = 2;
+	double max = 3;
+}
+
+message TmData {
+	uint64 time = 1;
+	uint32 pid = 2;
+	STATEV stateV = 3;
+	oneof data {
+		TmSample tmSample = 4;
+		TmStats tmStats = 5;
+	} 
+}
+
+message TmDataSet {
+	repeated TmData tmData = 1;
+}
+
+message TmDataSetPacket {
+	repeated TmDataSet tmDataSet = 1;
+}
+

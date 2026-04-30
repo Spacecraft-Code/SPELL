@@ -5,7 +5,7 @@
 // DESCRIPTION: Utility for Python arguments processing
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -30,6 +30,7 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
 // Project includes --------------------------------------------------------
+#include "SPELL_UTIL/SPELLutils.H"
 #include "SPELL_UTIL/SPELLtime.H"
 // System includes ---------------------------------------------------------
 
@@ -235,6 +236,20 @@ public: //--------------------------------------------------------------------
 		std::string getModifier_HiYel() const;
 
 		//////////////////////////////////////////////////////////////////////
+		/** Obtain the value of the Select modifier.
+		 *
+		 * \return The modifier value.
+		**////////////////////////////////////////////////////////////////////
+		std::string getModifier_Select() const;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Obtain the value of the Type modifier for Limits.
+		 *
+		 * \return The modifier value.
+		**////////////////////////////////////////////////////////////////////
+		std::string getModifier_LimitType() const;
+
+		//////////////////////////////////////////////////////////////////////
 		/** Obtain the value of the Message modifier.
 		 *
 		 * \throws SPELLcoreException if the modifier does not contain a string.
@@ -287,6 +302,7 @@ public: //--------------------------------------------------------------------
 		 * \return The modifier value.
 		**////////////////////////////////////////////////////////////////////
 		std::string getModifier_Default() const;
+
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

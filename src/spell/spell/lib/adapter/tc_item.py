@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Telecommand item model
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -36,8 +36,8 @@ from spell.lang.modifiers import *
 #*******************************************************************************
 # Local imports
 #*******************************************************************************
-from config import Configurable
-from value import *
+from .config import Configurable
+from .value import *
 
 #*******************************************************************************
 # System imports
@@ -58,10 +58,10 @@ __all__ = [ 'TcItemClass' ]
 
 ###############################################################################
 class TcItemParamClass(object):
-    
+
     name = None
     value = None
-    
+
     #==========================================================================
     def __init__(self, name, value, format, radix = DEC, vtype = ENG, units = "" ):
         self.name = name
@@ -69,15 +69,15 @@ class TcItemParamClass(object):
 
 ###############################################################################
 class TcItemClass(Configurable):
-    
+
     """
     DESCRIPTION:
         Telecommand item in charge of sending a command to the system
-    
+
     TODO: 
         Review the class. Some methods/vars are not required anymore.
     """
-    
+
     __tcClass = None
     __parameters = []
     __cmdName = None
@@ -89,7 +89,7 @@ class TcItemClass(Configurable):
     __elements        = ["ITEM"]
     __completed       = [False]
     __success         = [False]
-    
+
     #==========================================================================
     def __init__(self, tcClass, cmd, description = ""):
         Configurable.__init__(self)
@@ -104,7 +104,7 @@ class TcItemClass(Configurable):
         self.__executionStatus = ['UKN']
         self.__comment         = [" "]
         self.__updateTime      = [" "]
-    
+
     #==========================================================================
     def name(self):
         return self.__cmdName
@@ -135,7 +135,7 @@ class TcItemClass(Configurable):
         for p in self.__parameters:
             self.__parameters.remove(p)
         self.__parameters = []
-    
+
     #==========================================================================
     def _getParams(self):
         return self.__parameters
@@ -153,19 +153,19 @@ class TcItemClass(Configurable):
         self.__executionStatus = ["UKN"] + [" "]*(len(self.__executionStatus)-1)
         self.__comment         = [" "]   + [" "]*len(self.__comment)
         self.__updateTime      = [" "]   + [" "]*len(self.__updateTime)
-    
+
     #==========================================================================
     def __extractConfig(self, dict, key, default):
-        if dict.has_key(key):
+        if key in dict:
             return dict.get(key)
         else:
             return default
-    
+
     #==========================================================================
     def __setitem__(self, name, descList):
         if type(descList)!=list:
             # Value only has been given
-            param = TcItemParamClass(name, descList, ENG )                        
+            param = TcItemParamClass(name, descList, ENG )
         else:
             value = descList[0]
             if len(descList)==2:
@@ -176,7 +176,7 @@ class TcItemClass(Configurable):
                 radix  = self.__extractConfig(argCfg,Radix,DEC)
                 vtype   = self.__extractConfig(argCfg,ValueType,LONG)
                 units  = self.__extractConfig(argCfg,Units,"")
-    
+
                 param = TcItemParamClass(name, value,format,radix,vtype,units)
             else:
                 # Only value given
@@ -188,7 +188,7 @@ class TcItemClass(Configurable):
                 self.__parameters.insert(idx, param)
                 return
         self.__parameters.append(param)
-    
+
     #==========================================================================
     def send(self):
         return self.__tcClass.send(self, self.getConfig())
@@ -212,7 +212,7 @@ class TcItemClass(Configurable):
         self.__completed       = [False] + [False]*len(elements)
         self.__success         = [False] + [False]*len(elements)
         LOG("Elements set: " + repr(self.__elements))
-        
+
     #==========================================================================
     def _setExecutionStageStatus(self, stage, status, comment="",elementId = None):
         updTime = str(datetime.datetime.now())[:-3]

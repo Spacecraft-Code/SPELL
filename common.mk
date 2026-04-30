@@ -1,11 +1,11 @@
 ###################################################################################
 ## FILE       : common.mk
-## DATE       : Mar 17, 2011
+## DATE       : May 11, 2017
 ## PROJECT    : SPELL
-## DESCRIPTION: Automake rules
+## DESCRIPTION: Common compilation and linking flags
 ## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2012 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -23,10 +23,7 @@
 ## along with SPELL. If not, see <http://www.gnu.org/licenses/>.
 ##
 ###################################################################################
-
-AUTOMAKE_OPTIONS=foreign
-#REMOVED -O2
-AM_CPPFLAGS = -I$(top_srcdir)/include -I${SPELL_COTS}/include $(PYTHON_CPPFLAGS) -I${WITH_LOG4CPLUS}/include -fPIC -fno-strict-aliasing -g3 -Wall -c -fmessage-length=0 -MMD -MP
-AM_LDFLAGS = $(PYTHON_LDFLAGS) $(PYTHON_EXTRA_LIBS) $(PYTHON_EXTRA_LDFLAGS) -L/usr/local/lib -L${WITH_LOG4CPLUS}/lib -llog4cplus
-RSYNC=rsync -av --exclude-from=${top_srcdir}/exclude.list 
-
+AUTOMAKE_OPTIONS = subdir-objects foreign
+AM_CPPFLAGS = -I${top_srcdir}/include -Wall -fno-strict-aliasing -fmessage-length=0 -MMD
+AM_LDFLAGS = ${LIBS} -lxerces-c -lz -lrt -llog4cplus
+RELEASE_LDFLAG = -release ${PACKAGE_VERSION}

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the CIF helper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -360,6 +360,9 @@ std::string SPELLcifHelper::getResult( const std::string& result, const SPELLpro
         if ((def.options.size()>0))
         {
         	int optionIndex = STRI(result);
+        	if (optionIndex < 0 || (unsigned)optionIndex >= def.options.size()){
+        		return "";
+        	}
         	// Conversion LIST|ALPHA
         	if ( (def.typecode & LanguageConstants::PROMPT_ALPHA)>0)
         	{
@@ -411,6 +414,7 @@ std::string SPELLcifHelper::getResult( const std::string& result, const SPELLpro
         }
         break;
     }
+
     return promptResult;
 }
 
@@ -477,15 +481,15 @@ std::string SPELLcifHelper::commandLinePrompt( const SPELLpromptDefinition& def,
 		if (def.options.size()>0)
 		{
 			SPELLpromptDefinition::Options::const_iterator eit;
-			int count = 0;
+			unsigned int count = 0;
 			for( eit = def.expected.begin(); eit != def.expected.end(); eit++)
 			{
 				if (*eit == answer )
 				{
-					if (useRaw)
-					{
-						answer = ISTR(count);
-					}
+//					if (useRaw)
+//					{
+//						answer = ISTR(count);
+//					}
 					keepTrying = false;
 					break;
 				}
@@ -498,7 +502,8 @@ std::string SPELLcifHelper::commandLinePrompt( const SPELLpromptDefinition& def,
 				for( eit = def.expected.begin(); eit != def.expected.end(); eit++)
 				{
 					std::cout << "   " << (*eit);
-					if (count<def.expected.size()-1) std::cout << ", ";
+					if (count < def.expected.size()-1)
+						std::cout << ", ";
 					count++;
 				}
 				std::cout << std::endl;
@@ -529,7 +534,7 @@ std::string SPELLcifHelper::getRawAnswer( std::string answer, const SPELLpromptD
 		{
 			// When there are a list of expexted values: boolean values or PROMPT_LIST.
 			SPELLpromptDefinition::Options::const_iterator eit;
-			int count = 0;
+			unsigned int count = 0;
 			for( eit = def.expected.begin(); eit != def.expected.end(); eit++)
 			{
 				if (*eit == answer )
@@ -548,7 +553,8 @@ std::string SPELLcifHelper::getRawAnswer( std::string answer, const SPELLpromptD
 				for( eit = def.expected.begin(); eit != def.expected.end(); eit++)
 				{
 					std::cout << "   " << (*eit);
-					if (count<def.expected.size()-1) std::cout << ", ";
+					if (count < def.expected.size()-1)
+						std::cout << ", ";
 					count++;
 				}
 				std::cout << std::endl;

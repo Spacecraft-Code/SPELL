@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Base class for language helpers
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -94,9 +94,9 @@ class WrapperHelper(Configurable):
     # Notification flag. If true, notifications to clients are enabled.
     _doNotify = True
     # Aborted operation flag
-    _aborted = False 
+    _aborted = False
     # Operation name
-    _opName = "Operation" 
+    _opName = "Operation"
     # Related interface name
     _interface = None
     # Function name
@@ -112,11 +112,11 @@ class WrapperHelper(Configurable):
     _failureType = None
     _failureItem = None
     _customException = False
-    
+
     #===========================================================================
     def __init__(self, interface = None ):
         self._interface = interface
-        idx = self.__class__.__name__.index("_")
+        idx = self.__class__.__name__.rindex("_")
         self._functionName = self.__class__.__name__[:idx]
         self._handleError = True
         self._promptUser = True
@@ -125,7 +125,7 @@ class WrapperHelper(Configurable):
         self._selectedAction = None
         self._aborted = False
         self.setConfig(self._getDefaults())
-        self._opName = "Operation" 
+        self._opName = "Operation"
         self._opResult = None
         self._interruptible = False
         self._exec = REGISTRY['EXEC']
@@ -134,12 +134,12 @@ class WrapperHelper(Configurable):
         self._failureCode = 0
         self._failureType = None
         self._failureItem = None
-    
+
     #===========================================================================
     def configure(self, *args, **kargs ):
-        self.setConfig(self.buildConfig(args, kargs, self._getDefaults(), 
+        self.setConfig(self.buildConfig(args, kargs, self._getDefaults(),
           {HandleError:True,GiveChoice:False,Notify:True,PromptUser:True,AllowInterrupt:False}))
-        
+
         # Standard exception handling
         self._handleError = self.getConfig(HandleError)
 
@@ -152,7 +152,7 @@ class WrapperHelper(Configurable):
                 self._customException = True
                 if self.hasConfig(FailureCode):
                     self._failureCode = self.getConfig(FailureCode)
-                    
+
         self._customException = self.getConfig(HandleError)
         self._promptUser = self.getConfig(PromptUser)
         self._doNotify = self.getConfig(Notify)
@@ -166,19 +166,19 @@ class WrapperHelper(Configurable):
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
-        pass  
-        
+        pass
+
     #===========================================================================
-    def _doOperation(self, *args, **kargs ):  
+    def _doOperation(self, *args, **kargs ):
         """
         DESCRIPTION:
             The wrapper operation code. To be implemented by children.
-            
+
         RETURNS:
             Tuple containing [ Repeat, Object ] where Repeat must be boolean.
             If Repeat is true, the operation is repeated. Object is used
             when returning data after the operation is required. 
-            
+
         RAISES:
             SyntaxException     If the argument list is not ok
             DriverException     If there is an error during the operation
@@ -198,7 +198,7 @@ class WrapperHelper(Configurable):
     def __lock(self):
         # Raise the execution block flag on executor
         self._exec.processLock()
-        
+
     #===========================================================================
     def __unlock(self):
         # Raise the execution block flag on executor
@@ -209,35 +209,35 @@ class WrapperHelper(Configurable):
         """
         DESCRIPTION:
             Start the closed-loop operation execution.
-            
+
         ARGUMENTS:
             args    List of arguments for the operation
-            
+
         RETURNS:
             Operation result 
-            
+
         RAISES:
             Nothing
         """
-        
+
         self.__lock()
-        
+
         try:
             self._notifyOpStatus( NOTIF_STATUS_PR, "In progress..." )
-            
+
             REGISTRY['CIF'].setVerbosity(self.getConfig(Verbosity))
             repeat = True
             result = None
-            
+
             self._selectedAction = None
-    
+
             # Execute operation
             if len(args)>0 and type(args[-1])==dict:
                 args = args[0:-1]
-            
-            # Carry out the pre-operation 
+
+            # Carry out the pre-operation
             self._doPreOperation(*args,**kargs)
-            
+
             #LOG("Start operation loop", level = LOG_LANG )
             # Repeat operation loop
             while(repeat):
@@ -248,36 +248,40 @@ class WrapperHelper(Configurable):
                     #LOG("Operation returned " + repr(result) + ", repeat = " + repr(repeat), level = LOG_LANG )
                     # In case of driver exception, handle the error
                     if opStatus: self._notifyOpStatus( opStatus, opResult )
-                except SpellException,ex:
+                except SpellException as ex:
                     LOG("Caught exception in operation: " + ex.message)
                     self._notifyOpStatus( NOTIF_STATUS_FL, OPERATION_FAILED )
                     if self._handleError:
-                        repeat, result = self._handleException(ex)
+                        action = self._handleException(ex)
+                        repeat, result = self._doAction(action)
+                        LOG("Result of exception handling: " + repr([repeat,result]))
                         continue
                     else:
                         raise ex
-                
+
                 # If we are here the operation did not fail, but the user
                 # may want to be prompted depending on the result
                 if not repeat and ( (type(result)==bool) or (isinstance(result,Result)) ):
                     if (opStatus != NOTIF_STATUS_SP) and (opStatus != NOTIF_STATUS_CL):
+                        LOG("Invoke process action on result")
                         repeat, result = self._processActionOnResult(result)
-    
+                        LOG("Result of action-on-result: " + repr([repeat,result]))
+
             self._opResult = [result,self._selectedAction]
-    
+
             # Post operations
             #LOG("Post-operation", level = LOG_LANG )
             try:
                 # Preliminary operations
                 self._doPostOperation(*args,**kargs)
-            except SyntaxException,ex:
+            except SyntaxException as ex:
                 LOG("Caught syntax exception in post operation")
                 self._notifyOpStatus( NOTIF_STATUS_FL, ex.message )
                 raise DriverException("Syntax error in procedure: " + ex.message)
-    
+
             #LOG("Final result: " + repr(result), level = LOG_LANG )
             #LOG("Users choice: " + repr(self._selectedAction), level = LOG_LANG )
-            
+
             if self.getConfig(GiveChoice):
                 if not self._selectedAction:
                     self._selectedAction = ACTION_NOACTION
@@ -299,9 +303,9 @@ class WrapperHelper(Configurable):
 
         # If OnTrue/OnFalse configuration is no action, just continue
         if ((cfg is None) or (cfg == NOACTION)): return [False,result]
-        
+
         # If there is an action, will process
-        
+
         # This flag determines if automatic action is taken, or user is prompted
         doPrompt = self.getConfig(PromptUser)
 
@@ -309,20 +313,24 @@ class WrapperHelper(Configurable):
         if doPrompt:
             ex = DriverException("Operation result: " + repr(result) + ", Please select action", "")
             options = self._getActionList( cfg )
-            repeat, result = self._handleException(ex,options)
+            action = self._handleException(ex,options)
+            repeat, result = self._doAction(action)
         elif cfg in [ABORT,SKIP,CANCEL,REPEAT,RESEND,RECHECK,NOACTION]:
+            LOG("Preparing standard actions")
             action = self._CT_ACTIONS.get(cfg)
             repeat,actionResult = self._doAction(action)
-            if (actionResult != result): result = actionResult 
+            LOG("Do action result: " + repr([repeat,actionResult]))
+            if (actionResult != result): result = actionResult
         else:
             repeat = False
-            
+
+        LOG("Process action final result: " + repr([repeat,result]))
         return [repeat,result]
 
     #===========================================================================
     def _getExceptionFlag(self, exception ):
         return self.getConfig(PromptFailure)
-        
+
     #===========================================================================
     def _handleException(self, exception, options = None ):
         """
@@ -331,40 +339,44 @@ class WrapperHelper(Configurable):
             prompt are the exception reason text, and the list of options 
             configured for the wrapper operation. If config is None, default
             behavior is used.
-            
+
         ARGUMENTS:
             exception   Driver exception raisen by doOperation.
-            
+
         RETURNS:
             Tuple containing [ Repeat, Object ] where Repeat must be boolean.
             If Repeat is true, the operation is repeated. Object is used
             when returning data after the operation is required. 
-            
+
         RAISES:
             Nothing
         """
 
-        LOG("EXCEPTION: " + repr(exception.message + ",reason: " + exception.reason))
+        LOG("HANDLE EXCEPTION: " + repr(exception.message + ", reason: " + exception.reason))
 
         # Get the prompt message from the exception raisen by the driver
-        message = exception.message 
-        if (exception.reason and exception.reason.strip()!="" and exception.reason != "unknown"): 
-            message += ",reason: " + exception.reason
+        message = exception.message
+        if (exception.reason and exception.reason.strip()!="" and exception.reason != "unknown"):
+            message += ", reason: " + exception.reason
 
         # Reset abort flag
-        self._aborted = False 
+        self._aborted = False
+
+        LOG("Getting behavior options")
 
         if options is None:
             theOptions = self._getBehaviorOptions(exception)
         else:
             theOptions = options
-        
+
         # If there are no options defined
         if not theOptions or len(theOptions)==0:
             return [False,False]
-        
+
         shouldPrompt = self._getExceptionFlag(exception)
-        
+
+        LOG("Result of exception flag: " + repr(shouldPrompt))
+
         # Unless explicitly said, prompt the user for action
         if not (shouldPrompt == False):
             LOG("Prompting user for action")
@@ -379,7 +391,7 @@ class WrapperHelper(Configurable):
                 REGISTRY['EXEC'].abort()
                 return [False,None]
             action = action.upper()
-            
+
         # In this case, take automatically the action specified in OnFailure
         else:
             self._write("Error in operation: " + message, {Severity:ERROR})
@@ -402,8 +414,13 @@ class WrapperHelper(Configurable):
                 action = action.upper()
 
         # Perform an action depending on the prompt answer or configured action
-        return self._doAction(action)
-             
+        if str(action)=="":
+            self._write("No action chosen", {Severity:ERROR})
+            REGISTRY['EXEC'].abort()
+            return [False,None]
+
+        LOG("Will do action: " + repr(action))
+        return action
 
     #===========================================================================
     def _getBehaviorOptions(self, exception):
@@ -413,17 +430,17 @@ class WrapperHelper(Configurable):
         if self.getConfig(OnFailure) is None:
             LOG("Using defaults")
             self.setConfig({OnFailure:ABORT})
-            
+
         onFailure = self.getConfig(OnFailure)
-        
+
         # Get the desired behavior as per SPELL standards
         theOptions = self._getActionList( onFailure, exception )
-        
+
         return theOptions
 
     #===========================================================================
     def _driverUpdateActionList(self, theOptions, exception):
-        
+
         # By default the functions do not let the driver choose. By overriding
         # this method each SPELL function can ask the desired driver interfaces
         # to manipulate the options.
@@ -431,7 +448,7 @@ class WrapperHelper(Configurable):
 
     #===========================================================================
     def _driverPerformAction(self, code):
-        
+
         # By default the functions do not let the driver perform any action.
         # If this is overriden by a function, the function will invoke the
         # method driverPerformAction of the appropriate interface.
@@ -459,7 +476,7 @@ class WrapperHelper(Configurable):
     #===========================================================================
     def _getActionStrings(self ):
         return self.__actionStrings
-            
+
     #===========================================================================
     def _getActionList(self, actionCodes, exception = None ):
         theOptions = []
@@ -485,12 +502,12 @@ class WrapperHelper(Configurable):
         if (actionCodes & HANDLE):
             LOG("ACTION HANDLE")
             theOptions.append( ACTION_HANDLE + KEY_SEPARATOR + self._getActionStrings().get(ACTION_HANDLE))
-            
+
         # Now let the drivers manipulate these options or add custom ones
         theOptions = self._driverUpdateActionList( theOptions, exception )
-            
+
         return theOptions
-            
+
     #===========================================================================
     def _doAction(self, action):
         """
@@ -499,30 +516,33 @@ class WrapperHelper(Configurable):
             WARNING: no exception handling is done here. If a new action is
             implemented and it is possible that this action raise an exception,
             it should be handled here.
-            
+
         ARGUMENTS:
             action      The action code identifying the method to be executed.
-            
+
         RETURNS:
             Tuple containing [ Repeat, Object ] where Repeat must be boolean.
             If Repeat is true, the operation is repeated. Object is used
             when returning data after the operation is required.
-            
+
         RAISES:
             Nothing
         """
-        
+
         self._selectedAction = action
         LOG("Performing action: " + repr(action), level = LOG_LANG )
-        
+
         # Give the driver the opportunity to do something before the actions
+        LOG("Call driver before action " + repr(action))
         self._driverBeforeAction(action)
+
+        result = [False,False]
 
         if action == ACTION_ABORT:
             self._write("Execution aborted by user", {Severity:WARNING} )
             if REGISTRY.exists('EXEC'):
                 REGISTRY['EXEC'].abort()
-            return [False,False]
+            result = [False,False]
         elif action == ACTION_RESEND:
             self._notifyOpStatus( NOTIF_STATUS_PR, OPERATION_REPEAT )
             result = self._doResend()
@@ -534,27 +554,29 @@ class WrapperHelper(Configurable):
             result = self._doRecheck()
         elif action == ACTION_SKIP:
             self._notifyOpStatus( NOTIF_STATUS_SP, OPERATION_SKIPPED )
-            result = self._doSkip()       
+            result = self._doSkip()
         elif action == ACTION_NOACTION:
-            result = [False,True]       
+            result = [False,True]
         elif action == ACTION_CANCEL:
             self._notifyOpStatus( NOTIF_STATUS_CL, OPERATION_CANCELLED )
-            result = self._doCancel()       
+            result = self._doCancel()
         elif action == ACTION_HANDLE:
             self._notifyOpStatus( NOTIF_STATUS_SP, OPERATION_HANDLED )
             handle = Handle( code = self._failureCode, type = self._failureType, item = self._failureItem)
-            raise handle       
+            raise handle
         else:
             # Give the driver the opportunity to perform a custom action
+            LOG("Call driver perform action " + repr(action))
             result = self._driverPerformAction(action)
+            LOG("Result of driver perform action " + repr(result))
             if (result is None):
-                self._write("Unknown action: " + repr(action), {Severity:ERROR})
-                if REGISTRY.exists('EXEC'):
-                    REGISTRY['EXEC'].abort()
-                return [False,False]
+                result = [False,False]
 
         # Give the driver the opportunity to do something before the actions
+        LOG("Call driver after  action " + repr(action))
         self._driverAfterAction(action)
+
+        LOG("Returning from doAction: " + repr(result))
 
         return result
 
@@ -577,7 +599,7 @@ class WrapperHelper(Configurable):
     #===========================================================================
     def _doCancel(self):
         raise DriverException("Cannot cancel", "This action is not defined for this SPELL function")
-                                
+
     #===========================================================================
     def _notifyValue(self, name, value, status, reason):
         if self.getConfig(Notify) == False: return
@@ -612,7 +634,7 @@ class WrapperHelper(Configurable):
         if self._interface:
             defaults = REGISTRY['CTX'].getInterfaceConfig(self._interface)
         if defaults is not None:
-            result = defaults.copy() 
+            result = defaults.copy()
         fdefaults = REGISTRY['CTX'].getFunctionConfig(self._functionName)
         if fdefaults:
             result.update(fdefaults)

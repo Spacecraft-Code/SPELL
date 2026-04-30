@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: s5cntl
+  labels:
+    app.kubernetes.io/name: spell-cws-scorpio-s5cntl
+    app.kubernetes.io/instance: spell
+    app.kubernetes.io/version: "v2.6.5.1-dev" # {"$imagepolicy": "spell:spell-server:tag"}
+spec:
+  type: ExternalName
+  externalName: s5cntl.scorpio.eng.ses
+# ---
+# apiVersion: v1
+# kind: Endpoints
+# metadata:
+#   name: s5cntl
+# subsets:
+# - addresses:
+#   - hostname: s5cntl
+#     ip: 10.35.35.30

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,6 +29,7 @@
 // Local includes ----------------------------------------------------------
 #include "SPELL_EXC/SPELLexecutor.H"
 #include "SPELL_EXC/SPELLexecutorImpl.H"
+#include "SPELL_EXC/SPELLexecutorUtils.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_PRD/SPELLprocedureManager.H"
 #include "SPELL_SYN/SPELLmonitor.H"
@@ -53,8 +54,6 @@ static int static_dispatch( PyObject* obj, PyFrameObject* frame, int what, PyObj
 {
     return SPELLexecutor::instance().dispatch(obj, frame, what, args);
 }
-
-static SPELLexecutorConfig EMPTY_CONFIGURATION;
 
 //=============================================================================
 // FUNCTION: convert dispatch data type to string
@@ -104,6 +103,7 @@ SPELLexecutorImpl::SPELLexecutorImpl()
     m_controller         = NULL;
     m_childMgr           = NULL;
     m_varManager         = NULL;
+    m_resourceManager         = NULL;
 
     m_userAction.reset();
     m_gotoTarget = "";
@@ -129,6 +129,15 @@ SPELLexecutorImpl::~SPELLexecutorImpl()
 //=============================================================================
 // METHOD    : SPELLexecutorImpl::initialize()
 //=============================================================================
+
+void SPELLexecutorImpl::refreshStatus()
+{
+	if (m_controller != NULL)
+	{
+		m_controller->refreshStatus();
+	}
+}
+
 void SPELLexecutorImpl::initialize( SPELLcif* cif,
                                 SPELLcontrollerIF* controller,
                                 SPELLschedulerIF* scheduler,
@@ -146,6 +155,7 @@ void SPELLexecutorImpl::initialize( SPELLcif* cif,
     m_callstack = callstack;
     m_frameManager = frame;
     m_varManager = new SPELLvariableManager(*frame);
+    m_resourceManager = new SPELLresourceManager(*frame);
 
     // The order is important here!
     addDispatchListener(m_frameManager);
@@ -156,13 +166,13 @@ void SPELLexecutorImpl::initialize( SPELLcif* cif,
 //=============================================================================
 // METHOD    : SPELLexecutorImpl::getConfiguration()
 //=============================================================================
-SPELLexecutorConfig& SPELLexecutorImpl::getConfiguration() const
+SPELLexecutorConfig& SPELLexecutorImpl::getConfiguration()
 {
 	if (m_cif != NULL)
 	{
 		return m_cif->getExecutorConfig();
 	}
-	return EMPTY_CONFIGURATION;
+	return m_emptyConfig;
 };
 
 //=============================================================================
@@ -223,8 +233,11 @@ void SPELLexecutorImpl::prepare( const std::string& instanceId, const SPELLconte
         LOG_INFO("[E] Blocking mode    : " + BSTR( getConfiguration().isBlocking()  ));
         LOG_INFO("[E] Browsable lib    : " + getConfiguration().getBrowsableLibStr()  );
         LOG_INFO("[E] TC Confirm       : " + BSTR( getConfiguration().isForceTcConfirm()  ));
+        LOG_INFO("[E] Prompt Confirm   : " + BSTR( getConfiguration().isForcePromptConfirm()  ));
         LOG_INFO("[E] Save state mode  : " + getConfiguration().getSaveStateMode() );
         LOG_INFO("[E] Watch variables  : " + BSTR(getConfiguration().isWatchEnabled()) );
+        LOG_INFO("[E] Resources Display: " + BSTR(getConfiguration().isResourcesDisplayEnabled()) );
+        LOG_INFO("[E] Local resources support: " + BSTR(getConfiguration().isLocalResourcesSupported()) );
         LOG_INFO("[E] Input directory  : " + m_inputDir );
         LOG_INFO("[E] Output directory : " + m_outputDir );
         LOG_INFO("[E] Run Into         : " + BSTR(getConfiguration().isRunInto()));
@@ -306,7 +319,7 @@ void SPELLexecutorImpl::installCallingArguments()
     // Initialize now the data container for Calling Arguments
     Py_INCREF(argDict);
     DEBUG("[E] Argument dictionary: " + PYREPR(argDict));
-    PyObject* classObj = SPELLpythonHelper::instance().getObject("libSPELL_DTA", "DataContainer");
+    PyObject* classObj = SPELLpythonHelper::instance().getObject(MOD_NAME(libSPELL_DTA), "DataContainer");
     PyObject* argTuple = PyTuple_New(1);
     PyObject* argsName = STRPY("Calling Arguments");
     PyTuple_SetItem(argTuple,0,argsName);
@@ -341,7 +354,7 @@ void SPELLexecutorImpl::installCallingArguments()
 //=============================================================================
 void SPELLexecutorImpl::installInternalVariables()
 {
-    PyObject* classObj = SPELLpythonHelper::instance().getObject("libSPELL_DTA", "DataContainer");
+    PyObject* classObj = SPELLpythonHelper::instance().getObject(MOD_NAME(libSPELL_DTA), "DataContainer");
     PyObject* argTuple = PyTuple_New(1);
     PyObject* argsName = STRPY("Internal Variables");
     PyTuple_SetItem(argTuple,0,argsName);
@@ -403,22 +416,34 @@ void SPELLexecutorImpl::executeInternal( bool doReset )
         m_controller->enableRunInto( getConfiguration().isRunInto() );
 
         // The client will know that the executor is ready to go
-        m_controller->setStatus(STATUS_LOADED);
+        // Take into account initialization errors
+        SPELLexecutorStatus status = m_controller->getStatus();
+        LOG_INFO("Initial status check: " + SPELLexecutorUtils::statusToString(status) );
+        SPELLexecutionResult result = EXECUTION_UNKNOWN;
+        if (status != STATUS_ERROR)
+        {
+        	m_controller->setStatus(STATUS_LOADED);
 
-        // If in automatic and backgorund mode, set the controller in play mode accordingly
-        // IMPORTANT If in automatic and foreground mode, it is the GUI who sends the run command
-        if (  getConfiguration().isHeadless() || (getConfiguration().isAutomatic() && (!getConfiguration().isVisible()) ) )
-		{
-    		DEBUG("[E] Set autorun");
-        	m_controller->setAutoRun();
-		}
+			// If in automatic and backgorund mode, set the controller in play mode accordingly
+			// IMPORTANT If in automatic and foreground mode, it is the GUI who sends the run command
+			if (  getConfiguration().isHeadless() || (getConfiguration().isAutomatic() && (!getConfiguration().isVisible()) ) )
+			{
+				DEBUG("[E] Set autorun");
+				m_controller->setAutoRun();
+			}
 
-        DEBUG("[E] Launching execution");
-        // Execute the procedure/script. This triggers the procedure
-        // execution under dispatcher control.
-        SPELLexecutionResult result = m_frameManager->execute();
+			DEBUG("[E] Launching execution");
+			// Execute the procedure/script. This triggers the procedure
+			// execution under dispatcher control.
+			result = m_frameManager->execute();
 
-        DEBUG("[E] Execution done, checking result (" + ISTR(result) + ")");
+			DEBUG("[E] Execution done, checking result (" + ISTR(result) + ")");
+        }
+        else
+        {
+        	LOG_ERROR("Initialization error");
+        	result = EXECUTION_ERROR;
+        }
 
         // Check execution result and proceed accordingly.
         // Frame will be reset and environment unloaded if needed, depending on the case.
@@ -669,9 +694,6 @@ void SPELLexecutorImpl::loadExecutionEnvironment()
     // Check for Python errors
     SPELLpythonHelper::instance().checkError();
 
-	// Load SCDB and GDB
-	SPELLdatabaseManager::instance().loadBuiltinDatabases();
-
 	// Create proc dictionary object and install it
 	PyObject* procObj = PyDict_New();
 	PyObject* pname = SSTRPY(m_instanceId);
@@ -689,10 +711,48 @@ void SPELLexecutorImpl::loadExecutionEnvironment()
 	PyDict_SetItemString( procObj, DatabaseConstants::PARENT.c_str(), parentId);
 
 	SPELLpythonHelper::instance().install( procObj,  DatabaseConstants::PROC );
-
-	SPELLpythonHelper::instance().importUserLibraries( m_libPath );
-
 	SPELLpythonHelper::instance().checkError();
+
+	// Load SCDB and GDB
+	SPELLdatabaseManager::instance().loadBuiltinDatabases();
+	SPELLpythonHelper::instance().checkError();
+    
+	bool success = true;
+	std::string importErrors = "";
+
+	if (m_libPath != "")
+	{
+		if (m_libPath.find(",") != std::string::npos)
+		{
+			std::vector<std::string> items = SPELLutils::tokenize(m_libPath,",");
+			std::vector<std::string>::const_iterator cit;
+			for(cit = items.begin(); cit != items.end(); cit++)
+			{
+				success = SPELLpythonHelper::instance().importUserLibraries( *cit, importErrors ) &&  success;
+			}
+		}
+		else
+		{
+			try
+			{
+				success = SPELLpythonHelper::instance().importUserLibraries( m_libPath, importErrors ) && success;
+			}
+			catch(SPELLcoreException& ex)
+			{
+				importErrors += "\n - Failed to import user libraries from '" + m_libPath + "': " + ex.what();
+			}
+		}
+	}
+	else
+	{
+		LOG_INFO("No user libraries defined");
+	}
+
+
+	if (!success)
+	{
+		LOG_ERROR("Errors detected in UserLib: " + importErrors);
+	}
 
 	// Tell the execution frame that the environment has been updated
 	m_frameManager->filterDictUpdated();
@@ -721,6 +781,11 @@ void SPELLexecutorImpl::loadDriver()
     if (getConfiguration().isForceTcConfirm())
     {
     	setForceTcConfirmInternal(true);
+    }
+
+    if (getConfiguration().isForcePromptConfirm())
+    {
+    	setForcePromptConfirmInternal(true);
     }
 
 	// Load the driver language specifics
@@ -1068,6 +1133,9 @@ int SPELLexecutorImpl::dispatch( PyObject* obj, PyFrameObject* frame, int what, 
     if(!m_controller->checkAborted())
     {
         m_frameManager->terminate();
+        if (what == PyTrace_EXCEPTION)
+        	// We haven't raised an exception in case we trace an exception therefore return 0 (no error)
+        	return 0;
         return -1;
     }
 
@@ -1199,6 +1267,18 @@ void SPELLexecutorImpl::setForceTcConfirm( const bool force )
 }
 
 //=============================================================================
+// METHOD    : SPELLexecutorImpl::setForceTcConfirm
+//=============================================================================
+void SPELLexecutorImpl::setForcePromptConfirm( const bool force )
+{
+	if (getConfiguration().isForcePromptConfirm() != force )
+	{
+		LOG_INFO("[EXEC] Set force Prompt confirmation to " + BSTR(force));
+		getConfiguration().setForcePromptConfirm(force);
+		setForcePromptConfirmInternal(force);
+	}
+}
+//=============================================================================
 // METHOD    : SPELLexecutorImpl::command
 //=============================================================================
 void SPELLexecutorImpl::setForceTcConfirmInternal( bool force )
@@ -1210,7 +1290,18 @@ void SPELLexecutorImpl::setForceTcConfirmInternal( bool force )
 		SPELLpythonHelper::instance().callMethod( tc, "forceTcConfirm", arg, NULL );
 	}
 }
-
+//=============================================================================
+// METHOD    : SPELLexecutorImpl::command
+//=============================================================================
+void SPELLexecutorImpl::setForcePromptConfirmInternal( bool force )
+{
+	PyObject* tc = SPELLregistry::instance().get("CIF");
+	if (tc != NULL)
+	{
+		PyObject* arg = force ? Py_True : Py_False;
+		SPELLpythonHelper::instance().callMethod( tc, "forcePromptConfirm", arg, NULL );
+	}
+}
 //=============================================================================
 // METHOD    : SPELLexecutorImpl::command
 //=============================================================================
@@ -1292,7 +1383,8 @@ void SPELLexecutorImpl::finish( const std::string& message )
 //=============================================================================
 void SPELLexecutorImpl::processLock()
 {
-    SPELLmonitor m(m_cmdLock);
+    // TODO: No reason to lock here. Remove once validated.
+    //SPELLmonitor m(m_cmdLock);
     m_controller->executionLock();
 }
 
@@ -1301,7 +1393,8 @@ void SPELLexecutorImpl::processLock()
 //=============================================================================
 void SPELLexecutorImpl::processUnlock()
 {
-    SPELLmonitor m(m_cmdLock);
+    // TODO: No reason to lock here. Remove once validated.
+    //SPELLmonitor m(m_cmdLock);
     m_controller->executionUnlock();
 }
 
@@ -1568,9 +1661,13 @@ void SPELLexecutorImpl::displayStage( const std::string& id, const std::string& 
 		Py_INCREF(pyId);
 		Py_INCREF(pyDesc);
 
+		// Get the previous step value if any
+		PyObject* prev = PyDict_GetItemString(proc, DatabaseConstants::STEP.c_str());
+
+		// Set the new value
 		PyDict_SetItemString( proc, DatabaseConstants::STEP.c_str(), list);
 
-		PyObject* prev = PyDict_GetItemString(proc, DatabaseConstants::STEP.c_str());
+		// If there was a previous value, set it as PREVIOUS
 		if (prev != NULL)
 		{
 			PyDict_SetItemString( proc, DatabaseConstants::PREV_STEP.c_str(), prev);

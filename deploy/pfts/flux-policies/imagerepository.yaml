@@ -1,0 +1,23 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: spell-registry
+spec:
+  certSecretRef:
+    name: nexus-ca
+  image: bzengnexus1.idmz.eng.ses/spell/spell-registry
+  interval: 1m0s
+  secretRef:
+    name: bzengnexus-secret
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: spell-server
+spec:
+  certSecretRef:
+    name: nexus-ca
+  image: bzengnexus1.idmz.eng.ses/spell/spell-server
+  interval: 1m0s
+  secretRef:
+    name: bzengnexus-secret

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Telemetry interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -35,42 +35,71 @@ from spell.lib.registry import *
 from spell.lang.constants import *
 from spell.lang.modifiers import *
 from spell.lib.adapter.constants.notification import *
+from spell.lib.adapter.utctime import TIME
 
 #*******************************************************************************
 # Local imports
 #*******************************************************************************
-from tm_item import TmItemClass
-from verifier import TmVerifierClass
-from config import Configurable
-from constants.core import COMP_SYMBOLS
-from result import TmResult
-from interface import Interface
-from expression import ExpressionVerifier,Expression
+from .tm_item import TmItemClass
+from .verifier import TmVerifierClass
+from .config import Configurable
+from .constants.core import COMP_SYMBOLS
+from .result import TmResult
+from .interface import Interface
+from .expression import ExpressionVerifier,Expression
 
 #*******************************************************************************
 # System imports
 #*******************************************************************************
-import time,string,thread,sys
+import time,string,sys,struct
 
+try:
+    import _thread as _thread
+except ImportError as ex:
+    import thread as _thread
 ###############################################################################
 # Module import definition
 
 __all__ = ['TmInterface']
 
-INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | RECHECK | CANCEL, 
-                        ValueFormat:ENG, 
-                        Timeout:15, 
+INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | RECHECK | CANCEL,
+                        ValueFormat:ENG,
+                        Timeout:15,
                         Retries:2,
                         Tolerance:0,
+                        RelTolerance:1e-9,
                         Wait:False,
                         PromptUser:True,
                         OnFalse:PROMPT,
                         OnTrue:NOPROMPT,
                         OnSkip:True,
-			            IgnoreCase:False }
+                        IgnoreCase:False }
 
-EPSILON = 2.1e-5
+def _make32(a):
+    return struct.unpack('>f',struct.pack('>f',a))[0]
+  
+def _toInt32(a):
+    return struct.unpack('>i',struct.pack('>f',a))[0]
 
+def _float_eq(a, b, rel_tol=INTERFACE_DEFAULTS[RelTolerance], abs_tol=0.0):
+    if _make32(a) == a:
+        b = _make32(b)
+        
+    if a == b:
+        return True
+    
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+# def __old_eq(cvalue,comp):
+#     dnm = max(abs(cvalue),abs(comp))
+#     if not dnm > 0:
+#         dnm = 1
+#     return ( abs(cvalue-comp) / dnm ) < EPSILON
+try:
+    unicode
+except:
+    unicode = str
+    
 ###############################################################################
 class TmInterface(Configurable, Interface):
 
@@ -84,7 +113,8 @@ class TmInterface(Configurable, Interface):
     __verifTable = []
     __verifMutex = None
     __useConfig = {}
-    
+    __lastInterruptionTime = TIME('01/01/1970')
+
     #===========================================================================
     def __init__(self):
         Interface.__init__(self, "TM")
@@ -92,10 +122,11 @@ class TmInterface(Configurable, Interface):
         self.__tmParameters = {}
         self.__verifiers = []
         self.__verifTable = []
-        self.__verifMutex = thread.allocate_lock()
+        self.__verifMutex = _thread.allocate_lock()
         self.__ctxName = None
+        self.__lastInterruptionTime = TIME('01/01/1970')
         LOG("Created")
-        
+
     #===========================================================================
     def __getitem__(self, key):
         # If the parameter mnemonic is composed of several words:
@@ -109,7 +140,7 @@ class TmInterface(Configurable, Interface):
             mnemonic = key
             description = key
 
-        if not mnemonic in self.__tmParameters.keys():
+        if not mnemonic in list(self.__tmParameters.keys()):
             LOG("Creating TM item for " + mnemonic)
             LOG("Description: " + repr(description))
             item = self._createTmItem(mnemonic,description)
@@ -148,8 +179,8 @@ class TmInterface(Configurable, Interface):
         param = args[0]
         value_item = args[1]
         cFunc = self.__c_eq
-        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[eq], config = useConfig )        
-            
+        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[eq], config = useConfig )
+
     #===========================================================================
     def neq(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -157,8 +188,8 @@ class TmInterface(Configurable, Interface):
         param = args[0]
         value_item = args[1]
         cFunc = self.__c_neq
-        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[neq], config = useConfig )        
-    
+        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[neq], config = useConfig )
+
     #===========================================================================
     def lt(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -166,8 +197,8 @@ class TmInterface(Configurable, Interface):
         param = args[0]
         value_item = args[1]
         cFunc = self.__c_lt
-        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[lt], config = useConfig )        
-    
+        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[lt], config = useConfig )
+
     #===========================================================================
     def le(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -175,8 +206,8 @@ class TmInterface(Configurable, Interface):
         param = args[0]
         value_item = args[1]
         cFunc = self.__c_le
-        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[le], config = useConfig )        
-    
+        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[le], config = useConfig )
+
     #===========================================================================
     def gt(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -184,8 +215,8 @@ class TmInterface(Configurable, Interface):
         param = args[0]
         value_item = args[1]
         cFunc = self.__c_gt
-        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[gt], config = useConfig )        
-    
+        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[gt], config = useConfig )
+
     #===========================================================================
     def ge(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -193,8 +224,8 @@ class TmInterface(Configurable, Interface):
         param = args[0]
         value_item = args[1]
         cFunc = self.__c_ge
-        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[ge], config = useConfig )        
-    
+        return self.__comparator(param, value_item, cFunc, COMP_SYMBOLS[ge], config = useConfig )
+
     #===========================================================================
     def between(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -204,7 +235,7 @@ class TmInterface(Configurable, Interface):
         gvalue_item = args[2]
         cFunc = self.__c_btw
         return self.__bcomparator(param, lvalue_item, gvalue_item, cFunc, COMP_SYMBOLS[bw], config = useConfig)
-    
+
     #===========================================================================
     def not_between(self, *args, **kargs):
         self.__checkComparsionArgs(args, kargs)
@@ -214,23 +245,48 @@ class TmInterface(Configurable, Interface):
         gvalue_item = args[2]
         cFunc = self.__c_nbtw
         return self.__bcomparator(param, lvalue_item, gvalue_item, cFunc, COMP_SYMBOLS[nbw], config = useConfig)
-                  
+
     #===========================================================================
     def refresh(self, *args, **kargs):
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         if len(args)==0:
             for param in self.__tmParameters:
-                param = self.__tmParameters[param] 
+                param = self.__tmParameters[param]
                 self.__refreshItemNotify(param, useConfig)
         else:
             param = args[0]
             if type(param)==dict:
                 for param in self.__tmParameters:
-                    param = self.__tmParameters[param] 
+                    param = self.__tmParameters[param]
                     self.__refreshItemNotify(param, useConfig)
-            else:                         
-                if type(param) == str: param = self.__tmParameters[param] 
+            else:
+                if type(param) == str or type(param) == unicode: 
+                  param = self.__tmParameters[param]
                 self.__refreshItemNotify(param, useConfig)
+
+    #===========================================================================
+    def getTMPackets(self, *args, **kargs ):
+        if len(args)!=5:
+            raise SyntaxException("Invalid number of arguments given")
+
+        stoptime, starttime, filters, wait, timeout = args
+
+        if wait:
+            # wait for data (This may be implemented in the DB service)
+            delay_ns = stoptime - int(TIME(NOW).abs()) * 10**9
+            while (delay_ns > 0):
+                time.sleep(0.2)
+                if int(self.__lastInterruptionTime.abs()) * 10**9 > starttime:
+                    raise CancelException("GetTMPackets was cancelled!")
+                delay_ns = stoptime - int(TIME(NOW).abs()) * 10**9
+
+        REGISTRY['CIF'].write("Retrieving the TM Packets ...", {Severity:INFORMATION})
+
+        return self._getTMPackets(stoptime, starttime, filters, timeout)
+
+    #===========================================================================
+    def _getTMPackets(self, stoptime, starttime, filters, timeout):
+        REGISTRY['CIF'].write("Service GetTMPackets not implemented on this driver", {Severity:WARNING})
 
     #===========================================================================
     def inject(self, *args, **kargs ):
@@ -238,7 +294,7 @@ class TmInterface(Configurable, Interface):
             raise SyntaxException("No arguments given")
 
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
-        
+
         result = False
         if type(args[0])==list:
             injectionList = args[0]
@@ -249,17 +305,17 @@ class TmInterface(Configurable, Interface):
                 value = item[1]
                 if type(item[-1])==dict:
                     itemConfig.update(item[-1])
-                if type(param)==str:
+                if type(param) == str or type(param) == unicode:
                     param = self[param]
                 REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_PR, "Injecting value")
-                result = self._injectItem( param, value, itemConfig )
+                result = self._injectItem( param, str(value), itemConfig )
                 if result == True:
                     REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_OK)
                 else:
                     REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_FL)
         else:
             # Single parameter injection
-            if type(args[0])==str:
+            if type(args[0]) == str or type(args[0]) == unicode:
                 param = self[args[0]]
             # Value
             value = args[1]
@@ -268,30 +324,30 @@ class TmInterface(Configurable, Interface):
                 useConfig.update(args[-1])
             # Inject the parameter
             REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_PR, "Injecting value")
-            result = self._injectItem( param, value, useConfig )
+            result = self._injectItem( param, str(value), useConfig )
             if result == True:
                 REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_OK)
             else:
                 REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_FL)
-                
+
         return result
 
     #===========================================================================
     def verify(self, *args, **kargs ):
         if len(args)==0 and len(kargs)==0:
             raise SyntaxException("No arguments given")
-        
+
         # Obtain global verification config
         self.__useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         # Input cases ----------------------------------------------------------
         numArgs = len(args)
-        
-        # If the user gives the steps using 'verify =' 
+
+        # If the user gives the steps using 'verify ='
         if numArgs==0:
             # No steps are given as a normal parameter, but the user may be
             # using the keyword "verify" to pass them.
-            if kargs.has_key('verify'):
+            if 'verify' in kargs:
                 verificationSteps = kargs.get('verify')
                 LOG("Retrieved definition from named argument")
             else:
@@ -301,13 +357,13 @@ class TmInterface(Configurable, Interface):
             # comparison operator, and valueitem, or passing a list of verification
             # steps. In addition to this, if the user passes a config dictionary,
             # it is already processed by buildConfig(), thus we shall remove it.
-            
+
             # Check if the last element of the tuple is a dictionary
             if type(args[-1])==dict:
                 iargs = args[0:-1]
             else:
                 iargs = args
-            
+
             # Now, if the length of the remaining tuple is one, it means that
             # a single step or a list of steps are given. If the length of
             # the tuple is more than one, the user passed the verification
@@ -323,8 +379,8 @@ class TmInterface(Configurable, Interface):
             else:
                 # Get rid of the tuple and get the first element only
                 iargs = iargs[0]
-                # Here we have a list. To distinguish between a single step or a 
-                # list of steps, just check if the first element is a list 
+                # Here we have a list. To distinguish between a single step or a
+                # list of steps, just check if the first element is a list
                 # (a step) or not
                 if isinstance(iargs,Expression):
                     verificationSteps = iargs
@@ -334,7 +390,7 @@ class TmInterface(Configurable, Interface):
                 else:
                     if len(iargs)<3:
                         raise SyntaxException("Malformed condition")
-                    verificationSteps = [ iargs ] 
+                    verificationSteps = [ iargs ]
                     LOG("Built list of steps" + repr(iargs))
 
         if type(verificationSteps)==list:
@@ -346,29 +402,29 @@ class TmInterface(Configurable, Interface):
     def performListVerification(self, verificationSteps):
         try:
             self._operationStart()
-            
+
             # Prepare verifiers
             self.__prepareVerification(verificationSteps)
-    
+
             # Start verifiers
             #TODO review
             self.__startVerifiers()
-            
+
             # Wait all verifications to be finished
             self.__waitVerifiers()
-            
+
             # Check overall result
             overallResult,errors = self.__checkVerifiers()
-    
+
             # If there is a failure somewhere
             if not overallResult:
                 self.reportVerificationResult(errors)
-            
+
         finally:
             # Cleanup verifiers
             self.__resetVerification()
             self._operationEnd()
-        
+
         return overallResult
 
     #===========================================================================
@@ -376,22 +432,21 @@ class TmInterface(Configurable, Interface):
 
         try:
             self._operationStart()
-            self.__resetVerification()        
-            
+            self.__resetVerification()
+
             verifier = ExpressionVerifier(expression)
-    
+
             verifier.prepare(self.__useConfig,self.__verifiers,self.__verifTable)
-            
+
             overallResult,errors = verifier.evaluate()
-            
-    
+
             # If there is a failure somewhere
             if not overallResult:
                 REGISTRY['CIF'].write("Telemetry expression evaluates to False", {Severity:ERROR})
                 self.reportVerificationResult(errors)
             else:
                 REGISTRY['CIF'].write("Telemetry expression evaluates to True" )
-            
+
         finally:
             # cleanup expression verifier
             verifier.clear()
@@ -406,7 +461,7 @@ class TmInterface(Configurable, Interface):
     def reportVerificationResult(self, errors):
         # This will hold the description of the errors
         description = ""
-        
+
         # First, if there is a system failure somewhere, report it
         # unless PromptFailure is false
         thereIsFailure = False
@@ -414,7 +469,7 @@ class TmInterface(Configurable, Interface):
         for key,reason,withError,failed,stopped in errors:
             thereIsFailure = (thereIsFailure or withError)
             wasStopped = (wasStopped or stopped)
-            description += ("  %-10s" % key.split(":")[1]) + ": " + reason 
+            description += ("  %-10s" % key.split(":")[1]) + ": " + reason
             if withError:
                 description += " (failed)\n"
             elif stopped:
@@ -423,20 +478,20 @@ class TmInterface(Configurable, Interface):
                 description += " (NOK)\n"
             else:
                 description += " (OK)\n"
-        
-        if thereIsFailure: 
+
+        if thereIsFailure:
             if self.__useConfig.get(PromptFailure) != False:
                 raise DriverException("Verification failed", "Could not evaluate all TM conditions\n" + description)
             else:
                 # Do not raise the exception
                 pass
         elif wasStopped:
-            if not ("InWaitFor" in self.__useConfig): 
+            if not ("InWaitFor" in self.__useConfig):
                 raise DriverException("Verification stopped", "Aborted by user\n" + description)
             else:
                 return False
         # No failure but still the verification did not succeed,
-        # then check Prompt User                     
+        # then check Prompt User
         else:
             if self.__useConfig.get(PromptUser)!=False:
                 raise DriverException("Verification failed", "Some of the conditions evaluated to False\n" + description)
@@ -449,11 +504,11 @@ class TmInterface(Configurable, Interface):
             if ed[1] is not None:
                 if len(whichError)>0: whichError += ","
                 whichError += ed[0].split()[-1]
-    
+
     #===========================================================================
     def updateVerificationStatus(self, verifier):
-        LOG("Verification status: " + verifier.name + "=" + verifier.value + "," + verifier.status) 
-        if self.__useConfig.has_key(Notify):
+        LOG("Verification status: " + verifier.name + "=" + verifier.value + "," + verifier.status)
+        if Notify in self.__useConfig:
             if not self.__useConfig.get(Notify): return
         self.__verifMutex.acquire()
         entry = self.__verifTable[verifier.step]
@@ -467,7 +522,7 @@ class TmInterface(Configurable, Interface):
         reason = ""
         times  = ""
         for entry in self.__verifTable:
-            if len(names)>0: 
+            if len(names)>0:
                 names  = names + ITEM_SEP
                 values = values + ITEM_SEP
                 status = status + ITEM_SEP
@@ -481,7 +536,7 @@ class TmInterface(Configurable, Interface):
                 reason = reason + " "
             else:
                 reason = reason + entry[3]
-            
+
         REGISTRY['CIF'].notify( NOTIF_TYPE_VERIF, names, values, status, reason, times)
         self.__verifMutex.release()
 
@@ -506,60 +561,111 @@ class TmInterface(Configurable, Interface):
     #===========================================================================
     def _getTMparam(self, param, prop, config):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-    
-    #===========================================================================
-    def setLimit(self, *args, **kargs ):
-        
-        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
-        
-        #TODO implement more flexible input
-        if len(args)!=3: 
-            raise SyntaxException("Expected parameter, limit name and value")
-
-        param = args[0]
-        limit = args[1]
-        value = args[2]
-
-        if type(param)==str:
-            param = self[param]
-
-        if type(limit)!=str:
-            raise SyntaxException("Expected a limit name")
-        
-        return self._setLimit( param, limit, value, useConfig)
 
     #===========================================================================
-    def getLimit(self, *args, **kargs ):
+    def isAlarmed(self, *args, **kargs ):
 
         useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
-        
+
         #TODO implement more flexible input
-        if len(args)!=2: 
-            raise SyntaxException("Expected parameter, and limit name")
+        if len(args)!=1:
+            raise SyntaxException("Expected parameter")
 
         param = args[0]
-        limit = args[1]
 
-        if type(param)==str:
+        if type(param) == str or type(param) == unicode:
             param = self[param]
 
-        if type(limit)!=str:
-            raise SyntaxException("Expected a limit name")
-        
-        return self._getLimit( param, limit, useConfig)
+        return self._isAlarmed( param, useConfig)
+
+    #===========================================================================
+    def getDefaultLimitFilesLoaded(self, *args, **kargs ):
+        if len(args)!=1:
+            raise SyntaxException("Invalid number of arguments given")
+
+        timeout = args[0]
+
+        REGISTRY['CIF'].write("Retrieving the default limit files loaded ...", {Severity:INFORMATION})
+
+        return self._getDefaultLimitFilesLoaded(timeout)
+
+    #===========================================================================
+    def _getDefaultLimitFilesLoaded(self, timeout):
+        REGISTRY['CIF'].write("Service GetDefaultLimitFilesLoaded not implemented on this driver", {Severity:WARNING})
+
+    #===========================================================================
+    def getCurrentOverlay(self, *args, **kargs ):
+        if len(args)!=1:
+            raise SyntaxException("Invalid number of arguments given")
+
+        timeout = args[0]
+
+        REGISTRY['CIF'].write("Retrieving the current overlay ...", {Severity:INFORMATION})
+
+        return self._getCurrentOverlay(timeout)
+
+    #===========================================================================
+    def _getCurrentOverlay(self, timeout):
+        REGISTRY['CIF'].write("Service GetCurrentOverlay not implemented on this driver", {Severity:WARNING})
+
+    #===========================================================================
+    def activateOverlay(self, *args, **kargs ):
+        if len(args)!=2:
+            raise SyntaxException("Invalid number of arguments given")
+
+        overlay_file = args[0]
+        timeout = args[1]
+
+        REGISTRY['CIF'].write("Activating overlay " + str(overlay_file) + " overlay ...", {Severity:INFORMATION})
+
+        return self._activateOverlay(overlay_file, timeout)
+
+    #===========================================================================
+    def _activateOverlay(self, overlay_file, timeout):
+        REGISTRY['CIF'].write("Service activateOverlay not implemented on this driver", {Severity:WARNING})
+
+    #===========================================================================
+    def getSingleChanneled(self, *args, **kargs ):
+        if len(args)!=1:
+            raise SyntaxException("Invalid number of arguments given")
+
+        timeout = args[0]
+
+        REGISTRY['CIF'].write("Retrieving the single channeled limits ...", {Severity:INFORMATION})
+
+        return self._getSingleChanneled(timeout)
+
+    #===========================================================================
+    def _getSingleChanneled(self, timeout):
+        REGISTRY['CIF'].write("Service GetSingleChanneled not implemented on this driver", {Severity:WARNING})
+
+    #===========================================================================
+    def applySingleChanneled(self, *args, **kargs ):
+        if len(args)!=1:
+            raise SyntaxException("Invalid number of arguments given")
+
+        single_limits = args[0]
+
+        REGISTRY['CIF'].write("Applying the single channeled limits ...", {Severity:INFORMATION})
+
+        return self._applySingleChanneled(single_limits)
+
+    #===========================================================================
+    def _applySingleChanneled(self, timeout):
+        REGISTRY['CIF'].write("Service ApplySingleChanneled not implemented on this driver", {Severity:WARNING})
 
     #===========================================================================
     def getLimits(self, *args, **kargs ):
 
         useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
-        
+
         #TODO implement more flexible input
-        if len(args)!=1: 
+        if len(args)!=1:
             raise SyntaxException("Expected parameter")
 
         param = args[0]
-
-        if type(param)==str:
+ 
+        if type(param) == str or type(param) == unicode:
             param = self[param]
 
         return self._getLimits( param, useConfig)
@@ -567,17 +673,21 @@ class TmInterface(Configurable, Interface):
     #===========================================================================
     def setLimits(self, *args, **kargs ):
         useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
-        
-        if len(args)!=2: 
-            raise SyntaxException("Expected parameter and limits values")
 
-        param = args[0]
-        limits = args[1]
+        nArgs = len(args)
 
-        if type(param)==str:
+        # 2 parameters provided: paramName and Config dictionary
+        if nArgs==2:
+            param = args[0]
+        else:
+            raise SyntaxException("Expected parameter name")
+
+        if type(param) == str or type(param) == unicode:
             param = self[param]
 
-        return self._setLimits( param, limits, useConfig )
+        #REGISTRY['CIF'].write("(TM adapter) Limits: " + repr(limits), {Severity:INFORMATION})
+
+        return self._setLimits( param, useConfig )
 
     #===========================================================================
     def loadLimits(self, *args, **kargs ):
@@ -602,36 +712,31 @@ class TmInterface(Configurable, Interface):
     def _restoreNormalLimits(self, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return True
-               
+
     #===========================================================================
     def _refreshItem(self, param, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
+        return
 
     #===========================================================================
     def _injectItem(self, param, value, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
+        return
 
     #===========================================================================
-    def _setLimit(self, param, limit, value, config ):
+    def _isAlarmed(self, param, config ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
-
-    #===========================================================================
-    def _getLimit(self, param, limit, config ):
-        REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
+        return
 
     #===========================================================================
     def _getLimits(self, param, config ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
+        return
 
     #===========================================================================
-    def _setLimits(self, param, limits, config ):
+    def _setLimits(self, param, config ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
+        return
 
     #===========================================================================
     def _loadLimits(self, param, limits, config ):
@@ -640,8 +745,8 @@ class TmInterface(Configurable, Interface):
         limits: dictionary containing the limit definitions with LoYel, Midpoint, Expected, etc
         """
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
-        return 
-               
+        return
+
     #===========================================================================
     def _operationStart(self):
         LOG("TM interface started operation")
@@ -649,7 +754,7 @@ class TmInterface(Configurable, Interface):
     #===========================================================================
     def _operationEnd(self):
         LOG("TM interface finished  operation")
-               
+
     #===========================================================================
     def __refreshItemNotify(self, param, useConfig):
         try:
@@ -665,7 +770,7 @@ class TmInterface(Configurable, Interface):
                 else:
                     value = repr(param._getRaw())
                 REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), str(value), NOTIF_STATUS_OK, "" )
-        except DriverException,ex:
+        except DriverException as ex:
             if doNotify:
                 reason = ex.message
                 REGISTRY['CIF'].notify( NOTIF_TYPE_VAL, param.fullName(), "???", NOTIF_STATUS_FL, reason )
@@ -677,14 +782,14 @@ class TmInterface(Configurable, Interface):
         if not validity:
             raise DriverException("Parameter invalid")
         return [value,validity]
-    
+
     #===========================================================================
     def __calccounter(self, retries):
         counter = retries
-        if counter < 1: 
+        if counter < 1:
             counter = 1
         return counter
-        
+
     #===========================================================================
     def __timeiter(self, value, config):
         if type(value)==list:
@@ -704,7 +809,7 @@ class TmInterface(Configurable, Interface):
 
     #===========================================================================
     def __comparator(self, param, value_item, cFunc, symbol, config = {} ):
-        
+
         # If no configuration is given, use the interface defaults
         if len(config)==0:
             config = self.getConfig()
@@ -712,12 +817,13 @@ class TmInterface(Configurable, Interface):
         # Retrieve configuration parameters
         retries = config.get(Retries)
         tolerance = config.get(Tolerance)
+        relTolerance = config.get(RelTolerance)
         ignoreCase = config.get(IgnoreCase)
 
         # Retrieve initial values
-        if type(param)==str:
+        if type(param) == str or type(param) == unicode:
             param = self[param]
-        
+
         # Prepare comparison tools
         counter = self.__calccounter(retries)
         comp = self.__timeiter(value_item, config)
@@ -729,43 +835,38 @@ class TmInterface(Configurable, Interface):
         LOG("### Starting TM comparison")
         comparisonResult = False
 
-        # Perform comparisons        
+        # Perform comparisons
         while counter > 0:
-            
+
             # Abort verifications on pause or abort commands
             for verifier in self.__verifiers:
                 if verifier.stopped:
                     return False
-            
-            if firstCheck: 
+
+            if firstCheck:
                 firstCheck = False
             else:
                 config[Wait] = True
- 
+
             LOG("### (" + str(counter) + ") Retrieving " + param.name() + " comparison value")
             cvalue,status = self.__refreshItemValidity(param, config)
 
             LOG("### (" + str(counter) + ") Comparing " + repr(param.name()) + "=" + repr(cvalue) + " against " + str(comp) +\
-                ", iteration " + str(counter) + ", tolerance " + str(tolerance))
+                ", iteration " + str(counter) + ", tolerance " + str(tolerance) + ", relative tolerance " + str(relTolerance))
             LOG("### (" + str(counter) + ") Comparison config: " + repr(config))
-            
-            #-----------------------------------------------------------------------
-            # Type checking
-            self.__checkComparisonTypes(cvalue,comp)
-
-            if cFunc(cvalue,comp,tolerance,ignoreCase):
-                LOG("### (" + str(counter) + ") Comparison success") 
+            if cFunc(cvalue, comp, tolerance, relTolerance, ignoreCase):
+                LOG("### (" + str(counter) + ") Comparison success")
                 comparisonResult = True
                 break
             else:
                 LOG("### (" + str(counter) + ") Comparison failed")
                 comparisonResult = False
-                
-            if config.has_key(Notify) and config[Notify] == True:
+
+            if Notify in config and config[Notify] == True:
                 LOG("### (" + str(counter) + ") Notify comparison retry")
                 val = symbol + str(comp)
                 reason = "Value is " + str(cvalue) + ", retrying comparison (" + str(counter) + " left)"
-                if config.has_key("STEP_ID"):
+                if "STEP_ID" in config:
                     step = config.get("STEP_ID")
                     for verifier in self.__verifiers:
                         if verifier.step == step:
@@ -794,45 +895,40 @@ class TmInterface(Configurable, Interface):
         retries = config.get(Retries)
         strict = config.get(Strict)
         tolerance = config.get(Tolerance)
+        relTolerance = config.get(RelTolerance)
 
         # Retrieve initial values
-        if type(param)==str:
+        if type(param) == str or type(param) == unicode:
             param = self[param]
-        cvalue,status = self.__refreshItemValidity(param, config)
 
         counter = self.__calccounter(retries)
         comp_lt = self.__timeiter(lvalue_item, config)
         comp_gt = self.__timeiter(gvalue_item, config)
-        
+
         firstCheck  = True
-        
-        while counter > 0: 
+
+        while counter > 0:
 
             # Abort verifications on pause or abort commands
             for verifier in self.__verifiers:
                 if verifier.stopped:
                     return False
 
-            #-----------------------------------------------------------------------
-            # Type checking
-            self.__checkComparisonTypes(cvalue,comp_lt)
-            self.__checkComparisonTypes(cvalue,comp_gt)
-
-            if cFunc(cvalue,comp_lt, comp_gt, strict, tolerance): return True
-            
-            if firstCheck: 
+            if firstCheck:
                 firstCheck = False
             else:
                 config[Wait] = True
-            
+
             cvalue,status = self.__refreshItemValidity(param, config)
+            if cFunc(cvalue, comp_lt, comp_gt, strict, tolerance, relTolerance):
+                return True
             comp_lt = self.__timeiter(lvalue_item, config)
             comp_gt = self.__timeiter(gvalue_item, config)
             counter = counter - 1
-            if config.has_key(Notify) and config[Notify] == True:
+            if Notify in config and config[Notify] == True:
                 val = symbol + " " + str(comp_lt) + "," + str(comp_gt)
                 reason = "Value is " + str(cvalue) + ", retrying comparison (" + str(counter) + ")"
-                if config.has_key("STEP_ID"):
+                if "STEP_ID" in config:
                     step = config.get("STEP_ID")
                     for verifier in self.__verifiers:
                         if verifier.step == step:
@@ -845,17 +941,16 @@ class TmInterface(Configurable, Interface):
         return False
 
     #===========================================================================
-    def __c_eq(self, cvalue, comp, tolerance = 0, ignoreCase = False):
-        
+    def __c_eq(self, cvalue, comp, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance], ignoreCase = False):
+
         if type(comp)==list:
             for item in comp:
-                if self.__c_eq(cvalue, item, tolerance, ignoreCase): return True
+                if self.__c_eq(cvalue, item, tolerance, relTolerance, ignoreCase): return True
             return False
 
         #-----------------------------------------------------------------------
         # String comparisons (tolerance does not apply)
         if type(cvalue) == str:
-            
             if ignoreCase:
                 return (cvalue.upper() == comp.upper())
             else:
@@ -863,25 +958,21 @@ class TmInterface(Configurable, Interface):
         #-----------------------------------------------------------------------
         # Numeric comparisons (ignoreCase does not apply)
         else:
-            
             if tolerance<0:
                 raise DriverException("Error: cannot accept negative tolerance")
+            elif type(cvalue)==float or type(comp)==float:
+                return _float_eq(cvalue, comp, abs_tol=tolerance, rel_tol=relTolerance)
             elif tolerance>0:
                 return self.__c_btw(cvalue, comp-tolerance, comp+tolerance, False)
-            else: 
-                if type(cvalue)==float or type(comp)==float:
-                    dnm = max(abs(cvalue),abs(comp))
-                    if not dnm > 0: dnm = 1 
-                    return ( abs(cvalue-comp) / dnm ) < EPSILON
-                else:
-                    return (cvalue == comp)
-        
+            else:
+                return (cvalue == comp)
+
     #===========================================================================
-    def __c_neq(self, cvalue, comp, tolerance = 0, ignoreCase = False): 
+    def __c_neq(self, cvalue, comp, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance], ignoreCase = False):
 
         if type(comp)==list:
             for item in comp:
-                if self.__c_neq(cvalue, item, tolerance, ignoreCase): return True
+                if self.__c_neq(cvalue, item, tolerance, relTolerance, ignoreCase): return True
             return False
 
         #-----------------------------------------------------------------------
@@ -896,89 +987,86 @@ class TmInterface(Configurable, Interface):
         else:
             if tolerance<0:
                 raise DriverException("Error: cannot accept negative tolerance")
+            elif type(cvalue)==float or type(comp)==float:
+                return not _float_eq(cvalue, comp, abs_tol=tolerance, rel_tol=relTolerance)
             elif tolerance>0:
                 return self.__c_nbtw(cvalue, comp-tolerance, comp+tolerance, False)
-            else: 
-                if type(cvalue)==float or type(comp)==float:
-                    dnm = max(abs(cvalue),abs(comp))
-                    if not dnm > 0: dnm = 1 
-                    return ( abs(cvalue-comp) / dnm ) > EPSILON
-                else:
-                    return (cvalue != comp)
-    
+            else:
+                return (cvalue != comp)
+
     #===========================================================================
-    def __c_lt(self, cvalue, comp, tolerance = 0, ignoreCase = False):
-         
+    def __c_lt(self, cvalue, comp, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance], ignoreCase = False):
+
         if type(comp)==list:
             for item in comp:
-                if self.__c_lt(cvalue, item, tolerance, ignoreCase): return True
+                if self.__c_lt(cvalue, item, tolerance, relTolerance, ignoreCase): return True
             return False
-         
+
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
-            notEqual = self.__c_neq(cvalue, comp, 0, ignoreCase) 
+            notEqual = self.__c_neq(cvalue, comp, tolerance, relTolerance, ignoreCase)
             return notEqual and (cvalue < comp)
         else:
             return (cvalue < comp)
-        
+
     #===========================================================================
-    def __c_le(self, cvalue, comp, tolerance = 0, ignoreCase = False):
+    def __c_le(self, cvalue, comp, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance], ignoreCase = False):
 
         if type(comp)==list:
             for item in comp:
-                if self.__c_le(cvalue, item, tolerance, ignoreCase): return True
+                if self.__c_le(cvalue, item, tolerance, relTolerance, ignoreCase): return True
             return False
-        
+
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
-            equal = self.__c_eq(cvalue, comp, 0, ignoreCase) 
+            equal = self.__c_eq(cvalue, comp, tolerance, relTolerance, ignoreCase)
             return equal or (cvalue < comp)
         else:
             return (cvalue <= comp)
-        
+
     #===========================================================================
-    def __c_gt(self, cvalue, comp, tolerance = 0, ignoreCase = False):
-        
+    def __c_gt(self, cvalue, comp, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance], ignoreCase = False):
+
         if type(comp)==list:
             for item in comp:
-                if self.__c_gt(cvalue, item, tolerance, ignoreCase): return True
+                if self.__c_gt(cvalue, item, tolerance, relTolerance, ignoreCase): return True
             return False
 
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
-            notEqual = self.__c_neq(cvalue, comp, 0, ignoreCase) 
+            notEqual = self.__c_neq(cvalue, comp, tolerance, relTolerance, ignoreCase)
             return notEqual and (cvalue > comp)
         else:
             return (cvalue > comp)
-        
+
     #===========================================================================
-    def __c_ge(self, cvalue, comp, tolerance = 0, ignoreCase = False):
-        
+    def __c_ge(self, cvalue, comp, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance], ignoreCase = False):
+
         if type(comp)==list:
             for item in comp:
-                if self.__c_ge(cvalue, item, tolerance, ignoreCase): return True
+                if self.__c_ge(cvalue, item, tolerance, relTolerance, ignoreCase): return True
             return False
-         
+
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if type(cvalue)==float or type(comp)==float:
-            equal = self.__c_eq(cvalue, comp, 0, ignoreCase) 
+            equal = self.__c_eq(cvalue, comp, tolerance, relTolerance, ignoreCase)
             return equal or (cvalue > comp)
         else:
             return (cvalue >= comp)
-                
+
     #===========================================================================
-    def __c_btw(self, cvalue, lcomp, gcomp, strict, tolerance = 0):
-        
+    def __c_btw(self, cvalue, lcomp, gcomp, strict, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance],):
+
         if type(lcomp)==list or type(gcomp)==list:
             raise DriverException("Error: cannot use this operator with lists")
-        
+
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
-        
+
         if tolerance<0:
             raise DriverException("Error: cannot accept negative tolerance")
         else:
@@ -986,13 +1074,13 @@ class TmInterface(Configurable, Interface):
                 return (lcomp - tolerance < cvalue < gcomp + tolerance)
             else:
                 return (lcomp - tolerance <= cvalue <= gcomp + tolerance)
-            
+
     #===========================================================================
-    def __c_nbtw(self, cvalue, lcomp, gcomp, strict, tolerance = 0): 
+    def __c_nbtw(self, cvalue, lcomp, gcomp, strict, tolerance = 0, relTolerance = INTERFACE_DEFAULTS[RelTolerance],):
 
         if type(lcomp)==list or type(gcomp)==list:
             raise DriverException("Error: cannot use this operator with lists")
-        
+
         if type(cvalue) == str:
             raise DriverException("Error: cannot use this operator with strings")
         if tolerance<0:
@@ -1004,26 +1092,16 @@ class TmInterface(Configurable, Interface):
                 return (lcomp + tolerance >= cvalue) or (gcomp - tolerance <= cvalue)
 
     #===========================================================================
-    def __checkComparisonTypes(self, cvalue, comp):
-        if type(cvalue) == str and type(comp) != str:
-            raise DriverException("Comparing a string against a value of type " + str(type(comp)))
-        elif type(cvalue) == bool and type(comp) != bool:
-            raise DriverException("Comparing a boolean value against a value of type " + str(type(comp)))
-        else:
-            if type(cvalue) in [int,long,float] and type(comp) not in [int,long,float]:
-                raise DriverException("Comparing a value of type " + str(type(cvalue)) +" against a value of type " + str(type(comp)))
-
-    #===========================================================================
     def __checkComparsionArgs(self, args, kargs):
         if len(args)==0 and len(kargs)==0:
             raise SyntaxException("Received no parameters")
-        
+
     #===========================================================================
     def __resetVerification(self):
         self.__verifTable = []
         for v in self.__verifiers[:]:
             self.__verifiers.remove(v)
-                    
+
     #===========================================================================
     def __prepareVerification(self, verificationSteps):
         self.__resetVerification()
@@ -1053,7 +1131,7 @@ class TmInterface(Configurable, Interface):
 
     #===========================================================================
     def __checkVerifiers(self):
-        
+
         # Show verification information
         verifMessage = ""
         for v in self.__verifiers:
@@ -1065,28 +1143,28 @@ class TmInterface(Configurable, Interface):
             # Take into account ternary operators
             if len(defn[1]) >= 4 and type(defn[1][3])!=dict: # it is value of ternary op
                 message = message + " and " + str(defn[1][3])
-            
+
             # Configuration
             configText = ""
             if len(defn[1]) >=4 and type(defn[1][-1])==dict:
                 configText = ", ";
                 configDict = defn[1][-1]
                 for key in configDict:
-                    if len(configText)>0: 
+                    if len(configText)>0:
                         configText += " "
                     configText += str(key) + " = " + str(configDict.get(key))
 
             if len(verifMessage)>0: verifMessage += "\n"
             verifMessage += message + configText
         REGISTRY['CIF'].write(verifMessage)
-        
+
         # Overall result of verification
         someWrong = False
         # Will be true if user interaction has been disabled
         superseded = False
         # Will be true if verification was interrupted
         stopped = False
-        overallResult = TmResult() 
+        overallResult = TmResult()
         errors = []
         for v in self.__verifiers:
             defn = v.getDefinition()
@@ -1097,7 +1175,7 @@ class TmInterface(Configurable, Interface):
 
             # Verifier step number
             stepNum = str(defn[0])
-            
+
             # Decide how to report the failed verification step
             if v.stopped:
                 stopped = True
@@ -1112,7 +1190,7 @@ class TmInterface(Configurable, Interface):
                 if defn[2][PromptUser] == True:
                     severity = ERROR
                 # If PromptUser is false, we will ignore the failed check provided
-                # that it is not caused by a system failure (timeout, invalid param) 
+                # that it is not caused by a system failure (timeout, invalid param)
                 elif (v.error is None):
                     superseded = True
                     severity = INFORMATION
@@ -1128,7 +1206,7 @@ class TmInterface(Configurable, Interface):
                 message = "Verification " + stepNum + " failed. "
                 message += reason + "."
                 REGISTRY['CIF'].write( message , {Severity:severity} )
-        
+
         if stopped:
             REGISTRY['CIF'].write( "Verification interrupted" )
         elif someWrong and superseded:
@@ -1140,6 +1218,7 @@ class TmInterface(Configurable, Interface):
     #==========================================================================
     def _onInterfaceCommand(self, commandId):
         if (commandId in ["CMD_INTERRUPT","CMD_ABORT"]):
+            self.__lastInterruptionTime = TIME(NOW)
             for verifier in self.__verifiers:
                 verifier.stopVerification()
 

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Task interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -54,17 +54,17 @@ superClass = spell.lib.adapter.task.TaskInterface
 
 ###############################################################################
 class TaskInterface(superClass):
-    
+
     """
     DESCRIPTION:
         Empty task management interface. 
     """
-    
+
     #==========================================================================
     def __init__(self):
         superClass.__init__(self)
         LOG("Created")
-            
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         superClass.setup(self, ctxConfig,drvConfig)
@@ -74,11 +74,11 @@ class TaskInterface(superClass):
     def cleanup(self):
         superClass.cleanup(self)
         LOG("Cleanup empty TASK interface")
-    
+
     #==========================================================================
     def _startTask(self, name, config = {}  ):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-        
+
     #==========================================================================
     def _stopTask(self, name, config = {} ):
         raise DriverException("Cannot perform operation", "Not supported by driver")
@@ -90,5 +90,3 @@ class TaskInterface(superClass):
 ################################################################################
 # Interface handle
 TASK = TaskInterface()
-        
-            

@@ -1,0 +1,5 @@
+variables:
+  DOCKER_FILEPATH: docker/logrotate
+  DOCKER_IMAGE: spell/logrotate-ubuntu
+  NEXUS_APPLICATION: spell-logrotate
+  DOCKER_BUILD_CONTEXT: ""

@@ -1,0 +1,51 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: kube-ses24-spell-server
+spec:
+  chart:
+    spec:
+      chart: ./deploy/spell-server
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: spell-repo
+        namespace: flux-system
+  interval: 10m0s
+  valuesFrom:
+  - kind: ConfigMap
+    name: kube-ses24-spell-release
+    valuesKey: kube-ses24-values.yaml
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ses24-encryption-keys
+spec:
+  refreshInterval: "15s" # synchronisation
+  secretStoreRef:
+    name: spell-vault-backend
+    kind: SecretStore
+
+  dataFrom:
+  - extract:
+      key: /ses24-encryption
+      decodingStrategy: Auto
+
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ses24-encryption-cert
+spec:
+  refreshInterval: "15s" # synchronisation
+  secretStoreRef:
+    name: spell-vault-backend
+    kind: SecretStore
+    
+  data:
+    - secretKey: ses24_rsa.pem
+      remoteRef:
+        key:  /ses24-encryption
+        property: ses24_rsa.pem

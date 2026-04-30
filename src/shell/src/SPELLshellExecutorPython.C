@@ -5,7 +5,7 @@
 // DESCRIPTION: Pything bindings for executor in shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -188,8 +188,7 @@ static PyMethodDef ShellExecutor_Methods[] =
 //============================================================================
 static PyTypeObject ShellExecutor_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "shell.ShellExecutor",       //tp_name
     sizeof(PyShellExecutorObject),          //tp_basicsize
     0,                                 //tp_itemsize
@@ -242,7 +241,7 @@ static int ShellExecutor_Init( PyShellExecutorObject* self, PyObject* args, PyOb
 //============================================================================
 static void ShellExecutor_Dealloc( PyShellExecutorObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================

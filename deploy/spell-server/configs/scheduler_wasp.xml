@@ -1,0 +1,13 @@
+<scheduler id="wasp">
+    <name>WASP activity scheduler</name>
+    <!-- list of URLs to reach the service -->
+    <urls>
+{{- range $idx,$value := .Values.spell_addons.pace.pharos }}
+      <url>{{ $value }}</url>
+{{- end }}
+    </urls>
+    <!-- activity request interval in seconds -->
+    <interval>15</interval>
+    <!-- custom user data -->
+    <userdata>/home/spell/.wasp</userdata>
+</scheduler>

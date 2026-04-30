@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: User interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -54,17 +54,17 @@ superClass = spell.lib.adapter.usr.UserInterface
 
 ###############################################################################
 class UserInterface(superClass):
-    
+
     """
     DESCRIPTION:
         User management interface. 
     """
-    
+
     #==========================================================================
     def __init__(self):
         superClass.__init__(self)
         LOG("Created")
-            
+
     #==========================================================================
     def setup(self, ctxConfig,drvConfig):
         superClass.setup(self, ctxConfig, drvConfig)
@@ -74,11 +74,11 @@ class UserInterface(superClass):
     def cleanup(self):
         superClass.cleanup(self)
         LOG("Cleanup empty USER interface")
-        
+
     #==========================================================================
     def _login(self, username, password, config = {} ):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-        
+
     #==========================================================================
     def _logout(self, username, config = {}):
         raise DriverException("Cannot perform operation", "Not supported by driver")
@@ -86,7 +86,7 @@ class UserInterface(superClass):
     #==========================================================================
     def _isLoggedIn(self, username, config = {}):
         raise DriverException("Cannot perform operation", "Not supported by driver")
-            
+
 ###############################################################################
 # Interface instance
 USER = UserInterface()

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Base configurable entity and configuration interface for drivers
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -35,7 +35,7 @@ from spell.lib.exception import SyntaxException
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from interface import Interface
+from .interface import Interface
 
 #*******************************************************************************
 # System Imports
@@ -53,13 +53,13 @@ NO_CONFIG = [ 'command', 'commands', 'sequence', 'args', 'verify', 'config' ]
 
 ###############################################################################
 class Configurable(object):
-    
+
     __config = {}
-    
+
     #==========================================================================
     def __init__(self):
         self.__config = {}
-    
+
     #==========================================================================
     def setConfig(self, source ):
         if isinstance(source,Configurable):
@@ -68,11 +68,11 @@ class Configurable(object):
             self.__config = source.copy()
         else:
             raise BaseException("Cannot set configuration from " + repr(source))
-            
+
     #==========================================================================
     def getConfig(self, key = None):
         if key is not None:
-            if self.__config.has_key(key):
+            if key in self.__config:
                 return self.__config.get(key)
             return None
         return self.__config.copy()
@@ -87,13 +87,13 @@ class Configurable(object):
 
     #==========================================================================
     def hasConfig(self, key):
-        return self.__config.has_key(key)
+        return key in self.__config
 
     #==========================================================================
     def delConfig(self, key):
-        if self.__config.has_key(key):
+        if key in self.__config:
             del self.__config[key]
-    
+
     #==========================================================================
     def buildConfig(self, args, kargs, secondary = {}, defaults = {} ):
         useConfig = {}
@@ -104,24 +104,24 @@ class Configurable(object):
         # Parameters coming from this same entity
         useConfig.update(self.__config)
         # Parameters coming from user arguments
-        
+
         # Then update the dict with the dictionary type arguments only
         if len(args)>0:
             for arg in args:
                 if type(arg)==dict:
                     useConfig.update(arg)
-        
+
         # Parse named arguments, if any
-        if len(kargs)>0 and kargs.has_key('config'):
+        if len(kargs)>0 and 'config' in kargs:
             # Then update the dict with the contents of 'config'
             useConfig.update(kargs.get('config'))
             kargs.pop('config')
-        
+
         # Update the dict with remaining kargs
-        for key in kargs.keys():
+        for key in list(kargs.keys()):
             if not key in NO_CONFIG:
                 useConfig[key] = kargs.get(key)
-                
+
         return useConfig
 
     #==========================================================================
@@ -133,7 +133,7 @@ class Configurable(object):
                 raise SyntaxException("Unknown modifier: " + repr(key))
             if type(object)!=str:
                 raise SyntaxException("Not a modifier: " + repr(key))
-        
+
 ###############################################################################
 class ConfigInterface(Configurable,Interface):
     """
@@ -147,7 +147,7 @@ class ConfigInterface(Configurable,Interface):
     def __init__(self):
         Interface.__init__(self, "CONFIG")
         LOG("Created")
-    
+
     #==========================================================================
     def setup(self, contextConfig, driverConfig ):
         LOG("Setup CONFIG adapter interface")
@@ -157,5 +157,3 @@ class ConfigInterface(Configurable,Interface):
     #==========================================================================
     def cleanup(self, shutdown = False):
         LOG("Cleanup CONFIG adapter interface")
-        
-    

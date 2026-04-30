@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the CIF for server environment
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -51,7 +51,7 @@
 
 
 // DEFINES /////////////////////////////////////////////////////////////////
-#define ACKNOWLEDGE_TIMEOUT_SEC 30
+#define ACKNOWLEDGE_TIMEOUT_MSEC 30000
 // GLOBALS /////////////////////////////////////////////////////////////////
 SPELLserverCif* s_handle = NULL;
 
@@ -72,11 +72,18 @@ SPELLserverCif::SPELLserverCif()
     m_ifc = NULL;
     m_buffer = NULL;
     m_wovBuffer = NULL;
+    m_rdotcoBuffer = NULL;
     m_ready = false;
-
+    m_timeoutOpenProcMsec = 0;
+    m_ipcTimeoutGuiRequestMsec = 0;
+    m_ipcTimeoutCtxRequestMsec = 0;
+    m_ipcInterruptionNotified = false;
     m_errorState = false;
     m_sequence = 0;
     m_sequenceStack = 0;
+    m_numNotAcknowledged = 0;
+    m_timeoutExecLoginMsec = 0;
+    m_timeoutAcknowledgeSec = 0;
 
     getExecutorConfig().setVisible(true);
     getExecutorConfig().setAutomatic(false);
@@ -101,12 +108,6 @@ SPELLserverCif::SPELLserverCif()
     m_closing = false;
 
     m_lastStack = "";
-
-	m_ipcTimeoutGuiRequestMsec = SPELLconfiguration::instance().commonOrDefault( "GuiRequestTimeout", IPC_GUIREQUEST_DEFAULT_TIMEOUT_MSEC );
-	m_ipcTimeoutCtxRequestMsec = SPELLconfiguration::instance().commonOrDefault( "CtxRequestTimeout", IPC_CTXREQUEST_DEFAULT_TIMEOUT_MSEC );
-	m_timeoutOpenProcMsec = SPELLconfiguration::instance().commonOrDefault( "OpenProcTimeout", IPC_OPENPROC_DEFAULT_TIMEOUT_MSEC );
-	m_timeoutExecLoginMsec = SPELLconfiguration::instance().commonOrDefault( "ExecutorLoginTimeout", IPC_EXLOGIN_DEFAULT_TIMEOUT_MSEC );
-	m_timeoutAcknowledgeSec = SPELLconfiguration::instance().commonOrDefault( "AcknowledgeTimeout", ACKNOWLEDGE_TIMEOUT_SEC );
 }
 
 //=============================================================================
@@ -129,6 +130,11 @@ SPELLserverCif::~SPELLserverCif()
     	delete m_wovBuffer;
     	m_wovBuffer = NULL;
 	}
+    if (m_rdotcoBuffer != NULL)
+    {
+    	delete m_rdotcoBuffer;
+    	m_rdotcoBuffer = NULL;
+	}
 }
 
 //=============================================================================
@@ -136,6 +142,18 @@ SPELLserverCif::~SPELLserverCif()
 //=============================================================================
 void SPELLserverCif::specificSetup( const SPELLcifStartupInfo& info )
 {
+	m_ipcTimeoutGuiRequestMsec = SPELLconfiguration::instance().commonOrDefault( "GuiRequestTimeout", IPC_GUIREQUEST_DEFAULT_TIMEOUT_MSEC );
+	m_ipcTimeoutCtxRequestMsec = SPELLconfiguration::instance().commonOrDefault( "CtxRequestTimeout", IPC_CTXREQUEST_DEFAULT_TIMEOUT_MSEC );
+	m_timeoutOpenProcMsec = SPELLconfiguration::instance().commonOrDefault( "OpenProcTimeout", IPC_OPENPROC_DEFAULT_TIMEOUT_MSEC );
+	m_timeoutExecLoginMsec = SPELLconfiguration::instance().commonOrDefault( "ExecutorLoginTimeout", IPC_EXLOGIN_DEFAULT_TIMEOUT_MSEC );
+	m_timeoutAcknowledgeSec = SPELLconfiguration::instance().commonOrDefault( "AcknowledgeTimeout", ACKNOWLEDGE_TIMEOUT_MSEC ) / 1000;
+
+	LOG_INFO("GUI request timeout: " + ISTR(m_ipcTimeoutGuiRequestMsec) + " ms");
+	LOG_INFO("CTX request timeout: " + ISTR(m_ipcTimeoutCtxRequestMsec) + " ms");
+	LOG_INFO("       OPEN timeout: " + ISTR(m_timeoutOpenProcMsec) + " ms");
+	LOG_INFO("      LOGIN timeout: " + ISTR(m_timeoutExecLoginMsec) + " ms");
+	LOG_INFO("        ACK timeout: " + ISTR(m_timeoutAcknowledgeSec) + " sec");
+
 	//Initialize Executor Config parameters
     getExecutorConfig().setVisible(true);
     getExecutorConfig().setAutomatic(false);
@@ -156,6 +174,9 @@ void SPELLserverCif::specificSetup( const SPELLcifStartupInfo& info )
 
     m_wovBuffer = new SPELLvariableBuffer( getProcId(), *this );
     m_wovBuffer->start();
+
+    m_rdotcoBuffer = new SPELLresourceBuffer( getProcId(), *this );
+    m_rdotcoBuffer->start();
 
     // Initialize message sequencer
     m_sequence = 0;
@@ -188,8 +209,10 @@ void SPELLserverCif::specificCleanup( bool force )
     cancelPrompt();
     m_buffer->stop();
     m_wovBuffer->stop();
+    m_rdotcoBuffer->stop();
     m_buffer->join();
     m_wovBuffer->join();
+    m_rdotcoBuffer->join();
     DEBUG("[CIF] Disconnecting server CIF");
     if (!force)
     {
@@ -246,14 +269,12 @@ SPELLipcMessage SPELLserverCif::login()
     loginmsg.set( MessageField::FIELD_CSP, getProcId());
 
     // status loaded is not correct if the procedure did not compile, but the error will be
-    // notified afterwards anyhow.
-    loginmsg.set( MessageField::FIELD_EXEC_STATUS, SPELLexecutorUtils::statusToString(STATUS_LOADED));
+    // notified afterwards anyhow.c
     loginmsg.set( MessageField::FIELD_ASRUN_NAME, getAsRunName() );
     loginmsg.set( MessageField::FIELD_LOG_NAME, SPELLlog::instance().getLogFile() );
 
     LOG_INFO("Login information:");
     LOG_INFO("Proc  : " + getProcId() );
-    LOG_INFO("Status: LOADED");
     LOG_INFO("AsRun : " + getAsRunName() );
     LOG_INFO("Log   : " + SPELLlog::instance().getLogFile() );
 
@@ -376,7 +397,10 @@ void SPELLserverCif::processLogin( const SPELLipcMessage& loginResp )
     {
     	getExecutorConfig().setForceTcConfirm( loginResp.get(MessageField::FIELD_FORCE_TC_CONFIRM)  == ExecutorConstants::TRUE_VALUE );
     }
-
+    if (loginResp.hasField(MessageField::FIELD_FORCE_PROMPT_CONFIRM))
+    {
+    	getExecutorConfig().setForcePromptConfirm( loginResp.get(MessageField::FIELD_FORCE_PROMPT_CONFIRM)  == ExecutorConstants::TRUE_VALUE );
+    }
     if (loginResp.hasField(MessageField::FIELD_SAVE_STATE_MODE))
     {
     	getExecutorConfig().setSaveStateMode( loginResp.get(MessageField::FIELD_SAVE_STATE_MODE) );
@@ -385,6 +409,16 @@ void SPELLserverCif::processLogin( const SPELLipcMessage& loginResp )
     if (loginResp.hasField(MessageField::FIELD_WATCH_VARIABLES))
     {
     	getExecutorConfig().setWatchEnabled( loginResp.get(MessageField::FIELD_WATCH_VARIABLES) == ExecutorConstants::TRUE_VALUE );
+    }
+
+    if (loginResp.hasField(MessageField::FIELD_RESOURCES_DISPLAY))
+    {
+    	getExecutorConfig().setResourcesDisplayEnabled( loginResp.get(MessageField::FIELD_RESOURCES_DISPLAY) == ExecutorConstants::TRUE_VALUE );
+    }
+
+    if (loginResp.hasField(MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED))
+    {
+    	getExecutorConfig().setLocalResourcesSupported( loginResp.get(MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED) == ExecutorConstants::TRUE_VALUE );
     }
 
     if (loginResp.hasField(MessageField::FIELD_MAX_VERBOSITY))
@@ -412,8 +446,11 @@ void SPELLserverCif::processLogin( const SPELLipcMessage& loginResp )
     LOG_INFO("Prompt Delay  : " + ISTR(getExecutorConfig().getPromptWarningDelay()));
     LOG_INFO("By Step       : " + BSTR(getExecutorConfig().isByStep()));
     LOG_INFO("Force Tc Conf : " + BSTR(getExecutorConfig().isForceTcConfirm()));
+    LOG_INFO("Force Prompt Conf : " + BSTR(getExecutorConfig().isForcePromptConfirm()));
     LOG_INFO("Save State Mod: " + getExecutorConfig().getSaveStateMode());
     LOG_INFO("WatchVariables: " + BSTR(getExecutorConfig().isWatchEnabled()));
+    LOG_INFO("ResourcesDisplay: " + BSTR(getExecutorConfig().isResourcesDisplayEnabled()));
+    LOG_INFO("Local Resource supported: " + BSTR(getExecutorConfig().isLocalResourcesSupported()));
     LOG_INFO("Max Verbosity : " + ISTR(getExecutorConfig().getMaxVerbosity()));
 
 }
@@ -479,6 +516,8 @@ void SPELLserverCif::sendGUIMessage( const SPELLipcMessage& msg )
         	LOG_ERROR("Unable to communicate with Context: " + std::string(ex.what()));
         	SPELLexecutor::instance().pause();
         }
+    } else {
+        usleep(500000);
     }
 }
 
@@ -576,35 +615,30 @@ void SPELLserverCif::prepareMessage( SPELLipcMessage& msg,  const std::string da
 void SPELLserverCif::specificNotifyLine()
 {
 	// Local variables
-	std::string stage = "";
-
+    SPELLsafeThreadOperations ops("Notify");
+    std::string stage = "";
+    SPELLipcMessage msg = m_lnMessage;
 	// prepares the message to be sent to GUI
-	prepareMessage( m_lnMessage, MessageValue::DATA_TYPE_LINE, MSG_TYPE_NOTIFY_ASYNC);
+	prepareMessage( msg, MessageValue::DATA_TYPE_LINE, MSG_TYPE_NOTIFY_ASYNC);
 
 	// Update message with stage info
     stage = getStage();
-
-    if (stage.find(":") != std::string::npos)
+    size_t delim = stage.find(":");
+    if (delim != std::string::npos)
     {
-        std::vector<std::string> stage_title = SPELLutils::tokenize(stage,":");
-        if (stage_title.size()==2)
-        {
-        	m_lnMessage.set(MessageField::FIELD_STAGE_ID,stage_title[0]);
-        	m_lnMessage.set(MessageField::FIELD_STAGE_TL,stage_title[1]);
-        }
+        msg.set(MessageField::FIELD_STAGE_ID,stage.substr(0, delim));
+        if (delim + 1 < stage.length())
+        	msg.set(MessageField::FIELD_STAGE_TL,stage.substr(delim + 1));
         else
-        {
-            m_lnMessage.set(MessageField::FIELD_STAGE_ID,"(none)");
-            m_lnMessage.set(MessageField::FIELD_STAGE_TL,"(none)");
-        }
+        	msg.set(MessageField::FIELD_STAGE_TL,"(none)");
     }
     else
     {
-        m_lnMessage.set(MessageField::FIELD_STAGE_ID,stage);
-        m_lnMessage.set(MessageField::FIELD_STAGE_TL,stage);
+        msg.set(MessageField::FIELD_STAGE_ID,stage);
+        msg.set(MessageField::FIELD_STAGE_TL,stage);
     }
 
-	sendGUIMessage(m_lnMessage);
+	sendGUIMessage(msg);
 
 } //SPELLserverCif::specificNotifyLine()
 
@@ -615,10 +649,16 @@ void SPELLserverCif::specificNotifyLine()
 void SPELLserverCif::specificNotifyCall()
 {
 	// prepares the message to be sent to GUI
-	prepareMessage( m_lnMessage, MessageValue::DATA_TYPE_CALL, MSG_TYPE_NOTIFY);
+    SPELLsafeThreadOperations ops("NotifyCall");
+    SPELLipcMessage msg = m_lnMessage;
+	prepareMessage( msg, MessageValue::DATA_TYPE_CALL, MSG_TYPE_NOTIFY);
 
-	sendGUIMessage(m_lnMessage);
-    waitAcknowledge(m_lnMessage);
+	do
+	{
+	    sendGUIMessage(msg);
+	}
+	while (!waitAcknowledge(msg));
+
 } //void SPELLserverCif::specificNotifyCall()
 
 
@@ -627,11 +667,15 @@ void SPELLserverCif::specificNotifyCall()
 //=============================================================================
 void SPELLserverCif::specificNotifyReturn()
 {
-	// prepares the message to be sent to GUI
-	prepareMessage( m_lnMessage, MessageValue::DATA_TYPE_RETURN, MSG_TYPE_NOTIFY);
+    // prepares the message to be sent to GUI
+    SPELLsafeThreadOperations ops("NotifyReturn");
+    SPELLipcMessage msg = m_lnMessage;
+    prepareMessage(msg, MessageValue::DATA_TYPE_RETURN, MSG_TYPE_NOTIFY);
 
-    sendGUIMessage(m_lnMessage);
-    waitAcknowledge(m_lnMessage);
+    do
+    {
+        sendGUIMessage(msg);
+    } while (!waitAcknowledge(msg));
 }
 
 //=============================================================================
@@ -640,24 +684,28 @@ void SPELLserverCif::specificNotifyReturn()
 void SPELLserverCif::specificNotifyStatus( const SPELLstatusInfo& st )
 {
  	// Prepare message
-	m_stMessage.set(MessageField::FIELD_EXEC_STATUS, SPELLexecutorUtils::statusToString(st.status));
-    completeMessage( m_stMessage );
+    SPELLsafeThreadOperations ops("NotifyStatus");
+    SPELLipcMessage msg = m_stMessage;
+	msg.set(MessageField::FIELD_EXEC_STATUS, SPELLexecutorUtils::statusToString(st.status));
+    completeMessage( msg );
 
     // Set message Condition information
     if (st.condition.size()>0)
     {
-        m_stMessage.set( MessageField::FIELD_CONDITION, st.condition );
+        msg.set( MessageField::FIELD_CONDITION, st.condition );
     }
 
     // Set message Action information
     if (st.actionLabel != "")
     {
-    	m_stMessage.set( MessageField::FIELD_ACTION_LABEL, st.actionLabel );
-    	m_stMessage.set( MessageField::FIELD_ACTION_ENABLED, st.actionEnabled ? MessageValue::DATA_TRUE : MessageValue::DATA_FALSE );
+    	msg.set( MessageField::FIELD_ACTION_LABEL, st.actionLabel );
+    	msg.set( MessageField::FIELD_ACTION_ENABLED, st.actionEnabled ? MessageValue::DATA_TRUE : MessageValue::DATA_FALSE );
     }
 
-    sendGUIMessage(m_stMessage);
-    waitAcknowledge(m_stMessage);
+    do{
+        sendGUIMessage(msg);
+    } while(!waitAcknowledge(msg));
+
 }
 
 //=============================================================================
@@ -665,6 +713,7 @@ void SPELLserverCif::specificNotifyStatus( const SPELLstatusInfo& st )
 //=============================================================================
 void SPELLserverCif::specificNotifyUserActionSet( const std::string& label, const unsigned int severity )
 {
+    SPELLsafeThreadOperations ops("NotifyActionSet");
     SPELLipcMessage actionMessage(MessageId::MSG_ID_SET_UACTION);
     actionMessage.setType(MSG_TYPE_ONEWAY);
     actionMessage.set( MessageField::FIELD_PROC_ID, getProcId() );
@@ -692,6 +741,7 @@ void SPELLserverCif::specificNotifyUserActionSet( const std::string& label, cons
 //=============================================================================
 void SPELLserverCif::specificNotifyUserActionUnset()
 {
+    SPELLsafeThreadOperations ops("NotifyActionUnset");
     SPELLipcMessage actionMessage(MessageId::MSG_ID_DISMISS_UACTION);
     actionMessage.setType(MSG_TYPE_ONEWAY);
     actionMessage.set( MessageField::FIELD_PROC_ID, getProcId() );
@@ -703,6 +753,7 @@ void SPELLserverCif::specificNotifyUserActionUnset()
 //=============================================================================
 void SPELLserverCif::specificNotifyUserActionEnable( bool enable )
 {
+    SPELLsafeThreadOperations ops("Notify");
     if (enable)
     {
         SPELLipcMessage actionMessage(MessageId::MSG_ID_ENABLE_UACTION);
@@ -725,7 +776,9 @@ void SPELLserverCif::specificNotifyUserActionEnable( bool enable )
 void SPELLserverCif::specificNotify( ItemNotification notification )
 {
 	//Prepare message
-    completeMessage( m_ntMessage );
+    SPELLsafeThreadOperations ops("Notify");
+    SPELLipcMessage msg = m_ntMessage;
+    completeMessage( msg );
 
     //DEBUG("[CIF] Processing status");
 
@@ -733,27 +786,30 @@ void SPELLserverCif::specificNotify( ItemNotification notification )
     std::stringstream buffer;
     buffer << notification.getSuccessfulCount();
 
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_TYPE, NOTIF_TYPE_STR[notification.type]);
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_NAME, notification.name);
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_VALUE, notification.value);
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_STATUS, notification.status);
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_REASON, notification.getTokenizedComment());
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_TIME, notification.getTokenizedTime());
-    m_ntMessage.set(MessageField::FIELD_NOTIF_ITEM_SCOUNT, buffer.str());
+    msg.set(MessageField::FIELD_NOTIF_ITEM_TYPE, NOTIF_TYPE_STR[notification.type]);
+    msg.set(MessageField::FIELD_NOTIF_ITEM_NAME, notification.name);
+    msg.set(MessageField::FIELD_NOTIF_ITEM_VALUE, notification.value);
+    msg.set(MessageField::FIELD_NOTIF_ITEM_STATUS, notification.status);
+    msg.set(MessageField::FIELD_NOTIF_ITEM_REASON, notification.getTokenizedComment());
+    msg.set(MessageField::FIELD_NOTIF_ITEM_TIME, notification.getTokenizedTime());
+    msg.set(MessageField::FIELD_NOTIF_ITEM_SCOUNT, buffer.str());
 
     //DEBUG("[CIF] Message prepared, sending");
 
-    sendGUIMessage(m_ntMessage);
-    waitAcknowledge(m_ntMessage);
+    do
+    {
+        sendGUIMessage(msg);
+    } while(!waitAcknowledge(msg));
+
     //DEBUG("[CIF] Notification sent");
 }
 
 //=============================================================================
 // METHOD: SPELLserverCif::waitAcknowledge()
 //=============================================================================
-void SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
+bool SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
 {
-    if (m_ready && !m_ipcInterruptionNotified)
+    if (m_ready)
     {
     	bool found = false;
     	std::string seq = msg.get(MessageField::FIELD_MSG_SEQUENCE);
@@ -766,11 +822,12 @@ void SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
         		SPELLmonitor m(m_ackLock);
 
         		it = std::find(m_ackSequences.begin(), m_ackSequences.end(), seq);
-
         		found = it != m_ackSequences.end();
         		if (found)
         		{
         			m_ackSequences.erase(it);
+
+        			return true;
         		}
         		else
         		{
@@ -782,41 +839,16 @@ void SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
 						LOG_WARN("Acknowledge not received!");
 						LOG_WARN(msg.dataStr());
 						LOG_WARN("#########################");
-						m_numNotAcknowledged++;
 
-						if (m_numNotAcknowledged==5)
-						{
-							m_numNotAcknowledged = 0;
-							if (!m_ipcInterruptionNotified)
-							{
-								m_ipcInterruptionNotified = true;
-								SPELLexecutorStatus st = SPELLexecutor::instance().getStatus();
-								if ( st == STATUS_RUNNING )
-								{
-									ExecutorCommand cmd;
-									cmd.id = CMD_PAUSE;
-									warning("Communication with controlling GUI interrupted. Procedure paused for safety.", LanguageConstants::SCOPE_SYS);
-									warning("You may try to resume execution.", LanguageConstants::SCOPE_SYS);
-									SPELLexecutor::instance().command(cmd,false);
-								}
-								else if ( st == STATUS_WAITING )
-								{
-									ExecutorCommand cmd;
-									cmd.id = CMD_INTERRUPT;
-									warning("Communication with controlling GUI interrupted. Procedure interruptedfor safety.", LanguageConstants::SCOPE_SYS);
-									warning("You may try to resume execution.", LanguageConstants::SCOPE_SYS);
-									SPELLexecutor::instance().command(cmd,false);
-								}
-							}
-						}
-						return;
+						return false;
 					}
         		}
     		}
-    		if (!m_ready) return;
+    		if (!m_ready) return false;
     		usleep(52000);
     	}
     }
+    return false;
 }
 
 //=============================================================================
@@ -825,7 +857,7 @@ void SPELLserverCif::waitAcknowledge( const SPELLipcMessage& msg )
 void SPELLserverCif::specificNotifyError( const std::string& error, const std::string& reason, bool fatal )
 {
     //LOG_ERROR("[CIF] Error notification: " + error + " (" + reason + ")");
-
+    SPELLsafeThreadOperations ops("Notify");
 	// prepare error message
     SPELLipcMessage errorMsg( MessageId::MSG_ID_ERROR);
     errorMsg.setType(MSG_TYPE_ERROR);
@@ -852,71 +884,77 @@ void SPELLserverCif::specificNotifyError( const std::string& error, const std::s
 //=============================================================================
 // METHOD: SPELLserverCif::specificWrite
 //=============================================================================
-void SPELLserverCif::specificWrite( const std::string& msg, unsigned int scope )
+void SPELLserverCif::specificWrite( const std::string& msgText, unsigned int scope )
 {
     if (isManual())
     {
-        completeMessage( m_wrMessage );
+        SPELLsafeThreadOperations ops("Notify");
+        SPELLipcMessage msg = m_wrMessage;
+        completeMessage( msg );
         std::string timeStr = SPELLutils::timestampUsec();
-        m_wrMessage.set(MessageField::FIELD_TEXT,msg);
-        m_wrMessage.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_INFO);
-        m_wrMessage.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
-        m_wrMessage.set(MessageField::FIELD_TIME, timeStr);
-        m_wrMessage.set(MessageField::FIELD_SCOPE, ISTR(scope));
-        sendGUIMessage(m_wrMessage);
+        msg.set(MessageField::FIELD_TEXT,msgText);
+        msg.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_INFO);
+        msg.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
+        msg.set(MessageField::FIELD_TIME, timeStr);
+        msg.set(MessageField::FIELD_SCOPE, ISTR(scope));
+        sendGUIMessage(msg);
     }
     else
     {
-    	m_buffer->write( msg, scope );
+    	m_buffer->write( msgText, scope );
     }
 }
 
 //=============================================================================
 // METHOD: SPELLserverCif::specificWarning
 //=============================================================================
-void SPELLserverCif::specificWarning( const std::string& msg, unsigned int scope )
+void SPELLserverCif::specificWarning( const std::string& msgText, unsigned int scope )
 {
 
     // We shall not bufferize in manual mode
     if (isManual())
     {
-        completeMessage( m_wrMessage );
+        SPELLsafeThreadOperations ops("Notify");
+        SPELLipcMessage msg = m_wrMessage;
+        completeMessage( msg );
         std::string timeStr = SPELLutils::timestampUsec();
-        m_wrMessage.set(MessageField::FIELD_TEXT,msg);
-        m_wrMessage.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_WARN);
-        m_wrMessage.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
-        m_wrMessage.set(MessageField::FIELD_TIME, timeStr);
-        m_wrMessage.set(MessageField::FIELD_SCOPE, ISTR(scope));
-        sendGUIMessage(m_wrMessage);
+        msg.set(MessageField::FIELD_TEXT,msgText);
+        msg.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_WARN);
+        msg.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
+        msg.set(MessageField::FIELD_TIME, timeStr);
+        msg.set(MessageField::FIELD_SCOPE, ISTR(scope));
+        sendGUIMessage(msg);
     }
     else
     {
-    	m_buffer->warning( msg, scope );
+    	m_buffer->warning( msgText, scope );
     }
 
 }
 
 //=============================================================================
 // METHOD: SPELLserverCif::specificError
-//=============================================================================
-void SPELLserverCif::specificError( const std::string& msg, unsigned int scope )
+//==============================b===============================================
+void SPELLserverCif::specificError( const std::string& msgText, unsigned int scope )
 {
 
     // We shall not bufferize in manual mode
     if (isManual())
     {
-        completeMessage( m_wrMessage );
+        SPELLsafeThreadOperations ops("Notify");
+        SPELLipcMessage msg = m_wrMessage;
+        completeMessage( msg );
         std::string timeStr = SPELLutils::timestampUsec();
-        m_wrMessage.set(MessageField::FIELD_TEXT,msg);
-        m_wrMessage.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_ERROR);
-        m_wrMessage.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
-        m_wrMessage.set(MessageField::FIELD_TIME, timeStr);
-        m_wrMessage.set(MessageField::FIELD_SCOPE, ISTR(scope));
-        sendGUIMessage(m_wrMessage);
+        msg.set(MessageField::FIELD_TEXT,msgText);
+        msg.set(MessageField::FIELD_LEVEL,MessageValue::DATA_SEVERITY_ERROR);
+        msg.set(MessageField::FIELD_MSGTYPE,LanguageConstants::DISPLAY);
+        msg.set(MessageField::FIELD_TIME, timeStr);
+        msg.set(MessageField::FIELD_SCOPE, ISTR(scope));
+        sendGUIMessage(msg);
     }
     else
     {
-    	m_buffer->error( msg, scope );
+    	m_buffer->error( msgText, scope );
     }
 
 } //void SPELLserverCif::specificError( const std::string& msg, unsigned int scope )
@@ -928,6 +966,7 @@ void SPELLserverCif::specificNotifyVariableChange( const std::vector<SPELLvarInf
 										   const std::vector<SPELLvarInfo>& changed,
 		                                   const std::vector<SPELLvarInfo>& deleted )
 {
+    SPELLsafeThreadOperations ops("Notify");
 	m_wovBuffer->variableChange(added,changed,deleted);
 }
 
@@ -938,7 +977,8 @@ void SPELLserverCif::specificNotifyVariableScopeChange( const std::string& scope
 		                                        const std::vector<SPELLvarInfo>& globals,
 		                                        const std::vector<SPELLvarInfo>& locals )
 {
-	SPELLipcMessage notifyMsg(ExecutorMessages::MSG_SCOPE_CHANGE);
+    SPELLsafeThreadOperations ops("Notify");
+    SPELLipcMessage notifyMsg(ExecutorMessages::MSG_SCOPE_CHANGE);
 	notifyMsg.setType(MSG_TYPE_ONEWAY);
 
 	std::string names = "";
@@ -990,10 +1030,33 @@ void SPELLserverCif::specificNotifyVariableScopeChange( const std::string& scope
 }
 
 //=============================================================================
+// METHOD: SPELLserverCif::specificNotifyResourceChange()
+//=============================================================================
+void SPELLserverCif::specificNotifyResourceChange( const std::vector<SPELLresourceInfo>& changed )
+{
+    SPELLsafeThreadOperations ops("Notify");
+	m_rdotcoBuffer->resourceChange(changed);
+}
+
+//=============================================================================
+// METHOD: SPELLserverCif::specificNotifyResourceList()
+//=============================================================================
+void SPELLserverCif::specificNotifyResourceList( const std::vector<SPELLresourceInfo>& resources )
+{
+    SPELLsafeThreadOperations ops("Notify");
+	m_rdotcoBuffer->resourceList(resources);
+}
+
+//=============================================================================
 // METHOD: SPELLserverCif::specificPrompt
 //=============================================================================
 void SPELLserverCif::specificPrompt( const SPELLpromptDefinition& def, std::string& rawAnswer, std::string& answerToShow )
 {
+	PyThreadState* m_state;
+	m_state = SPELLpythonHelper::instance().beginSafeAllowThreads();
+	SPELLmonitor m(m_promptLock);
+	SPELLpythonHelper::instance().endSafeAllowThreads( m_state );
+
     m_promptDef = def;
 
     std::string timeStr = SPELLutils::timestampUsec();
@@ -1013,7 +1076,7 @@ void SPELLserverCif::specificPrompt( const SPELLpromptDefinition& def, std::stri
     DEBUG("[CIF] Prompt typecode " + ISTR(def.typecode));
 
     // the prompt display
-    std::string msgToShow = def.message;
+    std::string msgToShow = "";
 
     if ( def.options.size() == 0 )
     {
@@ -1030,7 +1093,9 @@ void SPELLserverCif::specificPrompt( const SPELLpromptDefinition& def, std::stri
     DEBUG("[CIF] Expected string: " + m_promptMessage.get(MessageField::FIELD_EXPECTED));
 
     // Send the display message via the buffer to ensure synchronization
-    m_buffer->prompt(msgToShow, LanguageConstants::SCOPE_PROMPT);
+    m_asRun->writeInfo( getStack(), msgToShow, LanguageConstants::SCOPE_PROMPT );
+
+    m_buffer->prompt(def.message + "\n" + msgToShow, LanguageConstants::SCOPE_PROMPT);
 
     // Ensure buffer is flushed
     m_buffer->flush();
@@ -1097,11 +1162,14 @@ void SPELLserverCif::specificPrompt( const SPELLpromptDefinition& def, std::stri
     // \todo When there is no controlling client we should keep the child procedure in prompt waiting state
 
     // Send the display message via the buffer to ensure synchronization
-    m_buffer->write("Answer: '" + toShow + "'", LanguageConstants::SCOPE_PROMPT);
-    m_buffer->flush();
+	if ( (def.typecode & LanguageConstants::PROMPT_PASSWORD)>0)
+		m_buffer->write("Answer: '***'", LanguageConstants::SCOPE_PROMPT);
+	else
+		m_buffer->write("Answer: '" + toShow + "'", LanguageConstants::SCOPE_PROMPT);
+	m_buffer->flush();
 
-    rawAnswer = toProcess;
-    answerToShow = toShow;
+	rawAnswer = toProcess;
+	answerToShow = toShow;
 }
 
 //=============================================================================
@@ -1109,6 +1177,7 @@ void SPELLserverCif::specificPrompt( const SPELLpromptDefinition& def, std::stri
 //=============================================================================
 std::string SPELLserverCif::specificOpenSubprocedure( const std::string& procId, int callingLine, const std::string& args, bool automatic, bool blocking, bool visible )
 {
+    SPELLsafeThreadOperations ops("Notify");
     std::string openModeStr = "{";
     DEBUG("[CIF] Open subprocedure options: " + BSTR(automatic) + "," + BSTR(blocking) + "," + BSTR(visible));
     openModeStr += (automatic ? (LanguageModifiers::Automatic + ":" + PythonConstants::True) : (LanguageModifiers::Automatic + ":" + PythonConstants::False)) + ",";
@@ -1185,6 +1254,7 @@ std::string SPELLserverCif::specificOpenSubprocedure( const std::string& procId,
 //=============================================================================
 void SPELLserverCif::specificCloseSubprocedure( const std::string& procId )
 {
+    SPELLsafeThreadOperations ops("Notify");
     SPELLipcMessage closeMsg(ContextMessages::REQ_CLOSE_EXEC);
     closeMsg.setType(MSG_TYPE_REQUEST);
     closeMsg.set(MessageField::FIELD_SPROC_ID, procId);
@@ -1197,6 +1267,7 @@ void SPELLserverCif::specificCloseSubprocedure( const std::string& procId )
 //=============================================================================
 void SPELLserverCif::specificKillSubprocedure( const std::string& procId )
 {
+    SPELLsafeThreadOperations ops("Notify");
     SPELLipcMessage killMsg(ContextMessages::REQ_KILL_EXEC);
     killMsg.setType(MSG_TYPE_REQUEST);
     killMsg.set(MessageField::FIELD_SPROC_ID, procId);
@@ -1265,6 +1336,7 @@ void SPELLserverCif::processMessage( const SPELLipcMessage& msg )
             if (msgId == MessageId::MSG_ID_ADD_CLIENT)
             {
             	LOG_INFO("Add controlling client");
+            	SPELLexecutor::instance().refreshStatus();
                 if (msg.hasField(MessageField::FIELD_GUI_CONTROL))
                 {
     				getExecutorConfig().setHeadless( false );
@@ -1275,6 +1347,16 @@ void SPELLserverCif::processMessage( const SPELLipcMessage& msg )
             else if (msgId == MessageId::MSG_ID_REMOVE_CLIENT)
             {
             	LOG_WARN("Controlling client removed");
+
+                // In case of a (Warning) text to submit to GCS send it
+                if (msg.hasField(MessageField::FIELD_TEXT) &&
+                    msg.hasField(MessageField::FIELD_GUI_CONTROL) && 
+                        msg.get(MessageField::FIELD_GUI_CONTROL) == getExecutorConfig().getControlClient()) {
+                    LOG_WARN("[CIF] " + msg.get(MessageField::FIELD_TEXT));
+                    SPELLexecutor::instance().getScheduler().raiseWarningEventToGCS(msg.get(MessageField::FIELD_TEXT));
+                }
+
+            	SPELLexecutor::instance().refreshStatus();
             	switch(SPELLexecutor::instance().getStatus())
             	{
             	case STATUS_FINISHED:
@@ -1314,6 +1396,14 @@ void SPELLserverCif::processMessage( const SPELLipcMessage& msg )
             else if (msgId == MessageId::MSG_ID_WVARIABLES_DISABLE)
             {
             	SPELLexecutor::instance().getVariableManager().setEnabled(false);
+            }
+            else if (msgId == MessageId::MSG_ID_DRESOURCES_ENABLE)
+            {
+            	SPELLexecutor::instance().getResourceManager().setEnabled(true);
+            }
+            else if (msgId == MessageId::MSG_ID_DRESOURCES_DISABLE)
+            {
+            	SPELLexecutor::instance().getResourceManager().setEnabled(false);
             }
             else
             {
@@ -1446,6 +1536,18 @@ SPELLipcMessage SPELLserverCif::processRequest( const SPELLipcMessage& msg )
     {
     	m_processor.processCheckVariablesEnabled(msg, response);
     }
+    else if (requestId == ExecutorMessages::REQ_GET_RESOURCES)
+    {
+    	m_processor.processGetResources(msg, response);
+    }
+    else if (requestId == ExecutorMessages::REQ_CHANGE_RESOURCE)
+    {
+    	m_processor.processChangeResource(msg, response);
+    }
+    else if (requestId == ExecutorMessages::REQ_DRESOURCES_ENABLED)
+    {
+    	m_processor.processCheckResourcesEnabled(msg, response);
+    }
     else if (requestId == ExecutorMessages::REQ_GET_DICTIONARY)
     {
     	m_processor.processGetDictionary(msg, response);
@@ -1468,6 +1570,20 @@ void SPELLserverCif::processConnectionError( int clientKey, std::string error, s
 {
 	if (!isClosing())
 	{
+        // send an alert to the GCS if context disconnect in transitionning states
+        switch(SPELLexecutor::instance().getStatus())
+        {
+        case STATUS_FINISHED:
+        case STATUS_PAUSED:
+        case STATUS_ABORTED:
+        case STATUS_ERROR:
+        case STATUS_PROMPT:
+        case STATUS_INTERRUPTED:
+            break;
+        default:
+            SPELLexecutor::instance().getScheduler().raiseWarningEventToGCS("Procedure lost SPELL Context, check and resume: "+ getProcId());
+        }
+
 	    m_ready = false;
 		LOG_ERROR("IPC error: " + error + ": " + reason);
 		SPELLexecutor::instance().pause();
@@ -1578,7 +1694,7 @@ void SPELLserverCif::waitPromptAnswer()
 
     // Finish the prompt state
     SPELLexecutor::instance().getScheduler().finishPrompt();
-
+    //SPELLexecutor::instance().getScheduler().wait();
     m_promptMessage = VOID_MESSAGE;
 }
 
@@ -1800,4 +1916,42 @@ void SPELLserverCif::removeSharedDataScopes()
 	{
 		THROW_EXCEPTION(response.get(MessageField::FIELD_ERROR),response.get(MessageField::FIELD_REASON), SPELL_ERROR_ENVIRONMENT);
 	}
+
+}
+SPELLipcMessage SPELLserverCif::getPingMessage()
+{
+	if (SPELLexecutor::instance().hasController()) {
+		SPELLcontrollerIF& controller =
+				SPELLexecutor::instance().getController();
+
+		SPELLstatusInfo st(controller.getStatus());
+		st.condition = controller.getCondition();
+		st.actionLabel = SPELLexecutor::instance().getUserAction().getLabel();
+		st.actionEnabled =
+				SPELLexecutor::instance().getUserAction().isEnabled();
+
+		m_stMessage.set(MessageField::FIELD_EXEC_STATUS,
+				SPELLexecutorUtils::statusToString(st.status));
+		completeMessage(m_stMessage);
+
+		// Set message Condition information
+		if (st.condition.size() > 0) {
+			m_stMessage.set(MessageField::FIELD_CONDITION, st.condition);
+		}
+
+		// Set message Action information
+		if (st.actionLabel != "") {
+			m_stMessage.set(MessageField::FIELD_ACTION_LABEL, st.actionLabel);
+			m_stMessage.set(MessageField::FIELD_ACTION_ENABLED,
+					st.actionEnabled ?
+							MessageValue::DATA_TRUE : MessageValue::DATA_FALSE);
+		}
+
+		return m_stMessage;
+	}
+	else
+	{
+		return SPELLipcMessage();
+	}
+
 }

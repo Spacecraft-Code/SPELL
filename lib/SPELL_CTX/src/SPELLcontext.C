@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the context main class
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -26,11 +26,12 @@
 
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
+#include "SPELL_PRD/SPELLservicePython.H"
 #include "SPELL_CTX/SPELLcontext.H"
 #include "SPELL_CTX/SPELLclientManager.H"
 #include "SPELL_CTX/SPELLexecutorManager.H"
+#include "SPELL_CTX/SPELLserviceManager.H"
 #include "SPELL_CTX/SPELLdataHelper.H"
-// Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLmonitor.H"
 #include "SPELL_WRP/SPELLconstants.H"
 #include "SPELL_WRP/SPELLdriverManager.H"
@@ -46,8 +47,8 @@
 #include "SPELL_IPC/SPELLipc_Context.H"
 #include "SPELL_IPC/SPELLipc_Listener.H"
 #include "SPELL_SDB/SPELLdatabaseFactory.H"
+#include "SPELL_WRP/SPELLdatabaseManager.H"
 // System includes ---------------------------------------------------------
-
 
 // DEFINES /////////////////////////////////////////////////////////////////
 #define NAME std::string("[CTX] ")
@@ -56,7 +57,26 @@ SPELLcontext* SPELLcontext::s_instance = NULL;
 
 const std::string USE_DRIVER_TIME = "UseDriverTime";
 
-
+extern "C" {
+    void checkService(std::string& serviceId) {
+        SPELLsafeThreadOperations ops("checkService");
+        SPELLserviceManager::ServiceList runningServices = SPELLserviceManager::instance().getServiceList();
+        for(SPELLserviceManager::ServiceList::iterator it = runningServices.begin();it != runningServices.end();++it)
+        {
+            //LOG_INFO("Service " + (*it) + " found!");
+            if (*it == serviceId)
+            {
+                SPELLservice* service = SPELLserviceManager::instance().getService(serviceId);
+                if (service && service->isActive())
+                {
+                    return;
+                }
+            }
+        }
+        
+        SPELLcontext::instance().openService(serviceId);
+    }
+}
 //=============================================================================
 // CONSTRUCTOR: SPELLcontext::SPELLcontext()
 //=============================================================================
@@ -100,6 +120,7 @@ void SPELLcontext::start( const SPELLcontextConfiguration& config )
 	// Setup the configuration
 	SPELLconfiguration::instance().loadConfig(m_config.configFile);
 
+
     // Configure the time format if defined in configuration
     std::string format = SPELLconfiguration::instance().getCommonParameter("TdsTimeFormat");
     if (format.length()!=0)
@@ -126,8 +147,11 @@ void SPELLcontext::start( const SPELLcontextConfiguration& config )
 	m_executorDefaults.setPromptWarningDelay( STRI(srvConfig.getExecutorParameter(ExecutorConstants::PromptDelay)) );
 	m_executorDefaults.setByStep( srvConfig.getExecutorParameter(ExecutorConstants::ByStep) == ExecutorConstants::TRUE_VALUE );
 	m_executorDefaults.setForceTcConfirm( srvConfig.getExecutorParameter(ExecutorConstants::ForceTcConfirm) == ExecutorConstants::TRUE_VALUE );
+	m_executorDefaults.setForcePromptConfirm( srvConfig.getExecutorParameter(ExecutorConstants::ForcePromptConfirm) == ExecutorConstants::TRUE_VALUE );
 	m_executorDefaults.setSaveStateMode( srvConfig.getExecutorParameter(ExecutorConstants::SaveStateMode) );
 	m_executorDefaults.setWatchVariables( srvConfig.getExecutorParameter(ExecutorConstants::WatchVariables) == ExecutorConstants::ENABLED );
+	m_executorDefaults.setResourcesDisplay( srvConfig.getExecutorParameter(ExecutorConstants::ResourcesDisplay) == ExecutorConstants::ENABLED );
+	m_executorDefaults.setLocalResourcesSupported( srvConfig.getExecutorParameter(ExecutorConstants::LocalResourcesSupported) == ExecutorConstants::TRUE_VALUE );
 	m_executorDefaults.setMaxVerbosity( STRI(srvConfig.getExecutorParameter(ExecutorConstants::MaxVerbosity)) );
 	m_executorDefaults.setBrowsableLibStr( srvConfig.getExecutorParameter(ExecutorConstants::BrowsableLib) );
 
@@ -141,11 +165,17 @@ void SPELLcontext::start( const SPELLcontextConfiguration& config )
 	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ByStep) != "" )
 		m_executorDefaults.setByStep( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ByStep) == ExecutorConstants::TRUE_VALUE );
 	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForceTcConfirm) != "" )
-		m_executorDefaults.setForceTcConfirm( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForceTcConfirm) == ExecutorConstants::TRUE_VALUE );
+			m_executorDefaults.setForceTcConfirm( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForceTcConfirm) == ExecutorConstants::TRUE_VALUE );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForcePromptConfirm) != "" )
+			m_executorDefaults.setForcePromptConfirm( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ForcePromptConfirm) == ExecutorConstants::TRUE_VALUE );
 	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::SaveStateMode) != "" )
 		m_executorDefaults.setSaveStateMode( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::SaveStateMode) );
 	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::SaveStateMode) != "" )
 		m_executorDefaults.setWatchVariables( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::WatchVariables) == ExecutorConstants::ENABLED );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ResourcesDisplay) != "" )
+		m_executorDefaults.setResourcesDisplay( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::ResourcesDisplay) == ExecutorConstants::ENABLED );
+	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::LocalResourcesSupported) != "" )
+		m_executorDefaults.setLocalResourcesSupported( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::LocalResourcesSupported) == ExecutorConstants::TRUE_VALUE );
 	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::MaxVerbosity) != "" )
 		m_executorDefaults.setMaxVerbosity( STRI(srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::MaxVerbosity)) );
 	if( srvConfig.getContext(getContextName()).getExecutorParameter(ExecutorConstants::BrowsableLib) != "" )
@@ -160,30 +190,52 @@ void SPELLcontext::start( const SPELLcontextConfiguration& config )
 
 	// Initialize Python support (some client requests require Python API)
     SPELLpythonHelper::instance().initialize();
+    SPELLsafePythonOperations ops("Context Init");
+    SpellService_Install();
+
+    SPELLconfiguration::instance().loadPythonConfig(m_config.configFile);
+    if (SPELLconfiguration::instance().getContextParameter(USE_DRIVER_TIME) == "true")
+    {
+        // Setup the TIME driver for getCurrentTime (need to load Python config first)
+        SPELLdriverManager::instance().setup(getContextName(), "TIME");
+    }
+    else
+    {
+        SPELLdriverManager::instance().setup(getContextName(), "CONFIG");
+    }
+
+    SPELLpythonHelper::instance().loadFramework();
+    SPELLdatabaseManager::instance().loadBuiltinDatabases();
 
 	// Setup the procedure manager
 	SPELLprocedureManager::instance().setup( getContextName() );
 
-	// Setup the executor manager. This may take time to come back, if
-	// there are executors to reconnect to. The listener login message will be sent after this stage.
-	SPELLexecutorManager::instance().setup( getContextName() );
-
-	if (SPELLconfiguration::instance().getContextParameter(USE_DRIVER_TIME) == "true")
-	{
-		// Setup the TIME driver for getCurrentTime (need to load Python config first)
-		SPELLconfiguration::instance().loadPythonConfig(m_config.configFile);
-		SPELLdriverManager::instance().setup(getContextName(), "TIME");
-	}
 
 	// Setup the IPC interfaces to clients and listener. The listener one logs in.
 	m_clientIPC.setup();
-	m_listenerIPC.setup();
+    m_listenerIPC.setup();
 
-	LOG_INFO("Context " + getContextName() + " ready" );
+    // Setup the executor manager. This may take time to come back, if
+    // there are executors to reconnect to. The listener login message will be sent after this stage.
+    SPELLexecutorManager::instance().setup(getContextName());
+    SPELLserviceManager::instance().setup(getContextName());
+
+    LOG_INFO("Context " + getContextName() + " ready" );
 
 	// SPELLpythonHelper::initialize has acquired the GIL. Release it so
 	// that operations in other threads (messages) can use it too.
-	PyEval_ReleaseLock();
+
+
+	std::list<std::string> serviceList = SPELLprocedureManager::instance().getServiceList();
+	std::list<std::string>::iterator it = serviceList.begin();
+	for (; it != serviceList.end(); ++it)
+	{
+	    LOG_INFO("Starting Service " + (*it) + "." );
+	    //openService(*it);
+	    SPELLpyService& exec = SPELLprocedureManager::instance().getService(*it);
+	    exec.startWatchDog(&checkService);
+    }
+
 }
 
 //=============================================================================
@@ -291,8 +343,9 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 	std::string theOriginId = "GUI";
 	if (msg.hasField( MessageField::FIELD_ORIGIN_ID ))
 	{
-		theOriginId = msg.get( MessageField::FIELD_ORIGIN_ID );
+		theOriginId = msg.get( MessageField::FIELD_ORIGIN_ID ) ;
 	}
+	theOriginId = theOriginId + " ("+msg.get("User")+")";
 
 	SPELLexecutorStartupParams config(theInstanceId, SPELLutils::fileTimestamp() );
 
@@ -322,6 +375,18 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 
 	try
 	{
+	    SPELLprocedureManager::ProcList services =  SPELLprocedureManager::instance().getServiceList();
+	    SPELLprocedureManager::ProcList::const_iterator it = services.begin();
+	    for (;it != services.end();++it)
+	    {
+	        if (config.getProcId() == *it)
+	        {
+	            resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_OPEN_EXEC, msg );
+	            resp.set( MessageField::FIELD_ERROR, "Cannot open selected service");
+	            resp.set( MessageField::FIELD_REASON, "The select entry is a service and can't be started manually." );
+	            return resp;
+	        }
+	    }
 		SPELLexecutorManager::instance().startExecutor( config, controllingClient );
 		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_OPEN_EXEC, msg );
 
@@ -366,6 +431,86 @@ SPELLipcMessage SPELLcontext::openExecutor( const SPELLipcMessage& msg, SPELLcli
 	}
 	return resp;
 }
+
+bool SPELLcontext::openService( const std::string serviceName )
+{
+    LOG_INFO( "Requested opening new service" );
+
+    // Get the information about procedure instance identifiers. Note that if the procedure
+    // has been started by another one, there will be a parent instance identifier in the request message.
+    //
+    //   - The identifier of the child (subprocedure) will be in SPROC_ID in this case,
+    //   - The identifier of the parent will be in the PROC_ID.
+    std::string theInstanceId = "";
+    std::string theParentInstanceId = "";
+    // Note that the group id matches the instance id for standalone procedures, but it is
+    // the id of the original main procedure for all the children down a dependency tree.
+    std::string theGroupId = serviceName;
+
+    // The following condition is for the case when we have a subprocedure being started.
+    int callingLine = 0;
+    theInstanceId = serviceName;
+
+    // Origin ID is just informative for SPELL and it is optional
+    std::string theOriginId = "SERVICE";
+
+    SPELLserviceStartupParams config(theInstanceId, SPELLutils::fileTimestamp() );
+
+    config.setArguments("");
+    config.setCondition("");
+    std::string cMode = MessageValue::DATA_GUI_MODE_B;
+    config.setClientMode(SPELLdataHelper::clientModeFromString(cMode));
+    std::string oMode = "1";
+    config.setOpenMode(SPELLdataHelper::openModeFromString(oMode));
+    config.setParentInstanceId(theParentInstanceId);
+    config.setParentCallingLine(callingLine);
+    config.setGroupId( theGroupId );
+    config.setOriginId( theOriginId );
+
+    LOG_INFO("      - Instance Id : " + config.getInstanceId());
+    LOG_INFO("      - Client mode : " + cMode);
+    LOG_INFO("      - Group Id    : " + config.getGroupId());
+    LOG_INFO("      - Origin Id   : " + config.getOriginId());
+    LOG_INFO("      - Calling line: " + ISTR(config.getParentCallingLine()) );
+    LOG_INFO("      - Time Id     : " + config.getTimeId());
+    LOG_INFO("      - Proc Id     : " + config.getProcId());
+    LOG_INFO("      - Instance num: " + ISTR(config.getInstanceNum()));
+    LOG_INFO("      - Arguments   : " + config.getArguments());
+    LOG_INFO("      - Condition   : " + config.getCondition());
+    LOG_INFO("      - Open mode   : " + oMode);
+    LOG_INFO("      - Parent      : " + config.getParentInstanceId());
+
+    try
+    {
+        SPELLserviceManager::instance().startService( config );
+
+        SPELLservice* exec = SPELLserviceManager::instance().getService(config.getInstanceId());
+        SPELLexecutorStatus initialStatus = exec->getStatus();
+
+        config.setClientMode(CLIENT_MODE_BACKGROUND);
+
+        // Notify other clients
+        SPELLexecutorOperation op;
+        op.instanceId = config.getInstanceId();
+        op.parentId = theParentInstanceId;
+        op.groupId = config.getGroupId();
+        op.originId = config.getOriginId();
+        op.clientKey = -1;
+        op.clientMode = config.getClientMode();
+        op.status = initialStatus;
+        op.condition = config.getCondition();
+        op.type = SPELLexecutorOperation::EXEC_OP_OPEN;
+        notifyExecutorOperation( op );
+
+    }
+    catch( SPELLcoreException& err )
+    {
+        err.loggit();
+        return false;
+    }
+    return true;
+}
+
 
 //=============================================================================
 // METHOD: SPELLcontext::
@@ -643,6 +788,8 @@ SPELLipcMessage SPELLcontext::getProcedureList( const SPELLipcMessage& msg )
 			SPELLprocedureManager::instance().refresh();
 		}
 	}
+
+
 	SPELLprocedureManager::ProcList list = SPELLprocedureManager::instance().getProcList();
 
 	std::string listStr = "";
@@ -652,6 +799,15 @@ SPELLipcMessage SPELLcontext::getProcedureList( const SPELLipcMessage& msg )
 		if (listStr != "") listStr += LIST_SEPARATOR;
 		listStr += *it;
 	}
+
+	list = SPELLprocedureManager::instance().getServiceList();
+
+    for( it = list.begin(); it != list.end(); it++)
+    {
+        if (listStr != "") listStr += LIST_SEPARATOR;
+        listStr += *it + "|" + *it;
+    }
+
 	resp = SPELLipcHelper::createResponse( ContextMessages::RSP_PROC_LIST, msg );
 	resp.set( MessageField::FIELD_PROC_LIST, listStr );
 	return resp;
@@ -750,13 +906,18 @@ SPELLipcMessage SPELLcontext::listFiles( const SPELLipcMessage& msg )
 			if (fileList.size()>0) fileList += LIST_SEPARATOR;
 			fileList += "+" + *it;
 		}
+		resp = SPELLipcHelper::createResponse( ContextMessages::RSP_LIST_FILES, msg );
+		resp.set( MessageField::FIELD_FILE_LIST, fileList );
 	}
 	else
 	{
 		LOG_ERROR("Path does not exist, cannot list files: '" + dir + "'");
+		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_LIST_FILES, msg );
+		resp.set( MessageField::FIELD_FILE_LIST, "" );
+		resp.set( MessageField::FIELD_ERROR, "Cannot list files");
+		resp.set( MessageField::FIELD_REASON, "Path does not exist: '" + dir + "'");
+		resp.set( MessageField::FIELD_FATAL, "false");
 	}
-	resp = SPELLipcHelper::createResponse( ContextMessages::RSP_LIST_FILES, msg );
-	resp.set( MessageField::FIELD_FILE_LIST, fileList );
 	return resp;
 }
 
@@ -860,9 +1021,36 @@ SPELLipcMessage SPELLcontext::getExecutorList( const SPELLipcMessage& msg )
 		DEBUG("    found " + *it);
 		listStr += *it;
 	}
+
+    SPELLserviceManager::ServiceList serviceList = SPELLserviceManager::instance().getServiceList();
+
+    SPELLserviceManager::ServiceList::const_iterator sit;
+    for( sit = serviceList.begin(); sit != serviceList.end(); sit++)
+    {
+        if (listStr != "") listStr += LIST_SEPARATOR;
+        DEBUG("    found " + *sit);
+        listStr += *sit + "#0";
+    }
+
+
 	resp = SPELLipcHelper::createResponse( ContextMessages::RSP_EXEC_LIST, msg );
 	resp.set( MessageField::FIELD_EXEC_LIST, listStr );
 	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::getServiceList( const SPELLipcMessage& msg )
+{
+    DEBUG( NAME + "Requested list of services");
+    SPELLipcMessage resp = VOID_MESSAGE;
+    SPELLserviceManager::ServiceList list = SPELLserviceManager::instance().getServiceList();
+    std::string listStr = "";
+
+    resp = SPELLipcHelper::createResponse( ContextMessages::RSP_SERVICE_LIST, msg );
+    resp.set( MessageField::FIELD_EXEC_LIST, listStr );
+    return resp;
 }
 
 //=============================================================================
@@ -897,6 +1085,19 @@ SPELLipcMessage SPELLcontext::getExecutorInfo( const SPELLipcMessage& msg )
 	SPELLexecutorManager::instance().buildExecutorInfo( instanceId, resp );
 	SPELLclientManager::instance().completeMonitoringInfo( instanceId, resp );
 	return resp;
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
+SPELLipcMessage SPELLcontext::getServiceInfo( const SPELLipcMessage& msg )
+{
+    std::string instanceId = msg.get( MessageField::FIELD_PROC_ID );
+    SPELLipcMessage resp = SPELLipcHelper::createResponse( ContextMessages::RSP_EXEC_INFO, msg);
+    DEBUG( NAME + "Requested service information: " + instanceId);
+    SPELLserviceManager::instance().buildServiceInfo( instanceId, resp );
+
+    return resp;
 }
 
 
@@ -953,7 +1154,11 @@ SPELLipcMessage SPELLcontext::setExecutorDefaults( const SPELLipcMessage& msg )
 		LOG_INFO("   - TC confirm   : " + msg.get(MessageField::FIELD_FORCE_TC_CONFIRM) );
 		m_executorDefaults.setForceTcConfirm( msg.get(MessageField::FIELD_FORCE_TC_CONFIRM) == ExecutorConstants::TRUE_VALUE );
 	}
-
+	if( msg.hasField(MessageField::FIELD_FORCE_PROMPT_CONFIRM) )
+	{
+		LOG_INFO("  - Prompt confirm: " + msg.get(MessageField::FIELD_FORCE_PROMPT_CONFIRM) );
+		m_executorDefaults.setForcePromptConfirm( msg.get(MessageField::FIELD_FORCE_PROMPT_CONFIRM) == ExecutorConstants::TRUE_VALUE );
+	}
 	if( msg.hasField(MessageField::FIELD_SAVE_STATE_MODE) )
 	{
 		LOG_INFO("   - Save state   : " + msg.get(MessageField::FIELD_SAVE_STATE_MODE) );
@@ -964,6 +1169,18 @@ SPELLipcMessage SPELLcontext::setExecutorDefaults( const SPELLipcMessage& msg )
 	{
 		LOG_INFO("   - Watch vars   : " + msg.get(MessageField::FIELD_WATCH_VARIABLES) );
 		m_executorDefaults.setWatchVariables( msg.get(MessageField::FIELD_WATCH_VARIABLES) == ExecutorConstants::TRUE_VALUE );
+	}
+
+	if( msg.hasField(MessageField::FIELD_RESOURCES_DISPLAY) )
+	{
+		LOG_INFO("   - Resource disp: " + msg.get(MessageField::FIELD_RESOURCES_DISPLAY) );
+		m_executorDefaults.setResourcesDisplay( msg.get(MessageField::FIELD_RESOURCES_DISPLAY) == ExecutorConstants::TRUE_VALUE );
+	}
+
+	if( msg.hasField(MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED) )
+	{
+		LOG_INFO("   - Local resource support: " + msg.get(MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED) );
+		m_executorDefaults.setLocalResourcesSupported( msg.get(MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED) == ExecutorConstants::TRUE_VALUE );
 	}
 
 	if( msg.hasField(MessageField::FIELD_MAX_VERBOSITY) )
@@ -993,8 +1210,11 @@ void SPELLcontext::fillExecutorDefaults( SPELLipcMessage& msg )
 	msg.set( MessageField::FIELD_PROMPT_DELAY, ISTR(m_executorDefaults.getPromptWarningDelay()) );
 	msg.set( MessageField::FIELD_BY_STEP, (m_executorDefaults.isByStep() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
 	msg.set( MessageField::FIELD_FORCE_TC_CONFIRM, (m_executorDefaults.isForceTcConfirm() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_FORCE_PROMPT_CONFIRM, (m_executorDefaults.isForcePromptConfirm() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
 	msg.set( MessageField::FIELD_SAVE_STATE_MODE, m_executorDefaults.getSaveStateMode() );
 	msg.set( MessageField::FIELD_WATCH_VARIABLES, (m_executorDefaults.isWatchVariables() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_RESOURCES_DISPLAY, (m_executorDefaults.isResourcesDisplay() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
+	msg.set( MessageField::FIELD_LOCAL_RESOURCE_SUPPORTED, (m_executorDefaults.isLocalResourcesSupported() ? ExecutorConstants::TRUE_VALUE : ExecutorConstants::FALSE_VALUE) );
 	msg.set( MessageField::FIELD_MAX_VERBOSITY, ISTR(m_executorDefaults.getMaxVerbosity()) );
 	msg.set( MessageField::FIELD_BROWSABLE_LIB, m_executorDefaults.getBrowsableLibStr() );
 
@@ -1083,11 +1303,58 @@ SPELLipcMessage SPELLcontext::attachExecutor( const SPELLipcMessage& msg, SPELLc
 	}
 	catch( SPELLcoreException& ex )
 	{
-		LOG_ERROR("Cannot attach: " + std::string(ex.what()) );
-		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_ATTACH_EXEC, msg );
-		resp.set( MessageField::FIELD_ERROR, "Cannot attach to executor");
-		resp.set( MessageField::FIELD_REASON, ex.what());
-		resp.set( MessageField::FIELD_FATAL, PythonConstants::True );
+
+	    try
+	        {
+	            SPELLservice* exec = SPELLserviceManager::instance().getService(instanceId);
+	            std::string groupId = exec->getModel().getGroupId();
+	            std::string originId = exec->getModel().getOriginId();
+
+	            if (mode == CLIENT_MODE_CONTROL)
+	            {
+	                LOG_ERROR("Cannot take control of Service! Not supported for service: " + instanceId );
+                    resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_ATTACH_EXEC, msg );
+                    resp.set( MessageField::FIELD_ERROR, "Cannot attach to service in controlling mode");
+                    resp.set( MessageField::FIELD_REASON, "Not supported for service" );
+                    resp.set( MessageField::FIELD_FATAL, PythonConstants::True );
+	            }
+	            else
+	            {
+	                // Set the procedure controlling client on the client model
+	                client->addProcedure(instanceId, CLIENT_MODE_MONITOR);
+
+	                LOG_INFO("Client " + ISTR(client->getClientKey()) + " monitoring service " + instanceId);
+
+	                resp = SPELLipcHelper::createResponse( ContextMessages::RSP_ATTACH_EXEC, msg );
+	                // Add the executor information
+	                SPELLexecutorManager::instance().buildExecutorInfo( instanceId, resp );
+	                // Add the GUI list
+	                SPELLclientManager::instance().completeMonitoringInfo( instanceId, resp );
+	                // Monitor the executor
+	                SPELLclientManager::instance().startMonitorExecutor(client, exec );
+	                // Notify other clients
+	                SPELLexecutorOperation op;
+	                op.instanceId = instanceId;
+	                op.parentId = exec->getParentInstanceId();
+	                op.groupId = groupId;
+	                op.originId = originId;
+	                op.clientKey = msg.getKey();
+	                op.clientMode = CLIENT_MODE_MONITOR;
+	                op.status = exec->getStatus();
+	                op.type = SPELLexecutorOperation::EXEC_OP_ATTACH;
+	                notifyExecutorOperation( op );
+	            }
+	        }
+	        catch( SPELLcoreException& ex )
+	        {
+
+
+	            LOG_ERROR("Cannot attach: " + std::string(ex.what()) );
+	            resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_ATTACH_EXEC, msg );
+	            resp.set( MessageField::FIELD_ERROR, "Cannot attach to executor");
+	            resp.set( MessageField::FIELD_REASON, ex.what());
+	            resp.set( MessageField::FIELD_FATAL, PythonConstants::True );
+	        }
 	}
 	return resp;
 }
@@ -1186,6 +1453,45 @@ void SPELLcontext::executorLost( const std::string& instanceId )
 //=============================================================================
 // METHOD: SPELLcontext::
 //=============================================================================
+void SPELLcontext::serviceLost( const std::string& instanceId )
+{
+    try
+    {
+        LOG_ERROR("Service lost: " + instanceId);
+        SPELLservice* exec = SPELLserviceManager::instance().getService( instanceId );
+        std::string groupId = exec->getModel().getGroupId();
+        std::string originId = exec->getModel().getOriginId();
+        std::string parentId = exec->getModel().getParentInstanceId();
+        std::string name = exec->getModel().getProcId();
+        LOG_ERROR("   - Group ID : " + groupId);
+        LOG_ERROR("   - Origin ID: " + originId);
+        LOG_ERROR("   - Parent ID: " + parentId);
+
+        LOG_ERROR("Notify clients about executor lost");
+
+        // Notify all GUIs in the system
+        SPELLexecutorOperation op;
+        op.instanceId = instanceId;
+        op.status = STATUS_ERROR;
+        op.groupId = groupId;
+        op.originId = originId;
+        op.parentId = parentId;
+        op.type = SPELLexecutorOperation::EXEC_OP_CRASH;
+        notifyExecutorOperation( op );
+
+        // Mark the model to be removed (cannot delete now, since this operation is
+        // triggered from the process model itself
+        SPELLserviceManager::instance().closeService( instanceId );
+
+//        openService(instanceId);
+
+    }
+    catch(SPELLcoreException& ex){};
+}
+
+//=============================================================================
+// METHOD: SPELLcontext::
+//=============================================================================
 SPELLipcMessage SPELLcontext::detachExecutor( const SPELLipcMessage& msg, SPELLclient* client )
 {
 	SPELLipcMessage resp = VOID_MESSAGE;
@@ -1228,12 +1534,39 @@ SPELLipcMessage SPELLcontext::detachExecutor( const SPELLipcMessage& msg, SPELLc
 	}
 	catch( SPELLcoreException& ex )
 	{
-		LOG_ERROR("Cannot detach: " + std::string(ex.what()) );
-		resp = SPELLipcHelper::createErrorResponse( ContextMessages::RSP_DETACH_EXEC, msg );
-		resp.set( MessageField::FIELD_ERROR, "Cannot detach from executor");
-		resp.set( MessageField::FIELD_REASON, ex.what() );
-		resp.set( MessageField::FIELD_FATAL, PythonConstants::True );
-	}
+        try
+        {
+            SPELLservice* exec = SPELLserviceManager::instance().getService(instanceId);
+            std::string groupId = exec->getModel().getGroupId();
+            std::string originId = exec->getModel().getOriginId();
+
+            LOG_INFO("Client " + ISTR(client->getClientKey()) + " detached from service " + instanceId);
+
+            // To notify to other clients
+            SPELLexecutorOperation op;
+            op.instanceId = instanceId;
+            op.clientKey = msg.getKey();
+            op.groupId = groupId;
+            op.originId = originId;
+            op.status = exec->getStatus();
+            op.type = SPELLexecutorOperation::EXEC_OP_DETACH;
+
+            resp = SPELLipcHelper::createResponse(ContextMessages::RSP_DETACH_EXEC, msg);
+
+            SPELLclientManager::instance().stopMonitorExecutor(client, exec);
+            op.clientMode = CLIENT_MODE_MONITOR;
+
+
+            notifyExecutorOperation(op);
+        } catch (SPELLcoreException& ex)
+        {
+            LOG_ERROR("Cannot detach: " + std::string(ex.what()));
+            resp = SPELLipcHelper::createErrorResponse(ContextMessages::RSP_DETACH_EXEC, msg);
+            resp.set(MessageField::FIELD_ERROR, "Cannot detach from executor");
+            resp.set(MessageField::FIELD_REASON, ex.what());
+            resp.set(MessageField::FIELD_FATAL, PythonConstants::True);
+        }
+    }
 	return resp;
 }
 

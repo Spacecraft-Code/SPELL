@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package IBus;
+
+enum MessageType {
+    MSG_UNDEF = 0;
+    MSG_INIT = 1;
+    MSG_ACK = 2;
+    MSG_EOT = 3;
+    MSG_STATUS = 4;
+    MSG_RESUME = 5;
+    MSG_NAK = 6;
+}
+
+enum StatusType {
+    STATUS_UNDEF = 0;
+    STATUS_OK = 1;
+    STATUS_NOT_FOUND = 2;
+}
+
+enum ClientType {
+    CLIENT_UNDEF = 0;
+    CLIENT_DUMB = 1;
+}
+
+message Type {
+  MessageType msgType = 1;      // message type
+  string id = 2;                // client identifier
+}
+
+// Initial message
+message InitMsg {
+  MessageType msgType = 1;      // msgType=MSG_INIT
+  string id = 2;                // client identifier
+  ClientType clientType = 3;    // client type
+  uint64 ts = 4;                // start time with historical=True, ts=0 means "everything"
+  bool live = 5;                // goes live after historical (or immediately)
+  bool historical = 6;          // request historical, makes startTime meaningful
+  bool reset = 7;               // start afresh, deleting previous client information if any
+}
+
+// Packet acknowledged message
+message AckMsg {
+  MessageType msgType = 1;      // msgType=MSG_ACK
+  string id = 2;                // client identifier
+  uint64 ts = 3;                // represents the acknowledged timestamp
+}
+
+// End-of-transmission message
+message EotMsg {
+  MessageType msgType = 1;      // msgType=MSG_EOT
+  string id = 2;                // client identifier
+}
+
+// Status message
+message StatusMsg {
+  MessageType msgType = 1;      // msgType=MSG_STATUS
+  string id = 2;                // client identifier
+  StatusType status = 3;        // status
+}
+

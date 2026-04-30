@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL listener main program
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -32,6 +32,12 @@
 #include "SPELL_LST/SPELLlistener.H"
 // System includes -----------------------------------------------------------
 #include <signal.h>
+#ifdef WITH_KUBERNETES
+#include <sys/prctl.h>
+#endif
+#ifdef WITH_BACKTRACE
+#include <backward.hpp>
+#endif
 // Local includes ------------------------------------------------------------
 
 // GLOBALS ///////////////////////////////////////////////////////////////////
@@ -116,9 +122,9 @@ int parseArgs( int argc, char** argv )
 //============================================================================
 void signal_handler(int signum)
 {
-	if (signum < NumSignals)
+	if ((unsigned)signum < NumSignals)
 	{
-		std::cerr << "[***] Captured signal " << signalList[signum].name << std::endl;
+		std::cerr << "[***] Captured signal " << signum << " "<< signalList[signum].name << std::endl;
 	}
 	else
 	{
@@ -162,6 +168,13 @@ void setupSignals()
 //============================================================================
 int main( int argc, char** argv )
 {
+    #ifdef WITH_KUBERNETES
+    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+    #endif
+    #ifdef WITH_BACKTRACE
+    backward::SignalHandling sh;
+    std::cout << "Singal Handlers loaded: " << sh.loaded() << std::endl;
+    #endif
     std::string timeId = SPELLutils::fileTimestamp();
 
     SPELLlog::instance().setLogFile("_Listener", timeId);

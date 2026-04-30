@@ -5,7 +5,7 @@
 // DESCRIPTION: Data value variant implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -173,7 +173,7 @@ private: //-------------------------------------------------------------------
     // METHODS ///////////////////////////////////////////////////////////////
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
-		long        m_intValue;
+		long long   m_intValue;
 		double      m_floatValue;
 		bool        m_boolValue;
 		std::string m_stringValue;
