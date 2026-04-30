@@ -5,7 +5,7 @@
 // DESCRIPTION: Client manager implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,12 +29,15 @@
 #include "SPELL_CTX/SPELLclientManager.H"
 #include "SPELL_CTX/SPELLclient.H"
 #include "SPELL_CTX/SPELLdataHelper.H"
+#include "SPELL_CTX/SPELLexecutorManager.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLmonitor.H"
 #include "SPELL_UTIL/SPELLlog.H"
 #include "SPELL_UTIL/SPELLutils.H"
 #include "SPELL_IPC/SPELLipc_Context.H"
 #include "SPELL_IPC/SPELLipc_Executor.H"
+#include "SPELL_UTIL/SPELLerror.H"
+#include "SPELL_PRD/SPELLprocedureManager.H"
 // System includes ---------------------------------------------------------
 
 
@@ -46,7 +49,7 @@ SPELLclientManager* SPELLclientManager::s_instance = NULL;
 //=============================================================================
 SPELLclientManager::SPELLclientManager()
 {
-
+	m_ipc = NULL;
 }
 
 //=============================================================================
@@ -98,7 +101,7 @@ void SPELLclientManager::clientLogin( int clientKey, const std::string& host )
 		SPELLclient* client = new SPELLclient( clientKey, host, *m_ipc );
 
 		m_clientMap.insert( std::make_pair( clientKey, client ));
-		DEBUG("[CMGR] Client logged in: " + ISTR(clientKey));
+		LOG_INFO("[CMGR] Client logged in: " + ISTR(clientKey) + " running on " + host);
 
 		notifyClientOperation( clientKey, host, CLIENT_OP_LOGIN );
 	}
@@ -118,6 +121,29 @@ void SPELLclientManager::clientLogout( int clientKey )
 	if (it != m_clientMap.end())
 	{
 		SPELLclient* client = it->second;
+
+		SPELLclient::ProcedureList procs = client->getProcedures();
+		SPELLclient::ProcedureList::iterator pit;
+		for ( pit = procs.begin(); pit != procs.end(); pit++ )
+		{
+			try
+			{
+				SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor( pit->first );
+				if (pit->second == CLIENT_MODE_CONTROL )
+				{
+					SPELLclientManager::instance().removeExecutorController(client, exec, true, true);
+					LOG_WARN("Client " + ISTR(clientKey) + " stop controlling executor " + exec->getModel().getInstanceId());
+				}
+				else
+				{
+					SPELLclientManager::instance().stopMonitorExecutor(client, exec);
+					LOG_INFO("Client " + ISTR(clientKey) + " stop monitoring executor " + exec->getModel().getInstanceId());
+				}
+			}
+			catch(SPELLcoreException& ex){};
+		}
+		DEBUG("Client " + ISTR(clientKey) + " logged out, stopping procedures done");
+
 		std::string host = client->getClientHost();
 		LOG_INFO("Client logged out: " + ISTR(clientKey) + ":" + host);
 		delete client;
@@ -141,6 +167,27 @@ void SPELLclientManager::clientLost( int clientKey )
 	if (it != m_clientMap.end())
 	{
 		SPELLclient* client = it->second;
+		SPELLclient::ProcedureList procs = client->getProcedures();
+		SPELLclient::ProcedureList::iterator pit;
+		for ( pit = procs.begin(); pit != procs.end(); pit++ )
+		{
+			try
+			{
+				SPELLexecutor* exec = SPELLexecutorManager::instance().getExecutor( pit->first );
+				if (pit->second == CLIENT_MODE_CONTROL )
+				{
+					SPELLclientManager::instance().removeExecutorController(client, exec, true, true);
+					LOG_WARN("Client lost:" + ISTR(clientKey) + " stop controlling executor " + exec->getModel().getInstanceId());
+				}
+				else
+				{
+					SPELLclientManager::instance().stopMonitorExecutor(client, exec);
+					LOG_INFO("Client lost:" + ISTR(clientKey) + " stop monitoring executor " + exec->getModel().getInstanceId());
+				}
+			}
+			catch(SPELLcoreException& ex){};
+		}
+
 		std::string host = client->getClientHost();
 		LOG_WARN("Client lost: " + ISTR(clientKey) + ":" + host);
 		delete client;
@@ -244,6 +291,8 @@ void SPELLclientManager::stopMonitorExecutor( SPELLclient* client, SPELLexecutor
 	}
 }
 
+
+
 //=============================================================================
 // METHOD: SPELLclientManager::
 //=============================================================================
@@ -261,6 +310,11 @@ std::list<std::string> SPELLclientManager::getMonitoringClients( const std::stri
 			std::string id = notifier->getClientHost() + ":" + ISTR(notifier->getClientKey());
 			monitoring.push_back(id);
 		}
+	}
+	if (monitoring.empty() && procId.find("#") != std::string::npos)
+	{
+	    std::string newId = noInstanceId(procId);
+	    return getMonitoringClients(newId);
 	}
 	return monitoring;
 }
@@ -281,6 +335,11 @@ std::list<int> SPELLclientManager::getMonitoringClientsKeys( const std::string& 
 			SPELLclientNotifier* notifier = (*lit);
 			keys.push_back(notifier->getClientKey());
 		}
+	}
+	if (keys.empty() && procId.find("#") != std::string::npos)
+	{
+	    std::string newId = noInstanceId(procId);
+        return getMonitoringClientsKeys(newId);
 	}
 	return keys;
 }
@@ -316,9 +375,9 @@ void SPELLclientManager::notifyClientOperation( int clientKey,
 	notification.set( MessageField::FIELD_GUI_KEY, ISTR(clientKey));
 	notification.set( MessageField::FIELD_CLOP, SPELLdataHelper::clientOperationToString(operation) );
 	notification.set( MessageField::FIELD_HOST, host );
-
 	ClientMap::const_iterator it;
-	for( it = m_clientMap.begin(); it != m_clientMap.end(); it++ )
+	ClientMap clientMap = m_clientMap;
+	for( it = clientMap.begin(); it != clientMap.end(); it++ )
 	{
 		SPELLclient* client = it->second;
 		if (client->getClientKey() == clientKey) continue;
@@ -336,7 +395,8 @@ void SPELLclientManager::notifyClients( const SPELLipcMessage& msg )
 	SPELLmonitor m(m_clientLock);
 	DEBUG("Notify clients IN");
 	ClientMap::const_iterator it;
-	for( it = m_clientMap.begin(); it != m_clientMap.end(); it++ )
+	ClientMap clientMap = m_clientMap;
+	for( it = clientMap.begin(); it != clientMap.end(); it++ )
 	{
 		SPELLclient* client = it->second;
 		DEBUG("    - client " + ISTR(it->first));
@@ -355,7 +415,8 @@ void SPELLclientManager::notifyMonitoringClients( const SPELLipcMessage& msg )
 	DEBUG("Notify monitoring clients IN");
 	ClientMap::const_iterator it;
 	int controllingKey = msg.getKey();
-	for( it = m_clientMap.begin(); it != m_clientMap.end(); it++ )
+	ClientMap clientMap = m_clientMap;
+	for( it = clientMap.begin(); it != clientMap.end(); it++ )
 	{
 		SPELLclient* client = it->second;
 		if (it->first == controllingKey) continue;

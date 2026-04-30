@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the dynamic runtime data manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -59,13 +59,13 @@ SPELLwsDynamicData::SPELLwsDynamicData( const SPELLwsStartupInfo& info, unsigned
 : m_startup(info),
   m_frame(frame)
 {
-	DEBUG("[DYN] Created dynamic data manager for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Created dynamic data manager for frame " + PYCREPR(m_frame));
 	assert(m_frame != NULL);
 
 	if (info.persistentFile != "")
 	{
 		m_persistentFile = info.persistentFile + "_" + ISTR(depth) + ".wsd";
-		DEBUG("DYN Using persistent file: '" + m_persistentFile + "'");
+		//DEBUG("DYN Using persistent file: '" + m_persistentFile + "'");
 	}
 	else
 	{
@@ -75,15 +75,15 @@ SPELLwsDynamicData::SPELLwsDynamicData( const SPELLwsStartupInfo& info, unsigned
 	if (info.recoveryFile != "")
 	{
 		m_recoveryFile = info.recoveryFile + "_" + ISTR(depth) + ".wsd";
-		DEBUG("DYN Using recovery file: '" + m_recoveryFile + "'");
+		//DEBUG("DYN Using recovery file: '" + m_recoveryFile + "'");
 	}
 	else
 	{
 		m_recoveryFile = "";
 	}
 
-	DEBUG("DYN working mode: " + WorkingModeToString(m_startup.workingMode));
-	DEBUG("DYN perform recovery: " + BSTR(m_startup.performRecovery));
+	//DEBUG("DYN working mode: " + WorkingModeToString(m_startup.workingMode));
+	//DEBUG("DYN perform recovery: " + BSTR(m_startup.performRecovery));
 
 	// If we are in recovery mode
 	if (m_startup.performRecovery && m_recoveryFile != "")
@@ -102,7 +102,7 @@ SPELLwsDynamicData::SPELLwsDynamicData( const SPELLwsStartupInfo& info, unsigned
 //=============================================================================
 SPELLwsDynamicData::~SPELLwsDynamicData()
 {
-	DEBUG("[DYN] Destroyed dynamic data manager for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Destroyed dynamic data manager for frame " + PYCREPR(m_frame));
 }
 
 //=============================================================================
@@ -110,7 +110,7 @@ SPELLwsDynamicData::~SPELLwsDynamicData()
 //=============================================================================
 void SPELLwsDynamicData::reset()
 {
-	DEBUG("[DYN] Reset dynamic data for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Reset dynamic data for frame " + PYCREPR(m_frame));
 	m_storage->reset();
 	m_iBlocks.clear();
 	// IMPORTANT do not DECREF objects in ValueStack or FastLocals, since they
@@ -124,7 +124,7 @@ void SPELLwsDynamicData::reset()
 //=============================================================================
 void SPELLwsDynamicData::cleanup()
 {
-	DEBUG("[DYN] Remove dynamic data file for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Remove dynamic data file for frame " + PYCREPR(m_frame));
 	if (m_persistentFile != "")
 	{
 		SPELLutils::deleteFile( m_persistentFile );
@@ -136,7 +136,7 @@ void SPELLwsDynamicData::cleanup()
 //=============================================================================
 void SPELLwsDynamicData::update()
 {
-	DEBUG("[DYN] Update dynamic data for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Update dynamic data for frame " + PYCREPR(m_frame));
 	// We need to keep a copy of these these data structures, since the Python interpreter code
 	// unwinds the stack and the try-blocks in case of exceptions.
 	updateTryBlocks();
@@ -149,7 +149,7 @@ void SPELLwsDynamicData::update()
 //=============================================================================
 void SPELLwsDynamicData::recover()
 {
-	DEBUG("[DYN] Recover dynamic data for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Recover dynamic data for frame " + PYCREPR(m_frame));
 	// We need to re-create these data structures, since the Python interpreter code
 	// unwinds the stack and the try-blocks in case of exceptions.
 	recoverTryBlocks();
@@ -162,13 +162,13 @@ void SPELLwsDynamicData::recover()
 //=============================================================================
 void SPELLwsDynamicData::save()
 {
-	DEBUG("[DYN] Save dynamic data for frame " + PYCREPR(m_frame));
-	DEBUG("[DYN] Pre-check errors...");
+	//DEBUG("[DYN] Save dynamic data for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Pre-check errors...");
 	SPELLpythonHelper::instance().checkError();
 	// Empty the file. We only want the latest change
 	// NOTE: this can be removed in case we want the full history of
 	// changes, although some mods would need to be done to the load code
-	DEBUG("[DYN] Resetting storage first");
+	//DEBUG("[DYN] Resetting storage first");
 	m_storage->reset();
 	// Store current data
 	storeParameters();
@@ -186,7 +186,7 @@ void SPELLwsDynamicData::save()
 	storeDTA("ARGS");
 	SPELLpythonHelper::instance().checkError();
 	storeDTA("IVARS");
-	DEBUG("[DYN] Save dynamic data for frame " + PYCREPR(m_frame) + " done");
+	//DEBUG("[DYN] Save dynamic data for frame " + PYCREPR(m_frame) + " done");
 }
 
 //=============================================================================
@@ -199,7 +199,7 @@ void SPELLwsDynamicData::restore()
 		THROW_EXCEPTION("Failed to restore dynamic data", "Storage not ready", SPELL_ERROR_WSTART);
 	}
 
-	DEBUG("[DYN] Restore dynamic data for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Restore dynamic data for frame " + PYCREPR(m_frame));
 	loadParameters();
 	loadTryBlocks();
 	loadValueStack();
@@ -211,13 +211,13 @@ void SPELLwsDynamicData::restore()
 
 	recover();
 
-	DEBUG("[DYN] Restore dynamic data for frame " + PYCREPR(m_frame) + " done");
+	//DEBUG("[DYN] Restore dynamic data for frame " + PYCREPR(m_frame) + " done");
 
 	if (m_persistentFile != "")
 	{
 		// Reset the storage to mode write, using now the assigned persistent file,
 		// not the recovery file
-		DEBUG("[DYN] Switching to saving state mode");
+		//DEBUG("[DYN] Switching to saving state mode");
 		delete m_storage;
 		m_storage = new SPELLwsStorage( m_persistentFile, SPELLwsStorage::MODE_WRITE );
 		// Re-save the state, so that the persistent file contains the current state
@@ -235,14 +235,14 @@ void SPELLwsDynamicData::updateTryBlocks()
 	unsigned int numTryBlocks = m_frame->f_iblock;
 	if (numTryBlocks>0)
 	{
-		DEBUG("[DYN] Updating try blocks on frame " + PYCREPR(m_frame));
+		//DEBUG("[DYN] Updating try blocks on frame " + PYCREPR(m_frame));
 
 		// If there is a different number of blocks than before, update. We assume they dont change once created...
 		if ( numTryBlocks > m_iBlocks.size())
 		{
 			PyTryBlock block = m_frame->f_blockstack[m_frame->f_iblock-1];
 			m_iBlocks.push_back(block);
-			DEBUG("[DYN] 	add block: [" + ISTR(block.b_type) + "," + ISTR(block.b_handler) + "," + ISTR(block.b_level) + "]");
+			//DEBUG("[DYN] 	add block: [" + ISTR(block.b_type) + "," + ISTR(block.b_handler) + "," + ISTR(block.b_level) + "]");
 		}
 		// Less blocks...
 		else if ((unsigned int) m_frame->f_iblock < m_iBlocks.size())
@@ -250,9 +250,9 @@ void SPELLwsDynamicData::updateTryBlocks()
 			// Just throw it away
 			TryBlocks::iterator it = m_iBlocks.end(); it--;
 			m_iBlocks.erase(it);
-			DEBUG("[DYN] 	remove block");
+			//DEBUG("[DYN] 	remove block");
 		}
-		DEBUG("[DYN] Updating try blocks done");
+		//DEBUG("[DYN] Updating try blocks done");
 	}
 	// Take into account the case of going out loops and try blocks ( the frame
 	// does not have blocks defined, so we must clear ours )
@@ -272,18 +272,18 @@ void SPELLwsDynamicData::recoverTryBlocks()
 	// If there were blocks defined...
 	if (m_iBlocks.size()>0)
 	{
-		DEBUG("[DYN] 	Restoring try blocks on frame " + PYCREPR(m_frame));
+		//DEBUG("[DYN] 	Restoring try blocks on frame " + PYCREPR(m_frame));
 		TryBlocks::iterator it;
 		unsigned int count = 0;
 		for( it = m_iBlocks.begin(); it != m_iBlocks.end(); it++)
 		{
 			PyTryBlock& block = (*it);
-			DEBUG("[DYN] 		block " + ISTR(count) + ": [" + ISTR(block.b_type) + "," + ISTR(block.b_handler) + "," + ISTR(block.b_level) + "]");
+			//DEBUG("[DYN] 		block " + ISTR(count) + ": [" + ISTR(block.b_type) + "," + ISTR(block.b_handler) + "," + ISTR(block.b_level) + "]");
 			PyFrame_BlockSetup( m_frame, block.b_type, block.b_handler, block.b_level );
 			count++;
 		}
 		m_frame->f_iblock = m_iBlocks.size();
-		DEBUG("[DYN] 	Restoring try blocks done");
+		//DEBUG("[DYN] 	Restoring try blocks done");
 	}
 }
 
@@ -292,7 +292,7 @@ void SPELLwsDynamicData::recoverTryBlocks()
 //=============================================================================
 void SPELLwsDynamicData::storeTryBlocks()
 {
-	DEBUG("[DYN] Storing try blocks (" + ISTR(m_iBlocks.size()) + ")" );
+	//DEBUG("[DYN] Storing try blocks (" + ISTR(m_iBlocks.size()) + ")" );
 	// Store tryblocks first. Size of the list:
 	m_storage->storeLong( m_iBlocks.size() );
 	// Store the blocks now, if any
@@ -302,7 +302,7 @@ void SPELLwsDynamicData::storeTryBlocks()
 		m_storage->storeLong( (*bit).b_type );
 		m_storage->storeLong( (*bit).b_handler );
 		m_storage->storeLong( (*bit).b_level );
-		DEBUG("    - [" + ISTR((*bit).b_type) + "," + ISTR((*bit).b_handler) + "," + ISTR((*bit).b_level) + "]");
+		//DEBUG("    - [" + ISTR((*bit).b_type) + "," + ISTR((*bit).b_handler) + "," + ISTR((*bit).b_level) + "]");
 	}
 }
 
@@ -312,14 +312,14 @@ void SPELLwsDynamicData::storeTryBlocks()
 void SPELLwsDynamicData::loadTryBlocks()
 {
 	int numBlocks = m_storage->loadLong();
-	DEBUG("[DYN] Loading try blocks (" + ISTR(numBlocks) + ")" );
+	//DEBUG("[DYN] Loading try blocks (" + ISTR(numBlocks) + ")" );
 	for( int count=0; count<numBlocks; count++)
 	{
 		PyTryBlock* block = new PyTryBlock();
 		block->b_type = m_storage->loadLong();
 		block->b_handler = m_storage->loadLong();
 		block->b_level = m_storage->loadLong();
-		DEBUG("    - [" + ISTR(block->b_type) + "," + ISTR(block->b_handler) + "," + ISTR(block->b_level) + "]");
+		//DEBUG("    - [" + ISTR(block->b_type) + "," + ISTR(block->b_handler) + "," + ISTR(block->b_level) + "]");
 		m_iBlocks.push_back(*block);
 	}
 }
@@ -338,17 +338,18 @@ void SPELLwsDynamicData::updateValueStack()
 		// Add a new item to the stack information
 		if ((unsigned int) stackCount > m_valueStack.size())
 		{
-			DEBUG("[DYN] Updating value stack on frame " + PYCREPR(m_frame));
+			//DEBUG("[DYN] Updating value stack on frame " + PYCREPR(m_frame));
 
 			PyObject** p;
 			p = m_frame->f_valuestack;
-
+			if (!p || !*p) // Check for Nullpointer on stack
+				return;
 			PyTypeObject* type = (PyTypeObject*) PyObject_Type(*p);
 			if (STR(type->tp_name)=="listiterator" )
 			{
 				// Get the iterator characteristics
 				ListIteratorMirror* iterator = (ListIteratorMirror*) (*p);
-				DEBUG("[DYN] 	add list iterator: [" + ISTR(iterator->it_index) + "," + PYCREPR(iterator->it_seq) + "]");
+				//DEBUG("[DYN] 	add list iterator: [" + ISTR(iterator->it_index) + "," + PYCREPR(iterator->it_seq) + "]");
 
 				// Create a copy
 				PyObject* newIterator = PyObject_GetIter( (PyObject*)iterator->it_seq );
@@ -356,24 +357,24 @@ void SPELLwsDynamicData::updateValueStack()
 				ListIteratorMirror* itm = (ListIteratorMirror*)newIterator;
 				itm->it_index = iterator->it_index;
 				// IMPORTANT this is a borrowed reference
-				DEBUG("[DYN] 	stored iterator: [" + ISTR(itm->it_index) + "," + PYCREPR(itm->it_seq) + "]");
+				//DEBUG("[DYN] 	stored iterator: [" + ISTR(itm->it_index) + "," + PYCREPR(itm->it_seq) + "]");
 				m_valueStack.push_back(newIterator);
 			}
 			else
 			{
-				DEBUG("[DYN] Adding to valuestack, unprocessed: " + PYREPR(*p));
+				//DEBUG("[DYN] Adding to valuestack, unprocessed: " + PYREPR(*p));
 				// IMPORTANT this is a borrowed reference
 				m_valueStack.push_back(*p);
 			}
 
-			DEBUG("[DYN] Updating value stack done");
+			//DEBUG("[DYN] Updating value stack done");
 		}
 		// Less items
 		else if ((unsigned int) stackCount < m_valueStack.size())
 		{
 			// Throw it away...
 			ObjectList::iterator it = m_valueStack.end(); it--;
-			DEBUG("[DYN] 	remove value stack object");
+			//DEBUG("[DYN] 	remove value stack object");
 			// IMPORTANT do not DECREF objects in ValueStack or FastLocals, since they
 			// are borrowed references managed by Python layer.
 			m_valueStack.erase(it);
@@ -386,14 +387,14 @@ void SPELLwsDynamicData::updateValueStack()
 			for( unsigned int index = 0; index < m_valueStack.size(); index++)
 			{
 				if (*p == NULL) break;
-				DEBUG("[DYN] 	checking value stack object: " + PYREPR(*p));
+				//DEBUG("[DYN] 	checking value stack object: " + PYREPR(*p));
 				PyTypeObject* type = (PyTypeObject*) PyObject_Type(*p);
 				if (STR(type->tp_name)=="listiterator" )
 				{
 				    ListIteratorMirror* stackIterator = (ListIteratorMirror*) (*p);
 				    ListIteratorMirror* storedIterator = (ListIteratorMirror*) m_valueStack[index];
 				    storedIterator->it_index = stackIterator->it_index;
-					DEBUG("[DYN] 	update iterator: [" + ISTR(stackIterator->it_index) + "," + PYCREPR(stackIterator->it_seq) + "]");
+					//DEBUG("[DYN] 	update iterator: [" + ISTR(stackIterator->it_index) + "," + PYCREPR(stackIterator->it_seq) + "]");
 				}
 			}
 		}
@@ -416,19 +417,21 @@ void SPELLwsDynamicData::recoverValueStack()
 	// If there are values to recover
 	if (m_valueStack.size()>0)
 	{
-		DEBUG("[DYN] 	Restoring value stack on frame " + PYCREPR(m_frame));
+		//DEBUG("[DYN] 	Restoring value stack on frame " + PYCREPR(m_frame));
 		PyObject** stack_pointer = m_frame->f_valuestack;
 
 		for( unsigned int count = 0; count<m_valueStack.size(); count++)
 		{
 			PyObject* stackObject = m_valueStack[count];
-			DEBUG("[DYN] 		add value stack object " + PYCREPR(stackObject));
+			if (!stackObject)
+			    continue;
+			//DEBUG("[DYN] 		add value stack object " + PYCREPR(stackObject));
 			PyTypeObject* type = (PyTypeObject*) PyObject_Type(stackObject);
-			DEBUG("[DYN] Type is " + STR(type->tp_name));
+			//DEBUG("[DYN] Type is " + STR(type->tp_name));
 			if (STR(type->tp_name)=="listiterator" )
 			{
 				ListIteratorMirror* stackIterator = (ListIteratorMirror*) (stackObject);
-				DEBUG("[DYN] 	      restoring iterator: [" + ISTR(stackIterator->it_index) + "," + PYCREPR(stackIterator->it_seq) + "]");
+				//DEBUG("[DYN] 	      restoring iterator: [" + ISTR(stackIterator->it_index) + "," + PYCREPR(stackIterator->it_seq) + "]");
 				PyObject* newIterator = PyObject_GetIter( (PyObject*)stackIterator->it_seq );
 				newIterator->ob_refcnt = stackObject->ob_refcnt;
 				*stack_pointer++ = newIterator;
@@ -440,7 +443,7 @@ void SPELLwsDynamicData::recoverValueStack()
 		}
 		m_frame->f_stacktop = stack_pointer--;
 		m_frame->f_code->co_stacksize = m_valueStack.size();
-		DEBUG("[DYN] 	Restoring value stack done");
+		//DEBUG("[DYN] 	Restoring value stack done");
 	}
 	// Otherwise define the top as the same value as the bottom of the stack
 	else
@@ -456,7 +459,7 @@ void SPELLwsDynamicData::storeValueStack()
 {
 	// Store the value stack. Size of the list first:
 	m_storage->storeLong( m_valueStack.size() );
-	DEBUG("[DYN] Storing value stack for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Storing value stack for frame " + PYCREPR(m_frame));
 	ObjectList::iterator it;
 	for( it = m_valueStack.begin(); it != m_valueStack.end(); it++)
 	{
@@ -509,7 +512,7 @@ void SPELLwsDynamicData::storeValueStack()
 void SPELLwsDynamicData::loadValueStack()
 {
 	long numValues = m_storage->loadLong();
-	DEBUG("[DYN] Loading value stack for frame " + PYCREPR(m_frame));
+	//DEBUG("[DYN] Loading value stack for frame " + PYCREPR(m_frame));
 	for( int count = 0; count < numValues; count++)
 	{
 		// Retrieve the marker
@@ -551,7 +554,7 @@ void SPELLwsDynamicData::updateFastLocals()
 {
 	assert(m_frame != NULL);
 	int numLocals = m_frame->f_code->co_nlocals-1;
-	DEBUG("[DYN] Update fast locals: " + ISTR(numLocals));
+	//DEBUG("[DYN] Update fast locals: " + ISTR(numLocals));
 	if (numLocals<0) numLocals = 0;
 	m_fastLocals.clear();
     if ((numLocals>0) && ((unsigned int)numLocals != m_fastLocals.size()))
@@ -561,7 +564,7 @@ void SPELLwsDynamicData::updateFastLocals()
 		{
 			if (*lplus)
 			{
-				DEBUG("      add fast local: " + PYREPR(*lplus));
+				//DEBUG("      add fast local: " + PYREPR(*lplus));
 				// IMPORTANT  this is a borrowed reference
 				m_fastLocals.push_back(*lplus);
 				lplus++;
@@ -576,13 +579,13 @@ void SPELLwsDynamicData::updateFastLocals()
 void SPELLwsDynamicData::recoverFastLocals()
 {
 	assert(m_frame != NULL);
-	DEBUG("[DYN] Recover fast locals: " + ISTR(m_fastLocals.size()));
+	//DEBUG("[DYN] Recover fast locals: " + ISTR(m_fastLocals.size()));
 	if (m_fastLocals.size()>0)
 	{
 		 for( unsigned int count = 0; count<m_fastLocals.size(); count++)
 		 {
 			 PyObject* obj = m_fastLocals[count];
-			 DEBUG("      recover fast local " + PYREPR(obj));
+			 //DEBUG("      recover fast local " + PYREPR(obj));
 			 m_frame->f_localsplus[count] = obj;
 		 }
 		 m_frame->f_code->co_nlocals = m_fastLocals.size()+1;
@@ -594,13 +597,13 @@ void SPELLwsDynamicData::recoverFastLocals()
 //=============================================================================
 void SPELLwsDynamicData::storeFastLocals()
 {
-	DEBUG("[DYN] Store fast locals: " + ISTR(m_fastLocals.size()));
+	//DEBUG("[DYN] Store fast locals: " + ISTR(m_fastLocals.size()));
 	// Store the fast locals. Size of list first
 	m_storage->storeLong( m_fastLocals.size() );
 	ObjectList::iterator it;
 	for( it = m_fastLocals.begin(); it != m_fastLocals.end(); it++)
 	{
-		DEBUG("      storing fast local " + PYREPR(*it));
+		//DEBUG("      storing fast local " + PYREPR(*it));
 		m_storage->storeObjectOrNone(*it);
 	}
 }
@@ -611,11 +614,11 @@ void SPELLwsDynamicData::storeFastLocals()
 void SPELLwsDynamicData::loadFastLocals()
 {
 	long numLocals = m_storage->loadLong();
-	DEBUG("[DYN] Load fast locals: " + ISTR(numLocals));
+	//DEBUG("[DYN] Load fast locals: " + ISTR(numLocals));
 	for(int count=0; count<numLocals; count++)
 	{
 		PyObject* obj = m_storage->loadObject();
-		DEBUG("      loaded fast local " + PYREPR(obj));
+		//DEBUG("      loaded fast local " + PYREPR(obj));
 		m_fastLocals.push_back( obj );
 	}
 }
@@ -625,7 +628,7 @@ void SPELLwsDynamicData::loadFastLocals()
 //=============================================================================
 void SPELLwsDynamicData::storeGlobals()
 {
-	DEBUG("[DYN] Storing globals");
+	//DEBUG("[DYN] Storing globals");
 	assert( m_frame->f_globals != NULL );
 	storeDictionary( m_frame->f_globals );
 	storeConstReferences( m_frame->f_globals );
@@ -676,7 +679,7 @@ void SPELLwsDynamicData::loadGlobals()
 //=============================================================================
 void SPELLwsDynamicData::storeLocals()
 {
-	DEBUG("[DYN] Storing locals");
+	//DEBUG("[DYN] Storing locals");
 	// IMPORTANT: do not remove this PyFrame calls. Inside functions, local variables MAY be defined in the
 	// fast locals, depending on their contents. These calls are needed so that the storeDictionary() call
 	// is able to store those local variables which were not moved to fast locals. Fast locals and locals
@@ -697,7 +700,7 @@ void SPELLwsDynamicData::loadLocals()
 
 	if (restored != NULL)
 	{
-		DEBUG("[DYN] Restored locals dictionary");
+		//DEBUG("[DYN] Restored locals dictionary");
 		// IMPORTANT: do not remove this PyFrame calls. Inside functions, local variables MAY be defined in the
 		// fast locals, depending on their contents. These calls are needed so that the storeDictionary() call
 		// is able to store those local variables which were not moved to fast locals. Fast locals and locals
@@ -723,7 +726,7 @@ void SPELLwsDynamicData::loadLocals()
 //=============================================================================
 void SPELLwsDynamicData::storeConstReferences( PyObject* dictionary )
 {
-	DEBUG("[DYN] Store const references");
+	//DEBUG("[DYN] Store const references");
 	if (dictionary == NULL)
 	{
 		m_storage->storeLong( 0 );
@@ -731,7 +734,7 @@ void SPELLwsDynamicData::storeConstReferences( PyObject* dictionary )
 	}
 	// Store possibly loaded functions which are ignored by the dictionary
 	// handler, if they are part of the code definition
-	DEBUG("[DYN] Counting const references");
+	//DEBUG("[DYN] Counting const references");
 	// Store first the amount of code references
 	unsigned int numReferences = 0;
 	int numConsts = 0;
@@ -739,7 +742,7 @@ void SPELLwsDynamicData::storeConstReferences( PyObject* dictionary )
 	if (co_consts != NULL)
 	{
 		numConsts = PyTuple_Size(co_consts);
-		DEBUG("[DYN] Defined " + ISTR(numConsts) + " constants in code");
+		//DEBUG("[DYN] Defined " + ISTR(numConsts) + " constants in code");
 		for( int index = 0; index < numConsts; index++ )
 		{
 			PyObject* item = PyTuple_GetItem(co_consts,index);
@@ -756,7 +759,7 @@ void SPELLwsDynamicData::storeConstReferences( PyObject* dictionary )
 		}
 	}
 
-	DEBUG("[DYN] Number of code references: " + ISTR(numReferences));
+	//DEBUG("[DYN] Number of code references: " + ISTR(numReferences));
 	m_storage->storeLong( numReferences );
 
 	if (numReferences>0)
@@ -771,7 +774,7 @@ void SPELLwsDynamicData::storeConstReferences( PyObject* dictionary )
 				// And the code object has been loaded in the globals dictionary
 				if (PyDict_Contains( dictionary, code->co_name ))
 				{
-					DEBUG("[DYN] Storing code reference: " + PYSTR(code->co_name));
+					//DEBUG("[DYN] Storing code reference: " + PYSTR(code->co_name));
 					m_storage->storeObject( code->co_name );
 				}
 			}
@@ -789,7 +792,7 @@ void SPELLwsDynamicData::loadConstReferences( PyObject* dictionary )
 
 	if (numReferences > 0)
 	{
-		DEBUG("[DYN] " + ISTR(numReferences) + "  global references to load");
+		//DEBUG("[DYN] " + ISTR(numReferences) + "  global references to load");
 		for(unsigned int count = 0; count < numReferences; count++ )
 		{
 			PyObject* codeName = m_storage->loadObject();
@@ -804,7 +807,7 @@ void SPELLwsDynamicData::loadConstReferences( PyObject* dictionary )
 					PyCodeObject* code = (PyCodeObject*) item;
 					if (PYSTR(code->co_name) == PYSTR(codeName))
 					{
-						DEBUG("[DYN] Loading reference to " + PYREPR(codeName));
+						//DEBUG("[DYN] Loading reference to " + PYREPR(codeName));
 						PyDict_SetItem( dictionary, code->co_name, PyFunction_New( (PyObject*) code, m_frame->f_globals) );
 					}
 				}
@@ -813,7 +816,7 @@ void SPELLwsDynamicData::loadConstReferences( PyObject* dictionary )
 	}
 	else
 	{
-		DEBUG("[DYN] No global references to load");
+		//DEBUG("[DYN] No global references to load");
 	}
 }
 
@@ -822,13 +825,13 @@ void SPELLwsDynamicData::loadConstReferences( PyObject* dictionary )
 //=============================================================================
 void SPELLwsDynamicData::storeParameters()
 {
-	DEBUG("[DYN] Storing frame parameters");
+	//DEBUG("[DYN] Storing frame parameters");
 	m_storage->storeLong(m_frame->f_lineno);
-	DEBUG("   - Lineno     : " + ISTR(m_frame->f_lineno));
+	//DEBUG("   - Lineno     : " + ISTR(m_frame->f_lineno));
 	m_storage->storeLong(m_frame->f_lasti);
-	DEBUG("   - Instruction: " + ISTR(m_frame->f_lasti));
+	//DEBUG("   - Instruction: " + ISTR(m_frame->f_lasti));
 	m_storage->storeLong(m_frame->f_iblock);
-	DEBUG("   - IBlocks    : " + ISTR(m_frame->f_iblock));
+	//DEBUG("   - IBlocks    : " + ISTR(m_frame->f_iblock));
 }
 
 //=============================================================================
@@ -836,9 +839,9 @@ void SPELLwsDynamicData::storeParameters()
 //=============================================================================
 void SPELLwsDynamicData::loadParameters()
 {
-	DEBUG("[DYN] Loading frame parameters");
+	//DEBUG("[DYN] Loading frame parameters");
 	m_frame->f_lineno = m_storage->loadLong();
-	DEBUG("   - Lineno     : " + ISTR(m_frame->f_lineno));
+	//DEBUG("   - Lineno     : " + ISTR(m_frame->f_lineno));
 	m_frame->f_lasti  = m_storage->loadLong();
 	// The last instruction pointer needs to be adjusted. Same as for fixState() algorithm
 
@@ -849,29 +852,29 @@ void SPELLwsDynamicData::loadParameters()
 		THROW_EXCEPTION("Unable to restore frame dynamic data", "Cannot restore frame parameters", SPELL_ERROR_WSTART);
 	}
 
-	DEBUG("[DYN] Adjusting offset");
+	//DEBUG("[DYN] Adjusting offset");
 	int offsetForLine = lnotab.offset(m_frame->f_lineno);
 	// If the current offset matches the first offset corresponding to the restored
 	// line in the lnotab, we are in the main proc and NO function call. We need
 	// to decrease the last instruction offset by 1 (see PyEval_EvalFrameEx)
 	if (offsetForLine == m_frame->f_lasti)
 	{
-		DEBUG("[DYN] Corresponds to normal statement");
+		//DEBUG("[DYN] Corresponds to normal statement");
 		m_frame->f_lasti = offsetForLine-1;
 	}
 	// Otherwise, we need to increase the offset by 2 (+3,-1) in order to position
 	// the interpreter right after the CALL_FUNCTION opcode, in the POP_TOP opcode
 	else
 	{
-		DEBUG("[DYN] Corresponds to function call");
+		//DEBUG("[DYN] Corresponds to function call");
 		int nextLine = lnotab.lineAfter(m_frame->f_lineno);
-		DEBUG("[DYN] Next line is " + ISTR(nextLine));
+		//DEBUG("[DYN] Next line is " + ISTR(nextLine));
 		int nextInstruction = lnotab.offset(nextLine);
 		m_frame->f_lasti = nextInstruction -1; // Will position it in the lastLine but POP_TOP instr.
 	}
-	DEBUG("   - Instruction: " + ISTR(m_frame->f_lasti));
+	//DEBUG("   - Instruction: " + ISTR(m_frame->f_lasti));
 	m_frame->f_iblock = m_storage->loadLong();
-	DEBUG("   - IBlocks    : " + ISTR(m_frame->f_iblock));
+	//DEBUG("   - IBlocks    : " + ISTR(m_frame->f_iblock));
 }
 
 //=============================================================================
@@ -900,7 +903,7 @@ PyObject* SPELLwsDynamicData::loadDictionary()
 //=============================================================================
 void SPELLwsDynamicData::storeDTA( const std::string& container )
 {
-	DEBUG("[DYN] Store DTA container: " + container);
+	//DEBUG("[DYN] Store DTA container: " + container);
 
 	PyObject* pyObj = PyDict_GetItemString(SPELLpythonHelper::instance().getMainDict(), container.c_str() );
 
@@ -917,7 +920,7 @@ void SPELLwsDynamicData::storeDTA( const std::string& container )
 
 	m_storage->storeLong(numKeys);
 
-	DEBUG("[DYN] " + ISTR(numKeys) + " items");
+	//DEBUG("[DYN] " + ISTR(numKeys) + " items");
 
 	for(unsigned int index=0; index < numKeys; index++)
 	{
@@ -931,13 +934,13 @@ void SPELLwsDynamicData::storeDTA( const std::string& container )
 		std::string format = var->getFormat();
 		std::string type = var->getType();
 
-		DEBUG("     - key: " + var->getName());
+		//DEBUG("     - key: " + var->getName());
 
 		// 0. Key
 		m_storage->storeObject( SSTRPY(var->getName()) );
 
 		// 1. Value
-		DEBUG("     - value: " + PYREPR(value));
+		//DEBUG("     - value: " + PYREPR(value));
 		SPELLwsDataHandler* handler = SPELLwsDataHandlerFactory::createDataHandler(value);
 		handler->setStorage(m_storage);
 		m_storage->storeLong(handler->getCode());
@@ -946,22 +949,22 @@ void SPELLwsDynamicData::storeDTA( const std::string& container )
 		// 2. Format, Type and Confirm
 		if (format.empty())
 		{
-			DEBUG("     - no format given");
+			//DEBUG("     - no format given");
 			m_storage->storeObject( Py_None );
 		}
 		else
 		{
-			DEBUG("     - format: " + format);
+			//DEBUG("     - format: " + format);
 			m_storage->storeObject( SSTRPY(format) );
 		}
 		if (type.empty())
 		{
-			DEBUG("     - no type given");
+			//DEBUG("     - no type given");
 			m_storage->storeObject( Py_None );
 		}
 		else
 		{
-			DEBUG("     - type: " + type);
+			//DEBUG("     - type: " + type);
 			m_storage->storeObject( SSTRPY(type) );
 		}
 		m_storage->storeObject( confirmGet ? Py_True : Py_False );
@@ -983,7 +986,7 @@ void SPELLwsDynamicData::storeDTA( const std::string& container )
 		}
 	}
 
-	DEBUG("[DYN] Data container stored");
+	//DEBUG("[DYN] Data container stored");
 }
 
 //=============================================================================
@@ -991,7 +994,7 @@ void SPELLwsDynamicData::storeDTA( const std::string& container )
 //=============================================================================
 void SPELLwsDynamicData::loadDTA( const std::string& container )
 {
-	DEBUG("[DYN] Loading data container: " + container);
+	//DEBUG("[DYN] Loading data container: " + container);
 
 	PyObject* pyObj = PyDict_GetItemString(SPELLpythonHelper::instance().getMainDict(), container.c_str() );
 
@@ -1006,14 +1009,14 @@ void SPELLwsDynamicData::loadDTA( const std::string& container )
 
 	unsigned int numKeys = m_storage->loadLong();
 
-	DEBUG("[DYN] Items to load: " + ISTR(numKeys));
+	//DEBUG("[DYN] Items to load: " + ISTR(numKeys));
 
 	for(unsigned int index=0; index < numKeys; index++)
 	{
 		// 0. Key
 		PyObject* pyName = m_storage->loadObject();
 
-		DEBUG("     - key: " + PYREPR(pyName));
+		//DEBUG("     - key: " + PYREPR(pyName));
 
 		// 1. Value
 		SPELLwsData::Code code = (SPELLwsData::Code) m_storage->loadLong();
@@ -1023,13 +1026,13 @@ void SPELLwsDynamicData::loadDTA( const std::string& container )
 
 		PyObject* value = handler->getObject();
 
-		DEBUG("     - value: " + PYREPR(value));
+		//DEBUG("     - value: " + PYREPR(value));
 
 		// 2. Format, Type and Confirm
 		PyObject* pyFormat = m_storage->loadObject();
-		DEBUG("     - format: " + PYREPR(pyFormat));
+		//DEBUG("     - format: " + PYREPR(pyFormat));
 		PyObject* pyType = m_storage->loadObject();
-		DEBUG("     - type: " + PYREPR(pyType));
+		//DEBUG("     - type: " + PYREPR(pyType));
 		PyObject* pyConfirm = m_storage->loadObject();
 
 		// 3. Expected
@@ -1055,7 +1058,7 @@ void SPELLwsDynamicData::loadDTA( const std::string& container )
 		}
 
 		// Create the variable
-		PyObject* varClass = SPELLpythonHelper::instance().getObject("libSPELL_DTA", "Var");
+		PyObject* varClass = SPELLpythonHelper::instance().getObject(MOD_NAME(libSPELL_DTA), "Var");
 		Py_INCREF(varClass);
 		assert(varClass != NULL);
 		PyObject* dict = PyDict_New();
@@ -1090,6 +1093,6 @@ void SPELLwsDynamicData::loadDTA( const std::string& container )
 		args->setValue(pyName,instance);
 	}
 
-	DEBUG("[DYN] Data container loaded");
+	//DEBUG("[DYN] Data container loaded");
 
 }

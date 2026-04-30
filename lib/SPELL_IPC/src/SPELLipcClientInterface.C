@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the interface for clients
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -59,6 +59,7 @@ SPELLipcClientInterface::SPELLipcClientInterface( const std::string& name, const
 {
     m_channel = NULL;
     m_listener = NULL;
+    m_socket = NULL;
     m_trash.start();
 
     m_timeoutIpcRetry = SPELLconfiguration::instance().commonOrDefault("RetryTimeout", IPC_REQUEST_RETRY_DEFAULT_DELAY_MSEC );
@@ -339,15 +340,16 @@ void SPELLipcClientInterface::incomingRequest( const SPELLipcMessage& msg )
 
     SPELLmonitor m(m_lock);
 
-    DEBUG(NAME + "Incoming request (" + msg.getSequenceStr() + ")");
+    DEBUG(NAME + "Incoming request (" + msg.getSequenceStr() + ") for ("+msg.get("User")+")");
 
     try
     {
         DEBUG(NAME + "Creating request processor (" + msg.getSequenceStr() + ")");
-    	SPELLipcIncomingRequest* ireq = new SPELLipcIncomingRequest( msg.requestId(), m_ifcName, msg, m_channel->getWriter(), *m_listener );
+    	SPELLipcIncomingRequest* ireq = new SPELLipcIncomingRequest( msg.requestId(), m_ifcName, msg, m_lock, &m_channel, *m_listener );
     	ireq->start();
-        DEBUG(NAME + "Wait request processor to start (" + msg.getSequenceStr() + ")");
-    	ireq->waitStarted();
+        //DEBUG(NAME + "Wait request processor to start (" + msg.getSequenceStr() + ")");
+        // TODO: No reason to wait here. Remove once validated.
+    	//ireq->waitStarted();
         DEBUG(NAME + "Place in trash");
     	m_trash.place(ireq);
         DEBUG(NAME + "Creating request processor DONE (" + msg.getSequenceStr() + ")");
@@ -365,7 +367,7 @@ void SPELLipcClientInterface::incomingRequest( const SPELLipcMessage& msg )
 //=============================================================================
 void SPELLipcClientInterface::incomingMessage( const SPELLipcMessage& msg )
 {
-    DEBUG(NAME + "IPC interface incoming message " + msg.getId());
+    DEBUG(NAME + "IPC interface incoming message " + msg.getId() + " for ("+msg.get("User")+")");
 
     if (!m_connected) return;
     if (m_listener == NULL) return;
@@ -374,11 +376,12 @@ void SPELLipcClientInterface::incomingMessage( const SPELLipcMessage& msg )
 
     SPELLipcIncomingMessage* imsg = new SPELLipcIncomingMessage( msgId, m_ifcName, msg, *m_listener);
     imsg->start();
-    DEBUG(NAME + "Wait processor to start");
-	imsg->waitStarted();
-    DEBUG(NAME + "Place in trash");
+    //DEBUG(NAME + "Wait processor to start");
+    // TODO: No reason to wait here. Remove once validated.
+	//imsg->waitStarted();
+    //DEBUG(NAME + "Place in trash");
     m_trash.place(imsg);
-    DEBUG(NAME + "IPC interface incoming message OUT");
+    //DEBUG(NAME + "IPC interface incoming message OUT");
 }
 
 //=============================================================================
@@ -567,3 +570,10 @@ void SPELLipcClientInterface::removeListener()
 	m_listener = NULL;
 }
 
+SPELLipcMessage SPELLipcClientInterface::getPingMessage()
+{
+    if (m_listener != NULL)
+        return m_listener->getPingMessage();
+    static SPELLipcMessage empty = SPELLipcMessage();
+    return empty;
+};

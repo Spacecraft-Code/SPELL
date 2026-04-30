@@ -5,7 +5,7 @@
 // DESCRIPTION: Common IPC interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -175,6 +175,12 @@ public: //--------------------------------------------------------------------
 		 * \param msg IN: response to be processed.
 		**////////////////////////////////////////////////////////////////////
 		virtual void incomingResponse( const SPELLipcMessage& msg ) = 0;
+
+		virtual SPELLipcMessage getPingMessage()
+        {
+		    static SPELLipcMessage empty = SPELLipcMessage();
+		    return empty;
+        };
 };
 
 /*@}*/

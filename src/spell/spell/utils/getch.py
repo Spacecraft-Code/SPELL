@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Getchar implementation
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -51,7 +51,7 @@ class _Getch:
 ################################################################################
 class _GetchCommon:
 
-    scanCode = False 
+    scanCode = False
 
     def echo(self, ch):
         o = ord(ch)

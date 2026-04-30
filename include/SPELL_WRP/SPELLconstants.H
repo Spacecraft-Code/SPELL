@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL language constants
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -67,8 +67,11 @@ const std::string MaxVerbosity           = "MaxVerbosity";
 const std::string BrowsableLib           = "BrowsableLib";
 const std::string UserLib                = "UserLib";
 const std::string ForceTcConfirm         = "ForceTcConfirm";
+const std::string ForcePromptConfirm     = "ForcePromptConfirm";
 const std::string SaveStateMode          = "SaveStateMode";
 const std::string WatchVariables         = "WatchVariables";
+const std::string ResourcesDisplay       = "ResourcesDisplay";
+const std::string LocalResourcesSupported = "LocalResourcesSupported";
 const std::string ENABLED                = "ENABLED";
 const std::string SAVE_ON_LINE           = "ON_LINE";
 const std::string SAVE_ON_DEMAND         = "ON_DEMAND";
@@ -118,6 +121,10 @@ namespace LanguageConstants
 	const std::string RAW                    = "Raw format";
 	const std::string ENG                    = "Eng format";
 	const std::string DEF                    = "Default format";
+
+	const std::string ACTIVE                 = "ACTIVE";
+	const std::string ALL                    = "ALL";
+
 
 	const unsigned int ABORT                 = 1;
 	const unsigned int CANCEL                = 2;
@@ -179,6 +186,8 @@ namespace LanguageConstants
 	const unsigned int PROMPT_YES_NO         = 128;
 	const unsigned int PROMPT_OK_CANCEL      = 512;
 	const unsigned int PROMPT_DATE           = 1024;
+	const unsigned int PROMPT_COMBO          = 2048;
+	const unsigned int PROMPT_PASSWORD       = 4096;
 
 	const std::string TIME_MODE_LIVE         = "live mode";
 	const std::string TIME_MODE_FWD          = "forwards retrieval mode";
@@ -193,7 +202,14 @@ namespace LanguageConstants
 	const std::string ACTION_CANCEL          = "Q";
 	const std::string ACTION_CANCEL_PMT      = "P";
 
-
+	//Limit constants
+	const std::string HARDSOFT				= "HARDSOFT";
+	const std::string HARD					= "HARD";
+	const std::string SOFT					= "SOFT";
+	const std::string STATUS				= "STATUS";
+	const std::string STATUS_CONSISTENCY	= "STATUS_CONSISTENCY";
+	const std::string SPIKE					= "SPIKE";
+	const std::string STEP					= "STEP";
 };
 // =========================================================================
 
@@ -239,6 +255,7 @@ namespace LanguageModifiers
 	const std::string OnTrue                 = "OnTrue";
 	const std::string OnSkip                 = "OnSkip";
 	const std::string Tolerance              = "Tolerance";
+	const std::string RelTolerance           = "RelTolerance";
 	const std::string LoRed                  = "LoRed";
 	const std::string LoYel                  = "LoYel";
 	const std::string HiRed                  = "HiRed";
@@ -259,8 +276,21 @@ namespace LanguageModifiers
 	const std::string Verbosity              = "Verbosity";
 	const std::string ReleaseTime			 = "ReleaseTime";
 	const std::string Procedure              = "Procedure";
-	const std::string Range                  = "Range";
-	const std::string Select                 = "Select";
+	const std::string Range						= "Range";
+	const std::string Select					= "Select";
+	const std::string Definition				= "Definition";
+	const std::string Delta						= "Delta";
+	const std::string Hysteresis				= "Hysteresis";
+	
+	const std::string Nominal					= "Nominal";
+	const std::string Error						= "Error";
+	const std::string Ignore					= "Ignore";
+	const std::string Warning					= "Warning";
+	
+	const std::string Name						= "Name";
+	const std::string Active					= "Active";
+	const std::string Algorithm					= "Algorithm";
+	const std::string Value						= "Value";
 }
 // =========================================================================
 
@@ -269,6 +299,7 @@ namespace LanguageModifiers
 namespace ContextConstants
 {
 	const std::string ExecutorScript         = "ExecutorScript";
+	const std::string EXIFversion            = "EXIFversion";
 };
 // =========================================================================
 
@@ -310,7 +341,8 @@ namespace XMLTags
 	const std::string TAG_CTX_GCS             = "gcs";
 	const std::string TAG_CTX_PPATH           = "procpath";
 	const std::string TAG_CTX_LPATH           = "libpath";
-	const std::string TAG_CTX_OPATH           = "output_dir";
+	const std::string TAG_CTX_SPATH           = "servicepath";
+    const std::string TAG_CTX_OPATH           = "output_dir";
 	const std::string TAG_CTX_IPATH           = "input_dir";
 	const std::string TAG_CTX_ECONFIG         = "executor";
 	const std::string TAG_CTX_DCONFIG         = "driverconfig";

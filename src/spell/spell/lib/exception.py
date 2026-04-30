@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Exceptions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,60 +33,61 @@
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
- 
+
 #*******************************************************************************
-# Exceptions 
+# Exceptions
 #*******************************************************************************
 
-class SpellException( BaseException ):
+class SpellException( Exception ):
     message = None
     reason  = None
-    def __init__(self, msg = None, reason = None ):
-        BaseException.__init__(self,msg)
+    data    = None # opaque data object
+    def __init__(self, msg = None, reason = None, data = None ):
+        Exception.__init__(self,msg)
         if isinstance(msg,SpellException):
             self.message = msg.message
             self.reason  = msg.reason
+            self.data    = msg.data
         elif type(msg)==str:
             self.message = msg
-            self.reason = reason
+            self.reason  = reason
+            self.data    = data
         if self.message is None:
             self.message = repr(self.__class__)
         if self.reason is None:
             self.reason = "unknown"
-    
+
     def __str__(self):
         return self.message + " ( " + self.reason + " )"
 
     def __repr__(self):
         return self.message + " ( " + self.reason + " )"
-        
-class CoreException  ( SpellException ): pass 
+
+class CoreException  ( SpellException ): pass
 class NotAvailable   ( SpellException ): pass
 class DriverException( SpellException ): pass
 class CancelException( SpellException ): pass
 class VerifyException( SpellException ): pass
 class SyntaxException( SpellException ): pass
 
+#*******************************************************************************
+# Customized Exceptions
+#*******************************************************************************
+class Handle(Exception):
 
-#*******************************************************************************
-# Customized Exceptions 
-#*******************************************************************************
-class Handle:
-    
     code = 0
     type = None
     item = None
-    
+
     def __init__(self, code = 0, type = None, item = None):
         self.code = code
         self.type = type
         self.item = item
- 
+
 #*******************************************************************************
 # Module globals
 #*******************************************************************************
-

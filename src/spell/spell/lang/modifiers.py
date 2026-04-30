@@ -82,7 +82,7 @@ Authoring
 
 @organization: SES ENGINEERING
 
-@copyright: Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+@copyright: Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
             
 @license:  This file is part of SPELL.
 
@@ -106,19 +106,22 @@ Authoring
 """
 ###############################################################################
 
-#: Timeout for any SPELL operation. 
+#: Timeout for any SPELL operation.
 #:
-#: Accepts any time in float format. Applicable to TM checks, command executions, 
+#: Accepts any time in float format. Applicable to TM checks, command executions,
 #: wait functions, etc.
 Timeout = 'Timeout'
-#: Number of retries for TM comparisons. 
+# These will take precedence if existing
+TmTimeout = 'TmTimeout'
+TcTimeout = 'TcTimeout'
+#: Number of retries for TM comparisons.
 #:
-#: Accepts an integer. 
+#: Accepts an integer.
 #:
-#: If a TM comparison fails, it will be repeated again as many times as specified 
+#: If a TM comparison fails, it will be repeated again as many times as specified
 #: by this modifier before actually failing.
 Retries = 'Retries'
-#: Wait flag for TM checks. 
+#: Wait flag for TM checks.
 #:
 #: Accepts True/False.
 #:
@@ -129,34 +132,36 @@ Wait = 'Wait'
 #: Format of a TM value.
 #:
 #: Accepts one of the following SPELL constants: RAW,ENG,DEF.
-#: 
+#:
 #: Indicates the desired format of a TM parameter (uncalibrated or calibrated)
 #: to be used in operations.
 ValueFormat = 'ValueFormat'
+
+IgnoreValidity = 'IgnoreValidity'
 #: Value type of a constant or variable.
 #:
 #: Accepts one of the following SPELL constants: STRING,LONG,FLOAT,DATETIME.
-#: 
+#:
 #: Indicates the desired format of a constant or variable.
 ValueType = 'ValueType'
 #: Radix of a constant or variable.
 #:
 #: Accepts one of the following SPELL constants: DEC,BIN,HEX,OCT.
-#: 
+#:
 #: Indicates the desired radix of a constant.Typically used in TC arguments
 #: specifications.
 Radix = 'Radix'
 #: Units of a constant or variable.
 #:
 #: Accepts any string.
-#: 
+#:
 #: Indicates the desired units of a constant or variable. Typically used in
 #: TC argument specifications.
 Units = 'Units'
 #: Notify clients flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Special modifier intended to be used in advanced operations. If True (default)
 #: the SPELL interfaces will notify SPELL clients about the ongoing operation
 #: status. If False, no notification will be done.
@@ -164,14 +169,14 @@ Notify = 'Notify'
 #: Strict comparison flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Typically used in TM verification steps. Indicates wether the associated comparison
 #: shall be strict or not.
 Strict = 'Strict'
 #: Try all flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: When sending a group of commands (not a sequence) and one of them fails,
 #: if this flag is False the whole operation will stop and fail. Otherwise, the rest
 #: of the commands of the group will be sent.
@@ -189,18 +194,28 @@ TryAll = "TryAll"
 #:      - PROMPT
 #:      - NOPROMPT
 #:      - NOACTION
-#: 
-#: Combinations are made with the pipe '|' character. This specification determines
-#: the list of choices (possible actions) shown to the user when a SPELL operation fails. 
 #:
-#: Notice that not all behavior constants are accepted by all SPELL functions. 
+#: Combinations are made with the pipe '|' character. This specification determines
+#: the list of choices (possible actions) shown to the user when a SPELL operation fails.
+#:
+#: Notice that not all behavior constants are accepted by all SPELL functions.
 #: The SPELL function documentation indicate which constants are applicable in each case.
 OnFailure = 'OnFailure'
 FailureCode = 'FailureCode'
+
+#: Ground parameter scope flag.
+#:
+#: Accepts True/False.
+#:
+#: If this flag is True, the scope of the ground parameter set via SetResource or
+#: retrieved via GetResource will limited to the local procedure only. Otherwise,
+#: the setting/retrieval will be handled through the GCS.
+IsLocal = 'IsLocal'
+
 #: Command block flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: A group of commands (not a sequence) can be sent one by one or grouped in a
 #: single frame. If this flag is True, the commands will be blocked. Otherwise
 #: (default) they will be sent and verified independently.
@@ -208,33 +223,33 @@ Block = 'Block'
 #: c flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Intended to be used internally by SPELL interfaces, not for procedure developers.
 #: Identifies a sequence and allows SPELL distinguishing it from a simple command.
 Sequence = 'Sequence'
 #: Host identifier.
 #:
 #: Accepts any string.
-#: 
+#:
 #: Specifies the host name to be used in a SPELL operation.
 Host = 'Host'
 #: Timestamp values.
 #:
 #: Accepts a TIME instance, a date-time string or a float value.
-#: 
+#:
 #: Used to pass dates and times to SPELL functions. Its specific meaning depends
 #: on the particular SPELL function being used.
 Time = 'Time'
 #: Until time.
 #:
 #: Accepts a TIME instance, a date-time string or a float value.
-#: 
+#:
 #: Indicates a time line for waiting for it.
 Until = 'Until'
 #: Delay time.
 #:
 #: Accepts a TIME instance, a date-time string or a float value.
-#: 
+#:
 #: Indicates the amount of time to wait between two operations. For example,
 #: in SendAndVerify function, it specifies the time to wait between the command
 #: execution verification and the TM verifications.
@@ -242,7 +257,7 @@ Delay = 'Delay'
 #: Delay time before command execution.
 #:
 #: Accepts a TIME instance, a date-time string or a float value.
-#: 
+#:
 #: Indicates the amount of time to wait before sending a command.
 SendDelay = 'SendDelay'
 #: Load command only, dont execute
@@ -263,26 +278,30 @@ Default = 'Default'
 #: Message severity
 #:
 #: Accepts one of the following: INFORMATION, WARNING, ERROR or FATAL.
-#: 
+#:
 #: Used when injecting events into the controlled system or when displaying
 #: messages.
 Severity = 'Severity'
 #: Event scope.
 #:
 #: Accepts one of the following: SCOPE_PROC, SCOPE_CFG or SCOPE_SYS.
-#: 
+#:
 #: Indicates the scope of an injected event.
 Scope = 'Scope'
+#: Event application.
+#:
+#: Indicates the application of an injected event.
+Application = 'Application'
 #: Operation mode.
 #:
 #: The accepted values depend on the SPELL function where it is used.
-#: 
+#:
 #: The semantics of this modifier depend on the SPELL function being used.
 Mode = 'Mode'
 #: Confirm flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Indicates if the corresponding SPELL operation shall be confirmed by the user
 #: or not. For example, when used with Send() functions, it will prompt the
 #: user for confirmation before sending the command/sequence.
@@ -290,7 +309,7 @@ Confirm ='Confirm'
 #: Confirm only critical flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Indicates if Send() functions must prompt the user for confirmation before
 #: sending a command/sequence/group with critical commands.
 ConfirmCritical ='ConfirmCritical'
@@ -300,12 +319,12 @@ ConfirmCritical ='ConfirmCritical'
 Critical = 'Critical'
 #: Type indicator.
 #:
-#: The semantics and accepted values depend on the SPELL function being used. 
+#: The semantics and accepted values depend on the SPELL function being used.
 Type = 'Type'
 #: Handle error flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Special modifier intended to be used in advanced operations. If true (default),
 #: the SPELL function will manage any operation failure internally. If False,
 #: any raisen exception will be forwarded to procedure level.
@@ -313,23 +332,23 @@ HandleError = 'HandleError'
 #: Allow interrupt flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Special modifier intended to be used in advanced operations. If true,
 #: the SPELL function can be interrupted in the middle of the operation.
 AllowInterrupt = 'AllowInterrupt'
 #: Give status flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Special modifier intended to be used in advanced operations. It has effect only
-#: in case of operation failures. If true, the SPELL function will return a duple 
+#: in case of operation failures. If true, the SPELL function will return a duple
 #: containing the function return value and the user choice after being prompted
 #: for choosing an action. Default is False.
 GiveChoice = 'GiveChoice'
 #: Prompt user flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: When True, the user will be prompted in case of true/false result. If False, the user
 #: will not be prompted and the SPELL interface will take directly the action
 #: specified by the OnTrue/OnFalse modifier.
@@ -339,25 +358,25 @@ PromptUser = 'PromptUser'
 #: specified by the OnFailure modifier.
 #:
 #: Accepts True/False.
-#: 
+#:
 PromptFailure = 'PromptFailure'
 #: Retry flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: Internal modifier not to be used in procedure developments.
 Retry = 'Retry'
 #: Adjust limits flag.
 #:
 #: Accepts True/False.
-#: 
+#:
 #: If True, the out of limits definitions of the associated TM parameter will
-#: be adjusted using other given information. 
+#: be adjusted using other given information.
 AdjLimits = 'AdjLimits'
 #: On false behavior specification.
 #:
 #: Accepts one of the behavior constants (see OnFailure modifier).
-#: 
+#:
 #: If the SPELL operation has a boolean result and this result is False, the
 #: given action will be taken automatically. Tipically the PROMPT/NOPROMPT
 #: constants are used.
@@ -365,7 +384,7 @@ OnFalse = 'OnFalse'
 #: On true behavior specification.
 #:
 #: Accepts one of the behavior constants (see OnFailure modifier).
-#: 
+#:
 #: If the SPELL operation has a boolean result and this result is True, the
 #: given action will be taken automatically. Tipically the PROMPT/NOPROMPT
 #: constants are used.
@@ -373,16 +392,22 @@ OnTrue = 'OnTrue'
 #: On skip behavior specification.
 #:
 #: Accepts one of the behavior constants (see OnFailure modifier).
-#: 
+#:
 #: Indicates the function result when the user chooses SKIP in case of failure.
 OnSkip = 'OnSkip'
 #: Comparison tolerance.
 #:
 #: Accepts a float value.
-#: 
+#:
 #: Used in comparisons (TM verifications). Also used for adjusting TM parameter
 #: limit definitions if no additional information is given.
 Tolerance = 'Tolerance'
+RelTolerance = 'RelTolerance'
+#: Delta.
+#:
+#: Accepts a float value.
+Delta = 'Delta'
+
 #: Low-Red Limit definition.
 #:
 #: Accepts a float value.
@@ -405,8 +430,12 @@ HiYel = 'HiYel'
 Midpoint = 'Midpoint'
 #: Identifies the group of limits to be retrieved/changed
 #:
-#: Accepts a dictionary containing HiRed, HiYel, LoRed, LoYel.
+#: Accepts a dictionary containing multiple limit definitions.
 Limits = 'Limits'
+#: Identifies a limit definition.
+#:
+#: Accepts a dictionary containing HiRed, HiYel, LoRed, LoYel or Nominal, Warning, Error & Ignore.
+Definition = 'Definition'
 #: Identifies the group of expected status codes (status parameters)
 #:
 #: Accepts a comma separated list of string status codes
@@ -543,4 +572,37 @@ Path = 'Path'
 #:
 #: Accepts integer
 Measurements = 'Measurements'
-
+#: Limits. OOL definition Hysteresis
+#:
+#: Accepts integer
+Hysteresis = 'Hysteresis'
+#: Limits. OOL definition algorithm
+#:
+#: Accepts string
+Algorithm = 'Algorithm'
+#: Limits. OOL definition active
+#:
+#: Accepts boolean
+Active = 'Active'
+#: Limits. Current OOL state
+#:
+#: Variant string
+State = 'State'
+#: PCS Version
+#:
+#:
+Version = 'Version'
+#: TM packet information
+#:
+#: Accepts a positive integer
+#:
+#: Represents the starting time to consider
+#: when getting TM packets
+StartTime = 'StartTime'
+#: TM packet information
+#:
+#: Accepts a dictionary
+#:
+#: Represents the S/C specific data filters
+#: when getting TM packets
+Filters = 'Filters'

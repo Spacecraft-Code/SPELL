@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package Messages;
+
+message Header {
+    string topic = 1;               // topic identifier
+    uint64 publisherID = 2;         // unique identifier of the publisher, 0 if not publishing
+    uint32 scID = 3;                // satellite identifier as per SATDB
+    uint32 familyID = 4;            // family identifier as per SATDB
+    string key = 5;                 // key
+};
+

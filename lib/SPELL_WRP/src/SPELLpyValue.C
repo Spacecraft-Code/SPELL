@@ -5,7 +5,7 @@
 // DESCRIPTION: Data variable implementation
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -94,7 +94,7 @@ void SPELLpyValue::set( PyObject* pyValue )
 		{
 			DEBUG("[PYVAL] Int check");
 			m_type = LONG;
-			m_intValue = PyInt_AsLong(pyValue);
+			m_intValue = PyLong_AsLongLong(pyValue);
 		}
 		else if (PyFloat_Check(pyValue))
 		{
@@ -103,7 +103,7 @@ void SPELLpyValue::set( PyObject* pyValue )
 		}
 		else if (SPELLpythonHelper::instance().isTime(pyValue))
 		{
-			m_timeValue = SPELLpythonHelper::instance().evalTime(PYSSTR(pyValue));
+			m_timeValue = SPELLpythonHelper::instance().evalTime(pyValue);
 			if (m_timeValue.isDelta())
 			{
 				m_type = RELTIME;
@@ -173,7 +173,7 @@ PyObject* SPELLpyValue::get() const
 	}
 	else if (m_type == LONG )
 	{
-		return PyLong_FromLong(m_intValue);
+		return PyLong_FromLongLong(m_intValue);
 	}
 	else if (m_type == DOUBLE)
 	{

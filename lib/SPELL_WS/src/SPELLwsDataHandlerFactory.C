@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the data handler factory
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -27,8 +27,10 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
 #include "SPELL_WS/SPELLwsDataHandlerFactory.H"
+#if PY_MAJOR_VERSION < 3
 #include "SPELL_WS/SPELLwsClassDataHandler.H"
 #include "SPELL_WS/SPELLwsInstanceDataHandler.H"
+#endif
 #include "SPELL_WS/SPELLwsCustomTypeDataHandler.H"
 #include "SPELL_WS/SPELLwsTmItemDataHandler.H"
 #include "SPELL_WS/SPELLwsDictDataHandler.H"
@@ -85,6 +87,7 @@ SPELLwsDataHandler* SPELLwsDataHandlerFactory::createDataHandler( PyObject* obje
 		//DEBUG("[DHF] Object is TIME");
 		handler = new SPELLwsTimeDataHandler(object);
 	}
+#if PY_MAJOR_VERSION < 3
 	else if (PyClass_Check(object))
 	{
 		DEBUG("[DHF] Object is a class: " + PYCREPR(object));
@@ -95,6 +98,7 @@ SPELLwsDataHandler* SPELLwsDataHandlerFactory::createDataHandler( PyObject* obje
 		//DEBUG("[DHF] Object is a instance: " + PYCREPR(object));
 		handler = new SPELLwsInstanceDataHandler(object);
 	}
+#endif
 	else if (SPELLpythonHelper::instance().isSubclassInstance(object, "TmItemClass", "spell.lib.adapter.tm_item"))
 	{
 		//DEBUG("[DHF] Object is a TM item: " + PYCREPR(object));
@@ -129,12 +133,14 @@ SPELLwsDataHandler* SPELLwsDataHandlerFactory::createDataHandler( SPELLwsData::C
 	case SPELLwsData::DATA_GENERIC:
 		handler = new SPELLwsObjectDataHandler(NULL);
 		break;
+#if PY_MAJOR_VERSION < 3
 	case SPELLwsData::DATA_CLASS:
 		handler = new SPELLwsClassDataHandler(NULL);
 		break;
 	case SPELLwsData::DATA_INSTANCE:
 		handler = new SPELLwsInstanceDataHandler(NULL);
 		break;
+#endif
 	case SPELLwsData::DATA_CUSTOM_TYPE:
 		handler = new SPELLwsCustomTypeDataHandler(NULL);
 		break;

@@ -1,0 +1,566 @@
+syntax = "proto3";
+
+package spell.driver;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/wrappers.proto";
+
+option java_multiple_files = true;
+option java_package = "lu.ses.engineering.spell.grpc.driver";
+option java_outer_classname = "SPELLDriverProto";
+option go_package = "driver";
+
+service SPELLDriverInterface {
+    rpc GetDriverInfo (DriverInfo) returns (DriverInfo);
+    rpc Ping (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Close (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+service SPELLDriverInterface_TM {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc DatabaseLookup (LookupRequest) returns (LookupAnswer);
+    //Load a set of limits definitions for a given parameter, from a given file.
+	//
+	//param: telemetry parameter name
+	//limits: file with limit definitions
+	//config: configuration parameters
+	//  returns True/False for Success
+//    rpc LoadLimits (google.protobuf.Empty) returns (google.protobuf.BoolValue);
+	//Modify an Out Of Limits definition for a given telemetry parameter
+	//
+	//param: the telemetry parameter name
+	//limits: dictionary containing the limit parameters
+	//config: configuration dictionary with modifiers
+	//
+	//Relevant modifiers are:
+	//
+	//- Select=ACTIVE/ALL/<STR>: indicates which definitions should be affected
+	//                     (all, only the active ones, or the one indicated by
+	//                     the string)
+	//
+	//Limit parameters dictionary may contain the following:
+	//
+	//LoRed,LoYel,HiRed,HiYel: indicate the hard and soft limit values
+	//
+	//Midpoint,Tolerance: indicate a middle limit point and a tolerance that is
+	//                    used to calculate the upper and lower limits (M+T, M-T)
+	//                    Hard and soft limits are considered equal.
+	//
+	//Nominal,Earning,Error,Ignore: the values are lists containing the values
+	//                    assigned to each category, e.g. Nominal:['ValueA','ValueB']
+	//
+	//Delta: set a step or spike limit
+    rpc SetLimits (LimitSetRequest) returns (google.protobuf.BoolValue);
+	//Obtain an Out Of Limits definition for a given telemetry parameter
+	//
+	//param: the telemetry parameter name
+	//config: configuration dictionary with modifiers
+	//
+	//Relevant modifiers are:
+	//
+	//- Select=ACTIVE/ALL/<STR>: indicates which definitions should be considered
+	//                     (all, only the active ones, or the one indicated by
+	//                     the string)
+	//
+	//The limit definition to be returned may be one of the following:
+	//
+	//{LoRed,LoYel,HiRed,HiYel}: indicate the hard and soft limit values
+	//
+	//{Nominal,Earning,Error,Ignore}: the values are lists containing the values
+	//                    assigned to each category, e.g. Nominal:['ValueA','ValueB']
+	//
+	//{Delta}: step or spike limit
+    rpc GetLimits (TmItemValue) returns (LimitSet);
+    rpc IsAlarmed (TmItemValue) returns (google.protobuf.BoolValue);
+	//Inject a ground value for a TM parameter.
+	//
+	//tmItem : instance of TmItemClass with the parameter information
+	//value  : contains the required value
+	//config : configuration dictionary with modifiers.
+	//  returns True/False for success
+    rpc InjectItem (TmItemValue) returns (google.protobuf.BoolValue);
+	//Acquire the value for a TM parameter.
+	//
+	//tmItem : instance of TmItemClass with the parameter information
+	//config : configuration dictionary with modifiers.
+	//
+	//Relevant modifiers are
+	//
+	//- Wait=True/False: when True, the system shall block the caller until
+	//a new sample of the required parameter arrives to the GCS. If False,
+	//the last recorded value of the parameter shall be returned immediately.
+	//
+	//- ValueFormat=RAW/ENG: if RAW is given, the raw or uncalibrated value
+	//of the parameter shall be given. If ENG is used, the engineering or
+	//calibrated value shall be returned.
+	//
+	//- Timeout=(TIME): maximum amount of time to wait for new samples,
+	//before the parameter is declared as impossible to acquire. It only
+	//makes sense when Wait=True.
+	//
+	//Returned value: a list with the value and True/False indicating the validity
+	//of the parameter
+    rpc RefreshItem (TmItemValue) returns (TmItemValue);
+    rpc RestoreNormalLimits (google.protobuf.Any) returns (google.protobuf.BoolValue);
+	//Instantiate a telemetry parameter (usually taking the information from GCS)
+	//
+	//The item shall be derived from TmItemClass class.
+	//
+	//If not overriden, the adapter class provides a generic TM item structure.
+    rpc CreateTmItem (TmItemDesc) returns (TmItemDesc);
+}
+
+
+message LookupRequest {
+	string name = 1;
+	string type = 2;
+	string source = 3;
+}
+
+message LookupAnswer {
+	google.protobuf.Any lookup = 1;
+}
+
+message LimitSetRequest {
+	TmItemDesc item = 1;
+	LimitSet set = 2;
+}
+
+message LimitSet {
+	google.protobuf.Any limitset = 1;
+}
+
+message TmItemValue {
+	TmItemDesc item = 1;
+	bool validity = 3;
+	google.protobuf.Any engValue = 4;
+	google.protobuf.Any rawValue = 5;
+	string timestamp = 6;
+	google.protobuf.Any config = 7;
+}
+
+message TmItemDesc {
+	string mnemonic = 1;
+	string description = 2;
+	string id = 3;
+}
+
+service SPELLDriverInterface_TC {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc CreateTcItem (TcItemDesc) returns (TcItemDesc);
+
+	//Inject a block of TC items into the GCS. Blocked items are injected
+	//and transmitted as a single TC frame.
+	//
+	//tcItemList : list of TcItemClass instance with the command information.
+	//config     : configuration dictionary
+    rpc SendBlock (CommandList) returns (google.protobuf.BoolValue);
+	//Inject a group of TC items into the GCS.
+	//
+	//tcItemList : list of TcItemClass instance with the command information.
+	//config     : configuration dictionary
+    rpc SendList (CommandList) returns (google.protobuf.BoolValue);
+	//Inject a TC item into the GCS.
+	//
+	//tcItem : TcItemClass instance with the command information.
+	//config : configuration dictionary
+    rpc SendCommand (CommandDesc) returns (google.protobuf.BoolValue);
+
+//    rpc CheckCriticalCommands (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+}
+
+message CommandList {
+	repeated CommandDesc commands = 1;
+	google.protobuf.Any config = 2;
+}
+
+message TcItemDesc {
+	string mnemonic = 1;
+	string description = 2;
+	string id = 3;
+}
+
+message CommandDesc {
+	TcItemDesc command = 1;
+	google.protobuf.Any args = 2;
+	google.protobuf.Any config = 3;
+}
+
+service SPELLDriverInterface_EV {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+	//    Invoked by the system in order to inject an event into the GCS.
+	//
+	//    message: string containing the event message
+	//    config: dictionary containing the event parameters:
+	//                - Severity modifier (INFORMATION/WARNING/ERROR/FATAL)
+	//                - Scope (SCOPE_PROC,SCOPE_SYS,SCOPE_CFG)
+    rpc RaiseEvent (Event) returns (google.protobuf.Empty);
+    //NOT USED AT THE MOMENT!
+    rpc RegisterForEvents (google.protobuf.Empty) returns (stream google.protobuf.Empty);
+    //NOT USED AT THE MOMENT!
+    rpc UnRegisterForEvents (google.protobuf.Empty) returns (google.protobuf.Empty);
+    //NOT USED AT THE MOMENT!
+    rpc PullEvents (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message Event {
+	string message = 1;
+	google.protobuf.Any config = 2;
+}
+
+service SPELLDriverInterface_PCS {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc CreatePtcItem (PtcItemDesc) returns (PtcItemDesc);
+
+    rpc PCS_GetStatus (google.protobuf.Any) returns (google.protobuf.Any);
+    rpc PCS_IsArqEnabled (google.protobuf.Any) returns (google.protobuf.BoolValue);
+    rpc PCS_IsVerifyModeEnabled (google.protobuf.Any) returns (google.protobuf.BoolValue);
+	rpc PCS_ReadyToCommand (google.protobuf.Any) returns (google.protobuf.StringValue);
+    rpc PCS_AbortPtc (google.protobuf.Any) returns (google.protobuf.BoolValue);
+
+    rpc SendPtcCommand (PtcDesc) returns (PtcResult);
+    rpc SendPtcList (PtcList) returns (PtcResult);
+    rpc PCS_Control (PtcDesc) returns (PtcResult);
+
+}
+message PtcItemDesc {
+	string mnemonic = 1;
+	string description = 2;
+	string id = 3;
+}
+message PtcList {
+	repeated PtcDesc commands = 1;
+	google.protobuf.Any config = 2;
+}
+
+message PtcDesc {
+	PtcItemDesc command = 1;
+	google.protobuf.Any args = 2;
+	google.protobuf.Any config = 3;
+}
+
+message PtcResult {
+	repeated int64 code = 1;
+	repeated bool success = 2;
+	repeated string stage = 3;
+	repeated string data = 4;
+	repeated string error = 5;
+}
+
+service SPELLDriverInterface_MEM {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc GenerateReport (MemoryReportRequest) returns (google.protobuf.BoolValue);
+    rpc CompareImages (CompareMemoryReportRequest) returns (google.protobuf.BoolValue);
+    rpc CreateGoldenImage (GoldenImageRequest) returns (google.protobuf.BoolValue);
+    rpc MemoryLookup (MemoryLookupRequest) returns (google.protobuf.Any);
+    rpc DataObjectLookup (DataObjectLookupRequest) returns (google.protobuf.Any);
+    rpc DataItemLookup (DataItemLookupRequest) returns (google.protobuf.Any);
+}
+
+message MemoryReportRequest {
+	string image = 1;
+	string report_type = 2;
+	string begin = 3;
+	string end = 4;
+	string source = 5;
+	google.protobuf.Any config = 6;
+}
+
+message CompareMemoryReportRequest {
+	string image1 = 1;
+	string image2 = 2;
+	string report_type = 3;
+	string begin = 4;
+	string end = 5;
+	string source = 6;
+	google.protobuf.Any config = 7;
+}
+
+message GoldenImageRequest {
+	string scp = 1;
+	string filename = 2;
+	google.protobuf.Any config = 3;
+}
+
+message MemoryLookupRequest {
+	string name = 1;
+	string address = 2;
+	string image = 3;
+	string report_type = 4;
+	string source = 5;
+	google.protobuf.Any config = 6;
+}
+
+message DataObjectLookupRequest {
+	string name = 1;
+	string type = 2;
+	google.protobuf.Any config = 3;
+}
+
+message DataItemLookupRequest {
+	string name = 1;
+	string type = 2;
+	string source = 3;
+	string valformat = 4;
+	google.protobuf.Any config = 5;
+}
+
+service SPELLDriverInterface_RSC {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+	//    Enable or disable a GCS link (TM, TC or others)
+	//
+	//    name: link  identifier
+	//    enable: True/False, indicates if the link needs to be enabled or disabled
+	//    config: configuration modifiers
+    rpc SetLink (LinkRequest) returns (google.protobuf.BoolValue);
+	//    Check if a GCS link (TM, TC or others) is enabled or disabled
+	//
+	//    name: link  identifier
+	//    config: configuration modifiers
+    rpc CheckLink (LinkRequest) returns (google.protobuf.BoolValue);
+	//    Assign the value of one resource or configuration parameter in the GCS
+	//
+	//    name: resource identifier
+	//    value: resource value
+	//    config: configuration modifiers
+    rpc SetResource (ResourceRequest) returns (google.protobuf.BoolValue);
+	//    Acquire the value of one resource or configuration parameter in the GCS
+	//
+	//    name: resource identifier
+	//    config: configuration modifiers
+    rpc GetResource (ResourceRequest) returns (ResourceRequest);
+	//    Acquire the name-value map of all resource or configuration parameters
+	//	  in the GCS
+	//
+	//    name: resource identifier
+	//    config: configuration modifiers
+    rpc GetResources (ResourcesRequest) returns (ResourcesRequest);
+	//    Acquire the current status of one resource or configuration parameter
+	//    in the GCS
+	//
+	//    name: resource identifier
+	//    config: configuration modifiers
+    rpc GetResourceStatus (ResourceRequest) returns (ResourceRequest);
+	//    Check if the current value of one resource or configuration parameter
+	//    in the GCS is correct or incorrect
+	//
+	//    name: resource identifier
+	//    config: configuration modifiers
+    rpc IsResourceOK (ResourceRequest) returns (google.protobuf.BoolValue);
+}
+
+message LinkRequest {
+	string name = 1;
+	bool status = 2;
+	google.protobuf.Any config = 3;
+}
+
+message ResourceRequest {
+	string name = 1;
+	google.protobuf.Any value = 2;
+	google.protobuf.Any config = 3;
+}
+
+message ResourcesRequest {
+	google.protobuf.Any value = 2;
+	google.protobuf.Any config = 3;
+}
+
+service SPELLDriverInterface_TASK {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+	//    Invoked by the system in order to stop a GCS task.
+	//
+	//    name: string containing the task name
+	//    config: configuration dictionary with modifiers.
+    rpc StartTask (Task) returns (google.protobuf.BoolValue);
+	//    Invoked by the system in order to stop a GCS task.
+	//
+	//    name: string containing the task name
+	//    config: configuration dictionary with modifiers.
+    rpc StopTask (Task) returns (google.protobuf.BoolValue);
+	//    Invoked by the system in order to check the status of a GCS task.
+	//
+	//    name: string containing the task name
+	//    config: configuration dictionary with modifiers.
+    rpc CheckTask (Task) returns (google.protobuf.Int32Value);
+	//    Invoked by the system in order to open a telemetry display on the GCS
+	//
+	//    displayName: name or identifier of the display
+	//    config: configuration dictionary with modifiers.
+	//
+	//    Relevant modifiers are:
+	//
+	//    Host: the machine name where the display should be open.
+    rpc OpenDisplay (Display) returns (google.protobuf.Empty);
+	//    Invoked by the system in order to print a telemetry display from the GCS
+	//
+	//    displayName: name or identifier of the display
+	//    config: configuration dictionary with modifiers.
+	//
+	//    Relevant modifiers are:
+	//
+	//    Printer: the printer name
+	//    Format: PS (postcript) or VECTOR (ASCII text, for alphanumeric displays only)
+    rpc PrintDisplay (Display) returns (google.protobuf.Empty);
+	//    Invoked by the system in order to close a telemetry display on the GCS
+	//
+	//    displayName: name or identifier of the display
+	//    config: configuration dictionary with modifiers.
+	//
+	//    Relevant modifiers are:
+	//
+	//    Host: the machine name where the display should be closed.
+    rpc CloseDisplay (Display) returns (google.protobuf.Empty);
+}
+
+message Task {
+	string name = 1;
+	google.protobuf.Any args = 2;
+	google.protobuf.Any config = 3;
+}
+
+message Display {
+	string name = 1;
+	google.protobuf.Any config = 2;
+}
+
+service SPELLDriverInterface_RNG {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+
+    rpc EnableRanging (Ranging) returns (google.protobuf.BoolValue);
+    rpc DisableRanging (Ranging) returns (google.protobuf.BoolValue);
+    rpc AbortRanging (Ranging) returns (google.protobuf.BoolValue);
+    rpc StartRanging (Ranging) returns (google.protobuf.BoolValue);
+    rpc StartCalibration (Ranging) returns (google.protobuf.BoolValue);
+
+    rpc GetBasebandConfig (BaseBandConfig) returns (BaseBandConfig);
+    rpc SetBasebandConfig (BaseBandConfig) returns (google.protobuf.BoolValue);
+
+    rpc GetAntennaNames (google.protobuf.Any) returns (Names);
+    rpc GetRangingPaths (google.protobuf.Any) returns (Names);
+    rpc GetBasebandNames (google.protobuf.Any) returns (Names);
+    rpc GetRangingStatus (google.protobuf.Any) returns (google.protobuf.StringValue);
+    rpc UpdateCortexConf (google.protobuf.Any) returns (google.protobuf.BoolValue);
+}
+
+message Ranging {
+	string bbe = 1;
+	string antenna = 2;
+	google.protobuf.Any config = 3;
+}
+
+message BaseBandConfig {
+	string bbe	= 1;
+	string param = 2;
+	string value = 4;
+	google.protobuf.Any config = 3;
+}
+
+message Names {
+	repeated string names = 1;
+}
+
+service SPELLDriverInterface_USER {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+	//    Login the given user in the GCS system.
+	//
+	//    username: user name
+	//    password: the user password
+	//    config: configuration dictionary with modifiers.
+    rpc Login (LoginCred) returns (google.protobuf.BoolValue);
+	//    Logout the given user from the GCS system.
+	//
+	//    username: user name
+	//    config: configuration dictionary with modifiers.
+    rpc Logout (LoginCred) returns (google.protobuf.BoolValue);
+	//    Check if the given user is logged in the GCS system.
+	//
+	//    username: user name
+	//    config: configuration dictionary with modifiers.
+    rpc IsLoggedIn (LoginCred) returns (google.protobuf.BoolValue);
+}
+
+message LoginCred {
+	string username = 1;
+	string password = 2;
+	google.protobuf.Any config = 3;
+}
+
+service SPELLDriverInterface_TIME {
+    rpc Setup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Cleanup (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc Interrupt (google.protobuf.Empty) returns (google.protobuf.Empty);
+	//    Obtain the current UTC time according to the GCS time. If the present
+	//    example is not change, the interface provices the current system local
+	//    time.
+	//
+	//    config: SPELL configuration dictionary.
+    rpc GetUTC (google.protobuf.Any) returns (Time);
+}
+
+message Interfaces {
+	// Dummy message just for the namespace
+	enum DriverInterface {
+	    TM = 0;
+	    TC = 1;
+	    EV = 2;
+	    PCS = 3;
+	    MEM = 4;
+	    RSC = 5;
+	    TASK = 6;
+	    RNG = 7;
+	    USER = 8;
+	    CONFIG = 9;
+	    TIME = 10;
+	}
+}
+
+message DriverInfo {
+    string host = 1;
+    uint32 port = 2;
+    string driverName = 3;
+    repeated Interfaces.DriverInterface interfaces = 4;
+}
+
+message List {
+	repeated google.protobuf.Any entries = 1;
+}
+
+message Dict {
+	repeated DictEntry entries = 1;
+}
+
+message Time {
+	string timeMsg = 1;
+}
+
+message DictEntry {
+	google.protobuf.Any key = 1;
+	google.protobuf.Any value = 2;
+}

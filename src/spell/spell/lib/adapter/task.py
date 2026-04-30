@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Task management interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -33,13 +33,13 @@ from spell.utils.log import *
 from spell.lib.exception import *
 from spell.lang.constants import *
 from spell.lang.modifiers import *
-from spell.lib.registry import REGISTRY 
+from spell.lib.registry import REGISTRY
 
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from config import Configurable
-from interface import Interface
+from .config import Configurable
+from .interface import Interface
 #*******************************************************************************
 # System Imports
 #*******************************************************************************
@@ -53,19 +53,19 @@ INTERFACE_DEFAULTS = { OnFailure:ABORT | SKIP | REPEAT }
 
 ###############################################################################
 class TaskInterface(Configurable,Interface):
-    
+
     """
     DESCRIPTION:
         Task management library interface. This class is in charge of
         managing the underlying system processes, if any.
     """
-    
+
     #==========================================================================
     def __init__(self):
         Interface.__init__(self, "TASK")
         Configurable.__init__(self)
         LOG("Created")
-    
+
     #===========================================================================
     def refreshConfig(self):
         ctxConfig = self.getContextConfig()
@@ -80,7 +80,7 @@ class TaskInterface(Configurable,Interface):
         LOG("Setup TASK adapter interface")
         self.storeConfig(ctxConfig, drvConfig)
         self.refreshConfig()
-    
+
     #==========================================================================
     def cleanup(self):
         LOG("Cleanup TASK adapter interface")
@@ -89,78 +89,78 @@ class TaskInterface(Configurable,Interface):
     def openDisplay(self, *args, **kargs):
         if len(args)<1:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         displayName  = args[0]
-         
+
         return self._openDisplay( displayName, useConfig )
 
     #==========================================================================
     def printDisplay(self, *args, **kargs):
         if len(args)<1:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         displayName  = args[0]
-         
+
         return self._printDisplay( displayName, useConfig )
 
     #==========================================================================
     def closeDisplay(self, *args, **kargs):
         if len(args)<1:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         displayName  = args[0]
-         
+
         return self._closeDisplay( displayName, useConfig )
-        
+
     #==========================================================================
     def startTask(self, *args, **kargs):
         if len(args)<2:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
-        
+
         # Reconfigure the host if needed
-        if not useConfig.has_key(Host):
+        if Host not in useConfig:
             useConfig[Host]=REGISTRY['EXEC'].getControllingHost()
-        
+
         taskName  = args[0]
         if len(args)==1:
             arguments = ""
         else:
             arguments = args[1]
-         
+
         return self._startTask( taskName, arguments, useConfig )
-        
+
     #==========================================================================
     def stopTask(self, *args, **kargs):
         if len(args)<1:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         taskName = args[0]
-         
+
         return self._stopTask( taskName, useConfig )
 
     #==========================================================================
     def checkTask(self, *args, **kargs):
         if len(args)<1:
             raise SyntaxException("Wrong arguments")
-        
+
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
 
         taskName = args[0]
-         
+
         return self._checkTask( taskName, useConfig )
 
     #==========================================================================
     def _startTask(self, taskName, arguments, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return False
-        
+
     #==========================================================================
     def _stopTask(self, taskName, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
@@ -180,9 +180,8 @@ class TaskInterface(Configurable,Interface):
     def _printDisplay(self, displayName, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return False
-        
+
     #==========================================================================
     def _closeDisplay(self, displayName, config = {} ):
         REGISTRY['CIF'].write("Service not implemented on this driver", {Severity:WARNING})
         return False
-

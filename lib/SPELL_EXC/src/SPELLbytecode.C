@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the bytecode analyzer
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -36,9 +36,20 @@
 
 
 // Macros for accessing opcodes
+#if PY_MAJOR_VERSION >= 3
+#define INSTR_OFFSET()  \
+    (sizeof(_Py_CODEUNIT) * (int)(next_instr - first_instr))
+#define NEXTOPARG()  do { \
+        _Py_CODEUNIT word = *next_instr; \
+        opcode = _Py_OPCODE(word); \
+        oparg = _Py_OPARG(word); \
+        next_instr++; \
+    } while (0)
+#else
 #define NEXTOP()        (*next_instr++)
 #define NEXTARG()       (next_instr += 2, (next_instr[-1]<<8) + next_instr[-2])
 #define INSTR_OFFSET()  ((int)(next_instr - first_instr))
+#endif
 // Debugging macro
 #define DUMP            DEBUG("[" + ISTR(info->lineno) +\
                            ":" + ISTR(info->offset) +  "]: " + OPCODES[info->opcode] \
@@ -225,9 +236,13 @@ void SPELLbytecode::analyze()
 {
     assert( m_code != NULL );
     // Pointer to initial instruction (used by macros)
-    unsigned char* first_instr = (unsigned char*) PyString_AS_STRING(m_code->co_code);
+#if PY_MAJOR_VERSION >= 3
+    _Py_CODEUNIT* first_instr = (_Py_CODEUNIT*) PyBytes_AsString(m_code->co_code);
+#else
+    _Py_CODEUNIT* first_instr = (_Py_CODEUNIT*) PyString_AsString(m_code->co_code);
+#endif
     // Pointer to current instruction (used by macros)
-    register unsigned char* next_instr = first_instr;
+    register _Py_CODEUNIT* next_instr = first_instr;
     // Opcode argument
     unsigned int oparg;
     // Stores the previous line
@@ -235,10 +250,9 @@ void SPELLbytecode::analyze()
     // Stores the last opcode
     unsigned int prevOpCode = 0;
     // Opcode count in line
-    unsigned short opcodeCount = 0;
+    unsigned int opcodeCount = 0;
 
     // Will be true when there is no more bytecode to process
-    bool finished = false;
     unsigned int callDepth = 0;
     // Try block structure
 	TryBlock tb;
@@ -250,8 +264,12 @@ void SPELLbytecode::analyze()
 	// Holds the bytecode offset for except and finally statements
 	unsigned int except_offset = 0;
 	unsigned int finally_offset = 0;
+    // Holds the current opcode
+#if PY_MAJOR_VERSION >= 3
+    unsigned int opcode;
+#endif
 
-	while(not finished)
+	while(true)
     {
         // Create one BLine info structure per bytecode instruction
         BLine info;
@@ -260,7 +278,20 @@ void SPELLbytecode::analyze()
         // Get the corresponding script line
         info.lineno = PyCode_Addr2Line(m_code, info.offset);
         // Obtain the opcode
+
+#if PY_MAJOR_VERSION >= 3
+        NEXTOPARG();
+        info.opcode = opcode;
+
+#else
         info.opcode = NEXTOP();
+#endif
+        // Track the end of the code
+        if (info.opcode == 0/*STOP_CODE*/)
+        {
+        	m_lastAddr = info.offset;
+        	break;
+        }
 
         // Track the number of opcodes per line in the lnotab.
         if ((prevLine>0) && (info.lineno != prevLine))
@@ -302,11 +333,11 @@ void SPELLbytecode::analyze()
 
 
 		// We will ignore this, for the moment
+#if PY_MAJOR_VERSION < 3
 		oparg  = 0;
-		// To decide wether store the bline information or not
-		bool storeit = false;
-		if (HAS_ARG(info.opcode)) oparg = NEXTARG();
 
+		if (HAS_ARG(info.opcode)) oparg = NEXTARG();
+#endif
 		//////////////////////////////////////////////////////////////////////////////////
 		// PHASE 2 - BUILD AND STORE NEXT BLINE INFORMATION
 		//////////////////////////////////////////////////////////////////////////////////
@@ -366,15 +397,12 @@ void SPELLbytecode::analyze()
 		//////////////////////////////////////////////////////////////////////////////////
         switch(info.opcode)
         {
-        case RETURN_VALUE:
-			m_lastAddr = info.offset;
-        	finished = true;
-        	break;
         case SETUP_EXCEPT:
 			tb.try_lineno = info.lineno;
 			except_offset = info.offset + oparg + 3; // This is the real destination offset
 			break;
         case SETUP_FINALLY:
+            tb.try_lineno = info.lineno;
         	finally_offset = info.offset + oparg + 3; // This is the 'finally' destination offset
         	break;
         case END_FINALLY:

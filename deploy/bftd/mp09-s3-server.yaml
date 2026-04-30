@@ -1,0 +1,22 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: s3-mp09-spell-server
+spec:
+  chart:
+    spec:
+      chart: ./deploy/spell-server
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: spell-repo
+        namespace: flux-system
+  interval: 10m0s
+  valuesFrom:
+  - kind: ConfigMap
+    name: s3-mp09-spell-server
+    valuesKey: s3-mp09-values.yaml
+
+        
+  

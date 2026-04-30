@@ -5,7 +5,7 @@
 // DESCRIPTION: Wrapper for context configuration
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -76,6 +76,7 @@ public: //--------------------------------------------------------------------
 
     // STATIC ////////////////////////////////////////////////////////////////
 		static const std::string ExecutorProgram;
+		static const std::string ServiceProgram;
 		static const std::string ExecutorStartTimeout;
 		static const std::string ExecutorLoginTimeout;
 		static const std::string UseDriverTime;
@@ -136,6 +137,12 @@ public: //--------------------------------------------------------------------
 		 * \returns The procedure search path.
 		**////////////////////////////////////////////////////////////////////
 		std::string getProcPath() const { return m_procPath; };
+
+		/** Obtain the current procedure path.
+         *
+         * \returns The procedure search path.
+        **////////////////////////////////////////////////////////////////////
+        std::string getServicePath() const { return m_servicePath; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the current library path.
@@ -292,6 +299,8 @@ private: //-------------------------------------------------------------------
 		std::string m_procPath;
 		/** Holds the library path */
 		std::string m_libPath;
+		/** Holds the service path */
+		std::string m_servicePath;
 		/** Holds the output data directory */
 		std::string m_outputDir;
 		/** Holds the input data directory */

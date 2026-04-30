@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of process manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -34,7 +34,7 @@
 #include "SPELL_UTIL/SPELLbase.H"
 #include "SPELL_UTIL/SPELLerror.H"
 #include "SPELL_UTIL/SPELLlog.H"
-
+#include "SPELL_UTIL/SPELLutils.H"
 
 // GLOBALS /////////////////////////////////////////////////////////////////
 
@@ -56,6 +56,7 @@ SPELLprocessManager::SPELLprocessManager()
 //=============================================================================
 SPELLprocessManager::~SPELLprocessManager()
 {
+
     m_processes.clear();
     m_listeners.clear();
 }
@@ -81,6 +82,9 @@ void SPELLprocessManager::startProcess( const std::string& identifier, const std
     DEBUG("[PRCMGR] Starting process " + identifier);
     SPELLprocess* process = new SPELLprocess(identifier,command,this);
     process->start();
+    if (m_processes.count(identifier) > 0)
+        LOG_ERROR("[PRCMGR] ProcessId " + identifier + " already exists!!!");
+
     m_processes.insert( std::make_pair( identifier, process ));
     DEBUG("[PRCMGR] Starting process " + identifier + " done");
 }
@@ -143,15 +147,32 @@ void SPELLprocessManager::killProcess( const std::string& identifier )
     DEBUG("[PRCMGR] Kill process " + identifier + " done");
 }
 
+bool SPELLprocessManager::checkProcessExist( const std::string& identifier )
+{
+    SPELLmonitor m(m_lock);
+    DEBUG("[PRCMGR] Checking process " + identifier);
+    SPELLprocessMap::iterator it = m_processes.find(identifier);
+    if (it == m_processes.end() )
+    {
+        return false;
+    }
+    return true;
+
+}
+
 //=============================================================================
 // METHOD     : SPELLprocessManager::waitProcess()
 //=============================================================================
 int SPELLprocessManager::waitProcess( const std::string& identifier )
 {
-    SPELLprocessMap::iterator it = m_processes.find(identifier);
-    if (it == m_processes.end() )
+    SPELLprocessMap::iterator it;
     {
-        THROW_EXCEPTION("Cannot wait process " + identifier, "Not found", SPELL_ERROR_PROCESS);
+        SPELLmonitor m(m_lock);
+        it = m_processes.find(identifier);
+        if (it == m_processes.end() )
+        {
+            THROW_EXCEPTION("Cannot wait process " + identifier, "Not found", SPELL_ERROR_PROCESS);
+        }
     }
     return it->second->wait();
 }
@@ -161,6 +182,7 @@ int SPELLprocessManager::waitProcess( const std::string& identifier )
 //=============================================================================
 SPELLprocessStatus SPELLprocessManager::getProcessStatus( const std::string& identifier )
 {
+    SPELLmonitor m(m_lock);
     SPELLprocessMap::iterator it = m_processes.find(identifier);
     if (it == m_processes.end() )
     {
@@ -174,11 +196,14 @@ SPELLprocessStatus SPELLprocessManager::getProcessStatus( const std::string& ide
 //=============================================================================
 void SPELLprocessManager::clearProcess( const std::string& identifier )
 {
+    SPELLmonitor m(m_lock);
     DEBUG("[PRCMGR] Clear process " + identifier);
     SPELLprocessMap::iterator pit = m_processes.find(identifier);
     if (pit != m_processes.end())
     {
+        m_lock.unlock();
 		pit->second->join();
+        m_lock.lock();
         delete pit->second;
         m_processes.erase(pit);
         DEBUG("[PRCMGR] Clear process " + identifier + " done");
@@ -230,14 +255,14 @@ void SPELLprocessManager::removeListener( const std::string& identifier, SPELLpr
 //=============================================================================
 // METHOD     : SPELLprocessManager::fireProcessStarted()
 //=============================================================================
-void SPELLprocessManager::fireProcessStarted( const std::string& identifier )
+void SPELLprocessManager::fireProcessStarted( const std::string identifier )
 {
-    SPELLmonitor m(m_lock);
     DEBUG("[PRCMGR] Firing process started: " + identifier);
-    SPELLprocessListenersMap::iterator mit = m_listeners.find(identifier);
+    SPELLprocessListenersMap listeners = m_listeners;
+    SPELLprocessListenersMap::iterator mit = listeners.find(identifier);
     if (mit != m_listeners.end())
     {
-        SPELLprocessListeners& list = mit->second;
+        SPELLprocessListeners list = mit->second;
         SPELLprocessListeners::iterator it;
         for( it = list.begin(); it != list.end(); it++)
         {
@@ -253,14 +278,14 @@ void SPELLprocessManager::fireProcessStarted( const std::string& identifier )
 //=============================================================================
 // METHOD     : SPELLprocessManager::fireProcessFinished()
 //=============================================================================
-void SPELLprocessManager::fireProcessFinished( const std::string& identifier, int retValue )
+void SPELLprocessManager::fireProcessFinished( std::string identifier, int retValue )
 {
-    SPELLmonitor m(m_lock);
     DEBUG("[PRCMGR] Firing process finished: " + identifier);
-    SPELLprocessListenersMap::iterator mit = m_listeners.find(identifier);
+    SPELLprocessListenersMap listeners = m_listeners;
+    SPELLprocessListenersMap::iterator mit = listeners.find(identifier);
     if (mit != m_listeners.end())
     {
-        SPELLprocessListeners& list = mit->second;
+        SPELLprocessListeners list = mit->second;
         SPELLprocessListeners::iterator it;
         for( it = list.begin(); it != list.end(); it++)
         {
@@ -276,14 +301,14 @@ void SPELLprocessManager::fireProcessFinished( const std::string& identifier, in
 //=============================================================================
 // METHOD     : SPELLprocessManager::fireProcessKilled()
 //=============================================================================
-void SPELLprocessManager::fireProcessKilled( const std::string& identifier )
+void SPELLprocessManager::fireProcessKilled( std::string identifier )
 {
-    SPELLmonitor m(m_lock);
     DEBUG("[PRCMGR] Firing process killed: " + identifier);
-    SPELLprocessListenersMap::iterator mit = m_listeners.find(identifier);
+    SPELLprocessListenersMap listeners = m_listeners;
+    SPELLprocessListenersMap::iterator mit = listeners.find(identifier);
     if (mit != m_listeners.end())
     {
-        SPELLprocessListeners& list = mit->second;
+        SPELLprocessListeners list = mit->second;
         SPELLprocessListeners::iterator it;
         for( it = list.begin(); it != list.end(); it++)
         {
@@ -294,20 +319,19 @@ void SPELLprocessManager::fireProcessKilled( const std::string& identifier )
             }
         }
     }
-    DEBUG("[PRCMGR] Firing process killed done: " + identifier);
 }
 
 //=============================================================================
 // METHOD     : SPELLprocessManager::fireProcessFailed()
 //=============================================================================
-void SPELLprocessManager::fireProcessFailed( const std::string& identifier )
+void SPELLprocessManager::fireProcessFailed( std::string identifier )
 {
-    SPELLmonitor m(m_lock);
     DEBUG("[PRCMGR] Firing process failed: " + identifier);
-    SPELLprocessListenersMap::iterator mit = m_listeners.find(identifier);
+    SPELLprocessListenersMap listeners = m_listeners;
+    SPELLprocessListenersMap::iterator mit = listeners.find(identifier);
     if (mit != m_listeners.end())
     {
-        SPELLprocessListeners& list = mit->second;
+        SPELLprocessListeners list = mit->second;
         SPELLprocessListeners::iterator it;
         for( it = list.begin(); it != list.end(); it++)
         {

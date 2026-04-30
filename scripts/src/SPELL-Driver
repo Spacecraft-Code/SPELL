@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+# Prototype for a standalone driver execution with an gRPC interface
+# Author: Raimondas Sasnauskas
+# Date:   2018-03-09
+
+import os, sys
+import argparse
+
+# parse command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("context", type=str, help="context name")
+group = parser.add_argument_group()
+group.add_argument("--host", type=str, help="executor service host")
+group.add_argument("--port", type=int, help="executor service port")
+group.add_argument("--debug", dest='debug', action='store_true')
+parser.set_defaults(debug=False)
+args = parser.parse_args()
+
+if (args.host and not args.port) or (not args.host and args.port):
+    parser.error("both executor host and port must be specified")
+
+# check necessary environment variables
+for e in ["SPELL_HOME", "SPELL_CONFIG", "SPELL_COTS"]:
+    if os.getenv(e):
+        continue
+    parser.error("%s environment variable not set" % e)
+
+# check if the config file exists
+SPELL_HOME = os.getenv("SPELL_HOME")
+SPELL_CONFIG = os.getenv("SPELL_CONFIG")
+config = SPELL_CONFIG + os.sep + "server" + os.sep + "server_" + args.context + ".xml"
+if not os.path.isfile(config):
+    parser.error("Configuration file does not exist: " + config)
+
+# Extend PYTHONPATH
+sys.path.append(SPELL_HOME + os.sep + "spell")
+sys.path.append(SPELL_HOME + os.sep + "spell" + os.sep + "spell" + os.sep + "stubs")
+sys.path.append(SPELL_HOME + os.sep + "lib")
+sys.path.append(SPELL_HOME + os.sep + "drivers" + os.sep + "service")
+
+# always load grpc imports first
+import driverserver
+from exec_client import *
+from cif_client import *
+
+from spell.utils.log import LOG
+# set the log file
+if not args.debug:
+    LOG.setLogFile('SPELL-Driver-%s' % args.context)
+    LOG.setShowLog(False)
+
+# spell imports
+from spell.config.reader import Config
+from spell.lib.drivermgr import DriverManager
+from spell.lib.registry import REGISTRY
+
+def run():
+    # load config file
+    Config.instance().load(config)
+
+    # load the driver
+    mgr = DriverManager.instance()
+    mgr.setup(args.context, skipSetup=True)
+    # always setup config interface
+    REGISTRY['CONFIG'].setup(mgr.contextConfig, mgr.driverConfig)
+
+    # start gRPC server
+    driverserver.serve(args.host, args.port)
+
+    # cleanup the driver
+    mgr.cleanup(True, True)
+
+if __name__ == "__main__":
+    run()

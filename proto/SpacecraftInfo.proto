@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+message SpacecraftInfo {
+  uint32 msgType = 1;
+  uint32 scID = 2;
+  uint64 period = 3;        // time between two frames at highest speed (nanoseconds)
+  uint32 totalFrames = 4;   // number of minor frames in a major frame
+}

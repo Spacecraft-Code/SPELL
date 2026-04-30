@@ -1,0 +1,28 @@
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "spell-server.fullname" . }}
+  labels:
+    {{- include "spell-server.labels" . | nindent 4 }}
+data:
+  context.xml : |
+    {{ tpl (.Files.Get "configs/context.xml") . | indent 4 | trim}}
+
+  driver.xml : |
+    {{ tpl (.Files.Get "configs/driver.xml") . | indent 4 | trim}}
+
+  language.xml : |
+    {{ tpl (.Files.Get "configs/language.xml") . | indent 4 | trim}}
+
+  server.xml : |
+    {{ tpl (.Files.Get "configs/server.xml") . | indent 4 | trim}}
+
+  log.properties : |
+    {{ tpl (.Files.Get "configs/log.properties") . | indent 4 | trim}}
+  
+  scheduler_wasp.xml: |
+    {{ tpl (.Files.Get "configs/scheduler_wasp.xml") . | indent 4 | trim}}
+  
+  known_hosts: |
+    {{ .Values.procedures.known_hosts | default "" | indent 4 | trim }}

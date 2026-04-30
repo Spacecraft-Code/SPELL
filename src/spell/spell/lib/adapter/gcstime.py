@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Time interface for drivers
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -37,8 +37,8 @@ from spell.lang.modifiers import *
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from config import Configurable
-from interface import Interface
+from .config import Configurable
+from .interface import Interface
 
 #*******************************************************************************
 # System Imports
@@ -54,19 +54,19 @@ INTERFACE_DEFAULTS = { OnFailure:ABORT }
 
 ###############################################################################
 class TimeInterface(Configurable,Interface):
-    
+
     """
     DESCRIPTION:
         Time management library interface. This class is in charge of
         managing the underlying system time.
     """
-    
+
     #==========================================================================
     def __init__(self):
         Interface.__init__(self, "TIME")
         Configurable.__init__(self)
         LOG("Created")
-    
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         self.storeConfig(ctxConfig, drvConfig)
@@ -75,7 +75,7 @@ class TimeInterface(Configurable,Interface):
     #==========================================================================
     def cleanup(self):
         LOG("Cleanup TIME adapter interface")
-        
+
     #==========================================================================
     def getUTC(self, *args, **kargs):
         useConfig = self.buildConfig(args, kargs, self.getConfig(), INTERFACE_DEFAULTS)

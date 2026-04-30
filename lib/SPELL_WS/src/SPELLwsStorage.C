@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the storage model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -148,7 +148,7 @@ void SPELLwsStorage::storeObject( PyObject* object )
 	SPELLpythonHelper::instance().checkError();
 	int marshal_len = PyObject_Length(marshal);
 	DEBUG("Marshal length: " + ISTR(marshal_len));
-	char* encoded = PyString_AsString(marshal);
+	const char* encoded = PyString_AsString(marshal);
 
     // FORMAT IN FILE:
     // COUNT \1 PTYPE \1 MARSHAL LENGTH

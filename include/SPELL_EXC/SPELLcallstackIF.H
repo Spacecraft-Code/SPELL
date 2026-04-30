@@ -5,7 +5,7 @@
 // DESCRIPTION: Call stack interface.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -85,7 +85,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The current callstack string.
 		**////////////////////////////////////////////////////////////////////
-		virtual const std::string& getStack() = 0;
+		virtual const std::string getStack() = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the current callstack string.
@@ -106,7 +106,7 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \returns The current code name string.
 		**////////////////////////////////////////////////////////////////////
-		virtual const std::string& getCodeName() = 0;
+		virtual const std::string getCodeName() = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Set the step over mode.

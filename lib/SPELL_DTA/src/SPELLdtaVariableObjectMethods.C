@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of variable container
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -70,7 +70,7 @@ int SPELLdtaVariableObject_Init( SPELLdtaVariableObject* self, PyObject* args, P
 void SPELLdtaVariableObject_Dealloc( SPELLdtaVariableObject* self )
 {
 	delete self->var;
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================

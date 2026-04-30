@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the NCurses shell for standalone executor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -47,7 +47,7 @@
 #define COLOR_WARNING 3
 #define COLOR_OK      4
 
-char *choices[] = {
+static const std::string choices[] = {
     "RUN",
     "PAUSE",
     "SKIP",
@@ -60,7 +60,7 @@ char *choices[] = {
     "RELOAD"
 };
 
-char *descriptions[] = {
+static const std::string descriptions[] = {
     "Run the procedure",
     "Pause the execution",
     "Skip current line",
@@ -333,7 +333,7 @@ void SPELLncursesShell::setupMenu()
     m_menuItems = (ITEM **)calloc(n_choices, sizeof(ITEM *));
     for(i = 0; i < n_choices; ++i)
     {
-        m_menuItems[i] = new_item(choices[i], descriptions[i]);
+        m_menuItems[i] = new_item(choices[i].c_str(), descriptions[i].c_str());
     }
 
     // Crate menu

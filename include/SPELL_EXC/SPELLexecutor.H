@@ -5,7 +5,7 @@
 // DESCRIPTION: Singleton factory for the executor
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -108,10 +108,15 @@ public: //--------------------------------------------------------------------
 		 *
 		 * \return The executor implementation instance.
 		**////////////////////////////////////////////////////////////////////
-		static SPELLexecutorIF& instance()
+		static inline SPELLexecutorIF& instance()
 		{
 		    assert(s_instance != NULL);
 		    return *s_instance;
+		}
+
+		static inline bool isInitialized()
+		{
+			return s_instance != NULL;
 		}
 
 		//////////////////////////////////////////////////////////////////////

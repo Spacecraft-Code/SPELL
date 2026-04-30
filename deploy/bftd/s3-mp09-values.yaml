@@ -1,0 +1,34 @@
+# Default values for spell-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+serviceAccountName: spell-sa
+image:
+  registry: bzengnexus1.idmz.eng.ses
+spell_server:
+  version: v2.6.5.1-dev # {"$imagepolicy": "spell:spell-server:tag"}
+  driver:
+    name: scorpio
+    properties:
+      key: value
+    settings:
+      cws: "{{ .Values.spell_server.seat | lower }}cntl"
+      archiva: "{{ .Values.spell_server.seat | lower }}dbs01.scorpio.eng.ses"
+      obus: bfts-ob.eng.ses:54407
+  maxprocs: 15
+  ssh_port: 22
+  mission: ZMP09
+  family: BSS702SP
+  seat: S3
+  applicable_missions:
+    MPOWER: MP01,ZMP01,ZMP02,ZMP03,ZMP04,ZMP05,ZMP06,ZMP07,ZMP08,ZMP09,ZMP10,ZMP11
+  input_folder: "{{ .Values.spell_server.mission }}/InputFiles/{{ substr 1 99999 .Values.spell_server.mission }}"
+  output_folder: "{{ .Values.spell_server.mission }}/OutputFiles/{{ substr 1 99999 .Values.spell_server.mission }}"
+procedures:
+  size: 5Gi
+  repo_folder: MPOWER
+  branch: SIM
+  server: bzengrcs1.idmz.eng.ses
+  known_hosts: |-
+    bzengrcs1.idmz.eng.ses,10.35.65.65 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA3Hjvq/uZqY8nxGeB8sQiq5sLaq4T8h3BTnHkElLjq1C6lJ+5hV9OgiYdf9NCMwZuES5ENQAFqB2GnHjDc0X4sz6K/tk3pqGXQ/wdwVA+ZylBunpv5CJqKyQO+mu+pbke9yhZNuGZeGi7x8cmhQgZ5xOYQdW2ijMecQ/hxO2+598hiIB1nsCWcVnX4zV07cpgViRkZd/cA8J/TekYG3058fDekPTtVwOVVnG25W1jSVzY/wuV0pSwraRCesiLkE4XSF59RDMn0HEqLgy6iy0Gj5nWY4cJ3Fct/VyDjqZhVM/Lr6d6avo3Io7c7rUM055fKfu2Xh8iMluYMK7PSrwMDQ==
+    prengrcs1.idmz.eng.ses,10.113.65.65 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCkcQiI+f8S43Yy8lyZ+mbCbJdMi4sH19yXXJ6BKemsm2wiVcX/q+cYrsjYLCayd8/AJdS4tBzGZegXgQ3YSnhzuoNlKFg4UqRnnsU4ynwa+VU38dbxrSTZKUhumFYvZ749d55GIwHZnardMb0ZROYO+mga8beYRbe7bWLlqCUpRgsNkz8wuzS2fd/u+J9T+I7Z7iYNpD91IIeqlch6EXPix4piD/beoD4W+1tXSd6UKDEARANqAsF+mdv6OfOVsfzV06A65+XuoR8gZn0W6ieojm6CdlIU/8i+q7EyVf0q9TMjPCVEvZOdNI1x9a06fezQdQpETDtVuVJDbr/TpDRT

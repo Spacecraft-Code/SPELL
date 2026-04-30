@@ -5,7 +5,7 @@
 // DESCRIPTION: Process manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -77,7 +77,7 @@ public://--------------------------------------------------------------------
 		 *
 		 * \param identifier IN: unique identifier of the process.
 		**////////////////////////////////////////////////////////////////////
-		virtual void processStarted( const std::string& identifier ) = 0;
+		virtual void processStarted( const std::string identifier ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify the given process has finished.
@@ -85,21 +85,21 @@ public://--------------------------------------------------------------------
 		 * \param identifier IN: unique identifier of the process.
 		 * \param retValue IN: process exit code.
 		**////////////////////////////////////////////////////////////////////
-		virtual void processFinished( const std::string& identifier, const int& retValue ) = 0;
+		virtual void processFinished( std::string identifier, const int& retValue ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify the given process has been killed.
 		 *
 		 * \param identifier IN: unique identifier of the process.
 		**////////////////////////////////////////////////////////////////////
-		virtual void processKilled( const std::string& identifier ) = 0;
+		virtual void processKilled( std::string identifier ) = 0;
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify the given process has failed to start.
 		 *
 		 * \param identifier IN: unique identifier of the process.
 		**////////////////////////////////////////////////////////////////////
-		virtual void processFailed( const std::string& identifier ) = 0;
+		virtual void processFailed( std::string identifier ) = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -167,6 +167,8 @@ public: //--------------------------------------------------------------------
 		 * \param identifier IN: unique process identifier
 		**////////////////////////////////////////////////////////////////////
 		void killProcess( const std::string& identifier );
+
+		bool checkProcessExist( const std::string& identifier );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Wait the given process to finish.
@@ -241,7 +243,7 @@ protected: //-----------------------------------------------------------------
 		 *
 		 * \param identifier IN: process unique identifier.
 		**////////////////////////////////////////////////////////////////////
-		void fireProcessStarted( const std::string& identifier );
+		void fireProcessStarted( const std::string identifier );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify listeners that a given process has finished.
@@ -249,21 +251,21 @@ protected: //-----------------------------------------------------------------
 		 * \param identifier IN: process unique identifier.
 		 * \param retValue IN: process exit code.
 		**////////////////////////////////////////////////////////////////////
-		void fireProcessFinished( const std::string& identifier, int retValue );
+		void fireProcessFinished( std::string identifier, int retValue );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify listeners that a given process has been killed.
 		 *
 		 * \param identifier IN: process unique identifier.
 		**////////////////////////////////////////////////////////////////////
-		void fireProcessKilled( const std::string& identifier );
+		void fireProcessKilled( std::string identifier );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Notify listeners that a given process has failed to start.
 		 *
 		 * \param identifier IN: process unique identifier.
 		**////////////////////////////////////////////////////////////////////
-		void fireProcessFailed( const std::string& identifier );
+		void fireProcessFailed( std::string identifier );
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

@@ -5,7 +5,7 @@
 // DESCRIPTION: Main class of the context process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -53,7 +53,9 @@
 // FORWARD REFERENCES ////////////////////////////////////////////////////////
 // TYPES /////////////////////////////////////////////////////////////////////
 // DEFINES ///////////////////////////////////////////////////////////////////
-
+extern "C" {
+    void checkService( std::string& serviceId );
+}
 //////////////////////////////////////////////////////////////////////////////
 /**
  ** \brief
@@ -127,6 +129,7 @@ public: //--------------------------------------------------------------------
 		//====================================================================
 
 		SPELLipcMessage openExecutor( const SPELLipcMessage& msg, SPELLclient* controllingClient );
+		bool openService( const std::string serviceName );
 		SPELLipcMessage getInstanceId(const SPELLipcMessage& msg);
 		SPELLipcMessage getCurrentTime(const SPELLipcMessage& msg);
 		SPELLipcMessage closeExecutor(const SPELLipcMessage& msg);
@@ -136,10 +139,12 @@ public: //--------------------------------------------------------------------
 		SPELLipcMessage setExecutorInBackground( const SPELLipcMessage& msg );
 		SPELLipcMessage getProcedureList( const SPELLipcMessage& msg );
 		SPELLipcMessage getExecutorList( const SPELLipcMessage& msg );
+		SPELLipcMessage getServiceList( const SPELLipcMessage& msg );
 		SPELLipcMessage getProcedureProperties( const SPELLipcMessage& msg );
 		SPELLipcMessage getProcedureCode( const SPELLipcMessage& msg );
 		SPELLipcMessage getExecutorInfo(const SPELLipcMessage& msg);
-		SPELLipcMessage attachExecutor(const SPELLipcMessage& msg, SPELLclient* client );
+		SPELLipcMessage getServiceInfo(const SPELLipcMessage& msg);
+        SPELLipcMessage attachExecutor(const SPELLipcMessage& msg, SPELLclient* client );
 		SPELLipcMessage detachExecutor(const SPELLipcMessage& msg, SPELLclient* client );
 		SPELLipcMessage getClientInfo(const SPELLipcMessage& msg);
 		SPELLipcMessage getServerFilePath(const SPELLipcMessage& msg);
@@ -169,6 +174,8 @@ public: //--------------------------------------------------------------------
 		//====================================================================
 		void clientLost( int clientKey );
 		void executorLost( const std::string& procId );
+		void serviceLost( const std::string& procId );
+
 
 	// STATIC ////////////////////////////////////////////////////////////////
 

@@ -5,7 +5,7 @@
 // DESCRIPTION: CIF implementation for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -214,7 +214,7 @@ void SPELLshellCif::log( const std::string& msg )
 //=============================================================================
 // METHOD: SPELLshellCif::prompt
 //=============================================================================
-std::string SPELLshellCif::prompt( const SPELLpromptDefinition& def )
+std::string SPELLshellCif::prompt( const SPELLpromptDefinition& def, bool doPromptConfirm)
 {
 	return SPELLcifHelper::commandLinePrompt( def, false );
 }

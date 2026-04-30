@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the logger
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -109,7 +109,7 @@ void SPELLlog::setLogFile( const std::string& filename, const std::string timest
     logfilename = logbase + "/" + logfilename;
     m_logFileName = logfilename;
 
-	log4cplus::SharedFileAppenderPtr appender( new log4cplus::RollingFileAppender(LOG4CPLUS_TEXT(logfilename), 10*1024*1024, 5, false, true));
+	log4cplus::SharedFileAppenderPtr appender( new log4cplus::RollingFileAppender(LOG4CPLUS_TEXT(logfilename), 10*1024*1024, 5, true, true));
 	appender->setLayout( std::auto_ptr<log4cplus::Layout>(new log4cplus::PatternLayout(LOG_PATTERN)) );
 	appender->getloc();
 	log4cplus::Logger::getRoot().addAppender( log4cplus::SharedAppenderPtr(appender.get()) );

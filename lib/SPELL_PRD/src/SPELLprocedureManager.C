@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of procedure manager
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,7 +33,7 @@
 #include "SPELL_UTIL/SPELLlog.H"
 #include "SPELL_UTIL/SPELLpythonHelper.H"
 #include "SPELL_SYN/SPELLmonitor.H"
-
+#include "SPELL_WRP/SPELLpyHandle.H"
 
 
 static SPELLprocedureManager* s_instance = 0;
@@ -94,11 +94,16 @@ void SPELLprocedureManager::resolvePaths()
     SPELLcontextConfig& ctx = SPELLconfiguration::instance().getContext(m_ctxName);
     m_procPath = ctx.getProcPath();
     m_libPath = ctx.getLibPath();
+    m_servicePath = ctx.getServicePath();
     // Resolve the path
     m_procPath = SPELLutils::resolvePath(m_procPath);
     m_libPath = SPELLutils::resolvePath(m_libPath);
+    m_servicePath = SPELLutils::resolvePath(m_servicePath);
+
     SPELLutils::trim(m_procPath, "\r\n");
     SPELLutils::trim(m_libPath, "\r\n");
+    SPELLutils::trim(m_servicePath, "\r\n");
+
     if (!SPELLutils::isDirectory(m_procPath))
 	{
     	LOG_ERROR("Procedure path not found or not a directory: '" + m_procPath + "'");
@@ -125,6 +130,24 @@ void SPELLprocedureManager::resolvePaths()
     {
         LOG_INFO("[PRCM] No user libraries defined");
     }
+
+    if (m_servicePath != "" && m_servicePath != "None")
+    {
+        if (!SPELLutils::isDirectory(m_servicePath))
+        {
+            LOG_ERROR("Spell Service path not found or not a directory: '" + m_servicePath + "'");
+            m_servicePath = "";
+        }
+        else
+        {
+            LOG_INFO("[PRCM] Spell Service path: " + m_servicePath);
+        }
+    }
+    else
+    {
+        LOG_INFO("[PRCM] No Spell Services defined");
+    }
+
 }
 
 //=============================================================================
@@ -157,6 +180,17 @@ void SPELLprocedureManager::refresh()
     {
     	LOG_INFO("Loading library files");
         findLibraries( m_libPath );
+    }
+    if (m_servicePath != "" && m_servicePath != "None")
+    {
+        SPELLpythonHelper::instance().addToPath(m_libPath);
+        LOG_INFO("Loading Spell Services");
+        findServices( m_servicePath, sc );
+
+        ServiceModelMap::iterator serviceIt =  m_serviceModels.begin();
+        for(;serviceIt != m_serviceModels.end();serviceIt++){
+            std::cout << "Service " << serviceIt->second->getName() << " was found" << std::endl;
+        }
     }
 }
 
@@ -223,7 +257,20 @@ const SPELLprocedureManager::ProcList SPELLprocedureManager::getProcList()
     }
     return list;
 }
+//=============================================================================
+// METHOD    : SPELLprocedureManager::getServiceList
+//=============================================================================
+const SPELLprocedureManager::ProcList SPELLprocedureManager::getServiceList()
+{
+    ProcList list;
+    ServiceModelMap::iterator it;
 
+    for( it = m_serviceModels.begin(); it != m_serviceModels.end(); it++)
+    {
+        list.push_back( it->first  );
+    }
+    return list;
+}
 //=============================================================================
 // METHOD    : SPELLprocedureManager::getProcName
 //=============================================================================
@@ -235,11 +282,91 @@ const std::string SPELLprocedureManager::getProcName( const std::string& procId 
     ProcMap::iterator it = m_idToName.find(theProcId);
     if (it == m_idToName.end())
     {
+        if (m_serviceModels.find(theProcId) != m_serviceModels.end()){
+            return theProcId;
+        }
+
         DEBUG("[PRCM] Did not find any name for: " + theProcId );
         THROW_EXCEPTION("Cannot get name for procedure '" + theProcId + "'", "No such identifier", SPELL_ERROR_PROCEDURES);
     }
     DEBUG("[PRCM] Found procedure name: " + it->second );
     return it->second;
+}
+
+//=============================================================================
+// METHOD    : SPELLprocedureManager::findProcedures
+//=============================================================================
+void SPELLprocedureManager::registerServiceHandler( PyObject* serviceImpl )
+{
+    SPELLpyService* serviceModel = new SPELLpyService(serviceImpl);
+
+    m_serviceModels[serviceModel->getName()] = serviceModel;
+}
+
+
+//=============================================================================
+// METHOD    : SPELLprocedureManager::findProcedures
+//=============================================================================
+void SPELLprocedureManager::findServices( const std::string& basePath, const std::string& sc )
+{
+    if (!SPELLutils::isDirectory(basePath))
+    {
+        return;
+    }
+
+    std::list<std::string> files = SPELLutils::getFilesInDir( basePath );
+    std::list<std::string>::iterator it;
+    std::list<std::string>::iterator end = files.end();
+
+    std::string procPath = m_servicePath;
+
+    // Add the current path to python path
+    if (SPELLpythonHelper::instance().isInitialized())
+    {
+        SPELLpythonHelper::instance().addToPath( basePath );
+    }
+
+    PyObject* result = SPELLpythonHelper::instance().callFunction("spell.utils.spell_service","SupportServices",NULL);
+    Py_IncRef(result);
+    SPELLpythonHelper::instance().checkError();
+    if (result == Py_False)
+        return;
+
+    for( it = files.begin(); it != end; it++ )
+    {
+        if ((*it) == "__init__.py") continue;
+
+        std::size_t idx = (*it).find_last_of(".py");
+        std::size_t idxb = (*it).find(".py~"); // Filter out backup files
+        std::size_t idxc = (*it).find(".pyc"); // Filter out compiled py files
+        if ((idx != std::string::npos && idx == ((*it).length() - 1))
+                && (idxb == std::string::npos) && (idxc == std::string::npos))
+        {
+            std::string serviceFile = basePath + PATH_SEPARATOR + (*it);
+            std::string serviceModuleName = it->substr(0, idx-2);
+            try
+            {
+                std::cout << "Loading Service " << serviceModuleName << std::endl;
+
+                SPELLpyHandle serviceModule = PyImport_ImportModule(serviceModuleName.c_str());
+                SPELLpythonHelper::instance().checkError();
+            }
+            catch (SPELLcoreException& e)
+            {
+
+            }
+
+        }
+    }
+
+    std::list<std::string> subdirs = SPELLutils::getSubdirs( basePath );
+    // Procedure folder order will be ['Bus', 'Ground', 'Mission', 'Payload', 'Prod_SES', 'Regression', 'SAE', 'Validation']
+    subdirs.sort(SPELLutils::compareNocase);
+    end = subdirs.end();
+    for( it = subdirs.begin(); it != end; it++ )
+    {
+        findServices( basePath + PATH_SEPARATOR + (*it), sc );
+    }
 }
 
 //=============================================================================
@@ -265,7 +392,8 @@ void SPELLprocedureManager::findProcedures( const std::string& basePath, const s
 
         std::size_t idx = (*it).find_last_of(".py");
         std::size_t idxb = (*it).find(".py~"); // Filter out backup files
-        if ((idx != std::string::npos && idx == ((*it).length() - 1)  ) && ( idxb == std::string::npos ))
+        std::size_t idxc = (*it).find(".pyc"); // Filter out compiled py files
+        if ((idx != std::string::npos && idx == ((*it).length() - 1)  ) && ( idxb == std::string::npos ) && ( idxc == std::string::npos ))
         {
             std::string procFile = basePath + PATH_SEPARATOR + (*it);
             SPELLprocedure* proc = NULL;
@@ -301,6 +429,8 @@ void SPELLprocedureManager::findProcedures( const std::string& basePath, const s
     }
 
     std::list<std::string> subdirs = SPELLutils::getSubdirs( basePath );
+    // Procedure folder order will be ['Bus', 'Ground', 'Mission', 'Payload', 'Prod_SES', 'Regression', 'SAE', 'Validation']
+    subdirs.sort(SPELLutils::compareNocase);
     end = subdirs.end();
     for( it = subdirs.begin(); it != end; it++ )
     {
@@ -366,7 +496,14 @@ SPELLprocedureSourceCode SPELLprocedureManager::getSourceCode( const std::string
     	LibModels::iterator libit = m_libModels.find(procId);
     	if (libit == m_libModels.end())
     	{
-        	THROW_EXCEPTION("Cannot get source code for " + procId, "Procedure or library not found", SPELL_ERROR_PROCEDURES);
+    	    ServiceModelMap::iterator mit = m_serviceModels.find(theProcId);
+            if (mit == m_serviceModels.end())
+            {
+                THROW_EXCEPTION("Cannot get source code for " + procId, "Procedure or library not found", SPELL_ERROR_PROCEDURES);
+
+            }
+    	    SPELLpyService* service = mit->second;
+    	    return service->getSourceCode();
     	}
     	SPELLlibrary* lib = libit->second;
     	lib->refresh();
@@ -391,7 +528,16 @@ SPELLprocedure::PropertyKeys SPELLprocedureManager::getPropertyKeys( const std::
     it = m_procModels.find(theProcId);
     if (it == m_procModels.end())
 	{
-    	THROW_EXCEPTION("Cannot get properties for " + theProcId, "Procedure not found", SPELL_ERROR_PROCEDURES);
+        ServiceModelMap::iterator mit;
+        mit = m_serviceModels.find(theProcId);
+        if (mit == m_serviceModels.end())
+        {
+            THROW_EXCEPTION("Cannot get properties for " + theProcId, "Procedure not found", SPELL_ERROR_PROCEDURES);
+        }
+        // Services don't have properties for now
+        SPELLprocedure::PropertyKeys empty = SPELLprocedure::PropertyKeys();
+        empty.clear();
+        return empty;
 	}
     SPELLprocedure* proc = (*it).second;
     proc->refresh();
@@ -418,7 +564,7 @@ const std::string SPELLprocedureManager::getProperty( const std::string& procId,
 //=============================================================================
 // METHOD    : SPELLprocedureManager::noInstanceId
 //=============================================================================
-const std::string SPELLprocedureManager::noInstanceId( const std::string& procId )
+const std::string noInstanceId( const std::string& procId )
 {
     std::string noIId = procId;
     std::size_t pos = procId.find_first_of("#");
@@ -427,6 +573,22 @@ const std::string SPELLprocedureManager::noInstanceId( const std::string& procId
         noIId = procId.substr(0, pos);
     }
     return noIId;
+}
+
+//=============================================================================
+// METHOD    : SPELLprocedureManager::getProcedure
+//=============================================================================
+SPELLpyService& SPELLprocedureManager::getService( const std::string& serviceId )
+{
+    SPELLmonitor lock(m_lock);
+    std::string noIId = noInstanceId(serviceId);
+    ServiceModelMap::iterator it;
+    it = m_serviceModels.find(noIId);
+    if (it != m_serviceModels.end())
+    {
+        return *it->second;
+    }
+    THROW_EXCEPTION("Cannot obtain service model", "No such id: " + serviceId, SPELL_ERROR_PROCEDURES);
 }
 
 //=============================================================================

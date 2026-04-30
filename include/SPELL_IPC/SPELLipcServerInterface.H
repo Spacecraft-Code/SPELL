@@ -5,7 +5,7 @@
 // DESCRIPTION: Interface for servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -216,7 +216,7 @@ protected: //-----------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** Obtain the channel for a peer
 		**////////////////////////////////////////////////////////////////////
-		SPELLipcChannel& getChannel( int peerKey );
+		SPELLipcChannel** getChannel( int peerKey );
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -251,6 +251,7 @@ private: //-------------------------------------------------------------------
 		 * \param key IN: peer key.
 		**////////////////////////////////////////////////////////////////////
 		void removeClient( int key );
+        void removeClientInternal( int key );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Remove all client of the list of connected clients and disconnect
@@ -325,6 +326,9 @@ private: //-------------------------------------------------------------------
 		std::string 					m_ifcName;
 		/** Holds the client keys used */
 		std::vector<int>  				m_usedClientKeys;
+
+		std::vector<int>                m_clientKeysToRemove;
+
 		/** Holds the server key */
 		int 							m_serverKey;
 		/** Holds the server port */
@@ -333,6 +337,7 @@ private: //-------------------------------------------------------------------
 		SPELLsocket* 					m_serverSocket;
 		/** Synchronization mutex for operations */
 		SPELLmutex 						m_clientLock;
+		SPELLmutex 						m_clientCleanupLock;
 		/** True if the interface is connected */
 		bool 							m_connected;
 		/** Associated IPC listener */

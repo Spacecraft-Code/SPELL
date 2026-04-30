@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the Executor.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -113,6 +113,7 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
 		SPELLcontrollerIF& getController() const { return *m_controller; };
+		bool hasController() const { return m_controller != NULL; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -127,12 +128,17 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorConfig& getConfiguration() const;
+		SPELLexecutorConfig& getConfiguration();
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
 		SPELLvariableManager& getVariableManager() const { return *m_varManager; };
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		SPELLresourceManager& getResourceManager() const { return *m_resourceManager; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -286,7 +292,7 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
 		void setForceTcConfirm( const bool force );
-
+		void setForcePromptConfirm( const bool force );
     // *******************************************************************
     // LANGUAGE INTERLOCK
     // *******************************************************************
@@ -377,6 +383,7 @@ public: //--------------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void displayStage( const std::string& id, const std::string& title );
 
+		void refreshStatus();
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
 protected: //-----------------------------------------------------------------
@@ -524,9 +531,12 @@ private: //-------------------------------------------------------------------
 		/** Change the force TC flag on the adapter layer
 		**////////////////////////////////////////////////////////////////////
 		void setForceTcConfirmInternal( bool force );
+		void setForcePromptConfirmInternal( bool force );
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
+		/** Empty configuration */
+		SPELLexecutorConfig          m_emptyConfig;
 		/** True if the initial configuration parameters have been set */
 		bool                         m_initialized;
 		/** Holds the procedure instance identifier */
@@ -570,6 +580,8 @@ private: //-------------------------------------------------------------------
 		SPELLimportChecker           m_importChecker;
 		/** Holds the variable manager */
 		SPELLvariableManager*        m_varManager;
+		/** Holds the resource manager */
+		SPELLresourceManager*        m_resourceManager;
 
 		/** Command synchronization lock */
 		SPELLmutex                   m_cmdLock;

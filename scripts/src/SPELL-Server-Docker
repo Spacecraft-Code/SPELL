@@ -1,0 +1,80 @@
+#!/bin/bash
+################################################################################
+#
+#  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+#  This file is part of SPELL.
+#
+#  SPELL is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  SPELL is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+
+#===============================================================================
+# Setup main environment variables
+#===============================================================================
+
+# Satellite
+SATELLITE=$1
+[ -z $SATELLITE ] && echo "Must provide the spacecraft: $0 <sat>" && exit 1
+
+# Set SPELL home
+if [ -z $SPELL_HOME ]; then
+    export SPELL_HOME=/home/spell/SPELL
+fi
+[ ! -d $SPELL_HOME ] && echo "ERROR: cannot find SPELL home directory: $SPELL_HOME" && exit 1
+
+#===============================================================================
+# Setup environment
+#===============================================================================
+SETUP_SCRIPT=$SPELL_HOME/bin/setup-environment.sh
+[ ! -f $SETUP_SCRIPT ] && echo "ERROR: cannot find environment setup script: $SETUP_SCRIPT" && exit 1
+! source $SETUP_SCRIPT && echo "ERROR: SPELL environment setup failed" && exit 1
+
+#===============================================================================
+# Launcher configuration
+#===============================================================================
+APP_PATH=$SPELL_HOME/bin/SPELL-Listener
+CFG_PATH=$SPELL_CONFIG/server/server_$SATELLITE.xml
+[ ! -f $CFG_PATH ] && echo "ERROR: could not find configuration file: $CFG_PATH" && exit 1
+[ ! -f $APP_PATH ] && echo "ERROR: could not find application: $APP_PATH" && exit 1
+
+#===============================================================================
+# Pre-execution cleanup
+#===============================================================================
+echo "Cleanup of previous server instances except of running SPELL services"
+$SPELL_HOME/bin/Kill-Server $SATELLITE skipservice
+
+#==============================================================================
+# SPELL COTS
+#==============================================================================
+
+export PATH=$SPELL_COTS/bin:$PATH
+export LD_LIBRARY_PATH=$SPELL_COTS/lib:$SPELL_HOME/lib:$SPELL_DRIVER/lib:$LD_LIBRARY_PATH
+export BACKWARD_CXX_SOURCE_PREFIXES=/home/spell/src/lib/SPELL_CFG/src
+
+
+#===============================================================================
+# Execute application
+#===============================================================================
+echo "Starting SPELL server for $SATELLITE"
+if [[ ( -f $BIN_DIR/APPLInotify ) ]]
+then
+    echo "Notifying hifly..."
+    $BIN_DIR/APPLInotify start $$
+    $APP_PATH -c $CFG_PATH && $BIN_DIR/APPLInotify stop $$
+else
+    $APP_PATH -c $CFG_PATH 2>&1 | tee -a $SPELL_LOG/server_$SATELLITE.log
+fi
+
+#tail -f $SPELL_LOG/server_$SATELLITE.log

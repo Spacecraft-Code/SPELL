@@ -5,7 +5,7 @@
 // DESCRIPTION: Processing code for client requests
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -160,6 +160,33 @@ protected: //-----------------------------------------------------------------
 		 *
 		**////////////////////////////////////////////////////////////////////
     	void processCheckVariablesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to get current resource names.
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processGetResources( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to change a resource value
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processChangeResource( const SPELLipcMessage& msg, SPELLipcMessage& response );
+
+		//////////////////////////////////////////////////////////////////////
+		/** Process a request to check if resource analysis is enabled
+		 *
+		 * \param msg IN: IPC request.
+		 * \param response INOUT: IPC response to complete.
+		 *
+		**////////////////////////////////////////////////////////////////////
+    	void processCheckResourcesEnabled( const SPELLipcMessage& msg, SPELLipcMessage& response );
 
 		//////////////////////////////////////////////////////////////////////
 		/** Process a request to get global dictionary contents

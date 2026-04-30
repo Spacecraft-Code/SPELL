@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of procedure model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -36,15 +36,16 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <openssl/md5.h>
 
 #define KEY_NAME "NAME"
+#define KEY_PYTHON_VERSION "PYTHON VERSION"
 #define KEY_FILE "FILE"
 #define KEY_HISTORY "REVISION HISTORY"
 #define KEY_SC1 "SPACECRAFT"
 #define KEY_SC2 "SPACECRAFTS"
 
 const std::string CHECK_SPACECRAFT = "CheckSpacecraft";
+const std::string OVERRIDE_SC = "OverrideContextSpacecraftName";
 
 //=============================================================================
 // CONSTRUCTOR : SPELLprocedure::SPELLprocedure()
@@ -69,9 +70,6 @@ SPELLprocedure::SPELLprocedure( const std::string& procPath, const std::string& 
     m_file = filename;
     m_header = "";
 
-    // Obtain the file checksum
-    m_md5 = obtainChecksum(filename);
-
     // Parse the file to get properties and source code
     parseFile(filename);
 }
@@ -89,6 +87,55 @@ SPELLprocedure::~SPELLprocedure()
 //=============================================================================
 std::string SPELLprocedure::getHeader()
 {
+	if (!m_header.empty())
+		return m_header;
+
+	std::ifstream file;
+	file.open( m_file.c_str() );
+	if (!file.is_open())
+	{
+		THROW_EXCEPTION("Cannot parse file " + m_file, "Unable to open", SPELL_ERROR_FILESYSTEM);
+	}
+	// Will be true while in comment lines
+	bool isComment = false;
+	// Will be true while inside the header
+	bool inHeader = false;
+	// Will be true when finished parsing the header
+	bool headerDone = false;
+	// Will be true if parsing the history of changes
+	bool inHistory  = false;
+	m_header = "";
+	// Stores the last key found
+	std::string lastKey;
+	while(!file.eof())
+	{
+		std::string line = "";
+		std::getline(file,line);
+
+		if ((line.size()>0)&&(!headerDone))
+		{
+			isComment = (line[0] == '#');
+			if (isComment && (!inHeader))
+			{
+				// If it is a header delimiter line we are entering the header
+				if (isLimitLine(line))
+				{
+					inHeader = true;
+				}
+			}
+			else if (isComment && inHeader)
+			{
+				m_header += line + "\n";
+				// If we are in header and another limit line comes, we have finished
+				if (isLimitLine(line))
+				{
+					headerDone = true;
+					break;
+				}
+			}
+		}
+	}
+	file.close();
 	return m_header;
 }
 
@@ -129,7 +176,6 @@ void SPELLprocedure::parseFile( const std::string& path )
     {
         std::string line = "";
         std::getline(file,line);
-        m_source.addSourceCodeLine(line);
         if ((line.size()>0)&&(!headerDone))
         {
             isComment = (line[0] == '#');
@@ -143,7 +189,6 @@ void SPELLprocedure::parseFile( const std::string& path )
             }
             else if (isComment && inHeader)
             {
-            	m_header += line + "\n";
                 // If we are in header and another limit line comes, we have finished
                 if (isLimitLine(line))
                 {
@@ -225,43 +270,6 @@ void SPELLprocedure::parseFile( const std::string& path )
 }
 
 //=============================================================================
-// METHOD    : SPELLprocedure::obtainChecksum()
-//=============================================================================
-std::string SPELLprocedure::obtainChecksum( const std::string& filename )
-{
-    int fd = open(filename.c_str(), O_RDONLY);
-    if (fd<0)
-    {
-        THROW_EXCEPTION("Cannot calculate MD5 for file " + filename, "Unable to open", SPELL_ERROR_FILESYSTEM);
-    }
-    struct stat statbuf;
-    if(fstat(fd, &statbuf) < 0)
-    {
-        THROW_EXCEPTION("Cannot calculate MD5 for file " + filename, "Unable to stat file", SPELL_ERROR_FILESYSTEM);
-    }
-    int fileSize = statbuf.st_size;
-    char* fileBuffer;
-    unsigned char result[MD5_DIGEST_LENGTH];
-
-    fileBuffer = (char*) mmap(0, fileSize, PROT_READ, MAP_SHARED, fd, 0);
-    MD5((unsigned char*) fileBuffer, fileSize, result);
-
-    // Print the MD5 sum as hex-digits.
-    int i;
-    char* hex = new char[2];
-    std::string checksum = "";
-    for(i=0; i<MD5_DIGEST_LENGTH; i++)
-    {
-    	sprintf(hex, "%02x",result[i]);
-    	checksum += hex;
-    }
-    delete hex;
-
-    close(fd);
-    return checksum;
-}
-
-//=============================================================================
 // METHOD    : SPELLprocedure::getProperty
 //=============================================================================
 const std::string SPELLprocedure::getProperty( const std::string& key )
@@ -327,8 +335,15 @@ bool SPELLprocedure::forSpacecraft( const std::string& sc ) const
 	{
 		return true;
 	}
+    const std::string overrideSC = SPELLconfiguration::instance().getContextParameter(OVERRIDE_SC);
+    std::string actualSC;
+	if (overrideSC != "") {
+		actualSC = overrideSC;
+	} else {
+        actualSC = sc;
+    }
 
-	std::string fam = SPELLconfiguration::instance().getFamilyFor(sc);
+	std::string fam = SPELLconfiguration::instance().getFamilyFor(actualSC);
 	// If the family is undefined, discard the proc
 	if (fam == "") return false;
 
@@ -348,8 +363,30 @@ bool SPELLprocedure::forSpacecraft( const std::string& sc ) const
 			std::string scFamInProc = *sit;
 			SPELLutils::trim(scFamInProc);
 			if (scFamInProc == fam) return true;
-			if (scFamInProc == sc) return true;
+			if (scFamInProc == actualSC) return true;
 		}
 	}
 	return false;
 }
+
+const std::vector<std::string> SPELLprocedureSourceCode::getSourceCodeLines() {
+	if (!m_sourceLines.empty())
+		return m_sourceLines;
+
+	std::ifstream file;
+	file.open( m_filename.c_str() );
+	if (!file.is_open())
+	{
+		THROW_EXCEPTION("Cannot parse file " + m_filename, "Unable to open", SPELL_ERROR_FILESYSTEM);
+	}
+	// Stores the last key found
+	std::string lastKey;
+	std::string line = "";
+	while(!file.eof())
+	{
+		std::getline(file,line);
+		m_sourceLines.push_back(line);
+	}
+
+	return m_sourceLines;
+};

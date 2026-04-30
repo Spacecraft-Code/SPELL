@@ -5,7 +5,7 @@
 // DESCRIPTION: Python safe operation monitors
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -59,14 +59,71 @@ class SPELLsafePythonOperations
 public:
 	SPELLsafePythonOperations( const std::string& where )
 	{
-		//std::cerr << "PYTHON OPERATIONS IN " << where << std::endl;
+		//std::cerr << "PYTHON OPERATIONS TRY-IN " << where << std::endl;
 		m_state = SPELLpythonHelper::instance().acquireGIL();
+		//std::cerr << ">>PYTHON OPERATIONS IN " << where << std::endl;
 		m_where = where;
 	};
-	~SPELLsafePythonOperations()
+	virtual ~SPELLsafePythonOperations() noexcept(false)
 	{
+		PyObject* err = PyErr_Occurred();
+		if (err != NULL)
+		{
+			std::cerr << std::endl << "===============================" << std::endl;
+			//PyErr_Print();
+			PyObject* ptype;
+			PyObject* pvalue;
+			PyObject* ptraceback;
+			PyErr_Fetch( &ptype, &pvalue, &ptraceback );
+			std::cerr << "TYPE : " << PYREPR(ptype) << std::endl;
+			std::cerr << "VALUE: " << PYREPR(pvalue) << std::endl;
+			if (ptraceback)
+			{
+				std::cerr << "Traceback: " << std::endl;
+				PyTracebackObject* traceback = (PyTracebackObject*) ptraceback;
+				while(traceback != NULL)
+				{
+					std::cerr << "at " << PYREPR(traceback->tb_frame->f_code->co_filename) << ":" << traceback->tb_lineno << std::endl;
+					traceback = traceback->tb_next;
+				}
+			}
+			std::cerr << "===============================" << std::endl << std::endl;
+			// Parse the exception to give better information about the error on python side
+			PyObject* spellException = SPELLpythonHelper::instance().getObject("spell.lib.exception", "SpellException");
+			std::string excType = PYREPR(ptype);
+			if (PyObject_IsInstance( pvalue, spellException ))
+			{
+				PyObject* msg = PyObject_GetAttrString( pvalue, "message" );
+				PyObject* rea = PyObject_GetAttrString( pvalue, "reason" );
+				std::string message = "<unknown error>";
+				std::string reason  = "";
+				if (msg != NULL)
+				{
+					message = PYSSTR(msg);
+				}
+				if (rea != NULL )
+				{
+					reason = PYSSTR(rea);
+				}
+				/** \todo decide the fatal flag value */
+				std::cerr << "RAISING INTERNAL DRIVER EXCEPTION" << std::endl;
+				PyErr_Clear();
+				THROW_EXCEPTION("Driver error: " + message, reason, SPELL_DRIVER_ERROR );
+			}
+			else if ( PYSTR(pvalue) == "EXECUTION ABORTED" || PYSTR(pvalue) == "EXECUTION TERMINATED" )
+			{
+				// Do not raise exceptions if the detected exception is an aborted or finished internal exception
+				return;
+			}
+			else
+			{
+				std::cerr << "RAISING PYTHON ERROR EXCEPTION" << std::endl;
+				PyErr_Clear();
+				THROW_EXCEPTION("Python error", PYSSTR(PyObject_Str(pvalue)), SPELL_ERROR_PYTHON_API );
+			}
+		}
 		SPELLpythonHelper::instance().releaseGIL(m_state);
-		//std::cerr << "PYTHON OPERATIONS OUT " << m_where << std::endl;
+		//std::cerr << "<<PYTHON OPERATIONS OUT " << m_where << std::endl;
 	};
 private:
 	PyGILState_STATE m_state;

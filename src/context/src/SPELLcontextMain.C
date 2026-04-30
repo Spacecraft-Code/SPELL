@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL context main program
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -33,6 +33,12 @@
 #include "SPELL_UTIL/SPELLerror.H"
 // Local includes ----------------------------------------------------------
 #include "SPELL_CTX/SPELLcontext.H"
+#ifdef WITH_KUBERNETES
+#include <sys/prctl.h>
+#endif
+#ifdef WITH_BACKTRACE
+#include <backward.hpp>
+#endif
 
 // GLOBALS ///////////////////////////////////////////////////////////////////
 
@@ -44,7 +50,6 @@ static std::string context = "";
 
 // For POST
 // STATIC ////////////////////////////////////////////////////////////////////
-
 
 //============================================================================
 // Show usage
@@ -116,6 +121,13 @@ int parseArgs( int argc, char** argv )
 //============================================================================
 int main( int argc, char** argv )
 {
+    #ifdef WITH_KUBERNETES
+    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+    #endif
+    #ifdef WITH_BACKTRACE
+    backward::SignalHandling sh;
+    std::cout << "Singal Handlers loaded: " << sh.loaded() << std::endl;
+    #endif
     if ( parseArgs(argc,argv) != 0 ) return 1;
 
     // The time identifier is used for unique log file names

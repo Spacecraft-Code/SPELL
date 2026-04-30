@@ -5,7 +5,7 @@
 // DESCRIPTION: Command line shell for standalone execution (NCurses)
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -31,8 +31,7 @@
 // System includes ---------------------------------------------------------
 #include <iostream>
 #include <vector>
-#include <menu.h>
-#include <ncurses/menu.h>
+#include <ncursesw/menu.h>
 // Local includes ----------------------------------------------------------
 // Project includes --------------------------------------------------------
 #include "SPELL_SYN/SPELLthread.H"

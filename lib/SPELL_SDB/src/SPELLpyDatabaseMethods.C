@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of database Python bindings
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -46,7 +46,7 @@ int SPELLpyDatabase_Init( PyDatabaseObject* self, PyObject* args, PyObject* kwds
 	std::string name = "";
 	std::string file = "";
 	std::string ext = "";
-	std::string type = self->ob_type->tp_name;
+	std::string type = Py_TYPE(self)->tp_name;
 	if (PyTuple_Size(args)!=3)
 	{
 		THROW_SYNTAX_EXCEPTION_NR("Cannot initialize database", "Expected database name, file and default extension");
@@ -93,7 +93,7 @@ void SPELLpyDatabase_Dealloc( PyDatabaseObject* self )
 {
 	delete self->__pdb;
 	self->__pdb = NULL;
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -614,8 +614,7 @@ static PyMethodDef dictiter_methods[] = {
 
 PyTypeObject PyDatabaseIterator_Type =
 {
-        PyObject_HEAD_INIT(&PyType_Type)
-        0,                                      /* ob_size */
+        PyVarObject_HEAD_INIT(&PyType_Type,0)
         "database-keyiterator",                 /* tp_name */
         sizeof(PyDatabaseIteratorObject),       /* tp_basicsize */
         0,                                      /* tp_itemsize */
@@ -668,7 +667,7 @@ PyObject* SPELLpyDatabase_NewIterator( PyDatabaseObject* container )
 //============================================================================
 void SPELLpyDatabase_DeallocIterator( PyDatabaseIteratorObject* di )
 {
-	di->ob_type->tp_free( (PyObject*)di );
+	Py_TYPE(di)->tp_free( (PyObject*)di );
 }
 
 //============================================================================
@@ -676,34 +675,26 @@ void SPELLpyDatabase_DeallocIterator( PyDatabaseIteratorObject* di )
 //============================================================================
 PyObject* SPELLpyDatabase_NextKey( PyDatabaseIteratorObject* di )
 {
-    PyObject *key;
-    register Py_ssize_t i, mask;
-    register PyDictEntry *ep;
-    PyDictObject* d = di->di_dict;
+    PyObject *key,*value;
+    Py_ssize_t i;
+    int result;
+    PyObject* d = (PyObject*)di->di_dict;
 
     if (d == NULL) return NULL;
     assert (PyDict_Check(d));
 
-    if (di->di_used != d->ma_used)
-    {
-		PyErr_SetString(PyExc_RuntimeError, "dictionary changed size during iteration");
-		di->di_used = -1; /* Make this state sticky */
-		return NULL;
-    }
-
     i = di->di_pos;
     if (i < 0) goto fail;
-    ep = d->ma_table;
-    mask = d->ma_mask;
-    while (i <= mask && ep[i].me_value == NULL) i++;
-    di->di_pos = i+1;
-    if (i > mask) goto fail;
+
+    result = PyDict_Next(d, &di->di_pos, &key, &value);
+
+    if (!result) goto fail;
+
     di->len--;
-    key = ep[i].me_key;
+
     Py_INCREF(key);
     return key;
 fail:
-    Py_DECREF(d);
     di->di_dict = NULL;
     return NULL;
 }

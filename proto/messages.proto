@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "header.proto";
+import "alerts.proto";
+import "limits.proto";
+import "msgbus.proto";
+
+package Messages;
+
+message Item {
+    Header header = 1;
+
+    oneof these {
+        MsgBus.CreateNewTopic newtopic = 2;
+        MsgBus.RequestValues request_values = 3;
+        MsgBus.KeyList keylist = 4;
+        MsgBus.Status status = 5;
+        Limits.DefinitionUpdate limit_definition_update = 6;
+        Limits.Fileset fileset = 7;
+        Alerts.Alert alert = 8;
+        MsgBus.RequestType request = 9;
+    };
+};
+

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Database for AsRun files
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -26,30 +26,30 @@
 ##
 ###################################################################################
 
-from database import *
+from .database import *
 
 ################################################################################
 class DatabaseAsRun(Database):
-    
+
     __filename = None
     __file = None
-    
+
     #===========================================================================
     def __init__(self, name, path, defaultExt = None):
         if defaultExt is not None:
             self.__filename = path + "." + defaultExt
         else:
             self.__filename = path
-            
+
         # Obtain the SPELL data directory
         data = os.getenv("SPELL_DATA")
         if data is None:
             raise DriverException("SPELL data directory not defined")
-            
+
         self.__filename = data + os.sep + self.__filename
 
         LOG("Instanciated: " + self.__filename)
-    
+
     #===========================================================================
     def id(self):
         return self.__filename
@@ -59,7 +59,7 @@ class DatabaseAsRun(Database):
         self.__file = open(self.__filename, 'w')
         LOG("Created: " + self.__filename)
         return self
-    
+
     #===========================================================================
     def __getitem__(self, key):
         return None
@@ -71,18 +71,18 @@ class DatabaseAsRun(Database):
     #===========================================================================
     def set(self, key, value, format = None):
         pass
-            
+
     #===========================================================================
     def write(self, timestamp, identifier, *kargs):
         args = '\t'.join([ str(k) for k in kargs ])
-        text = "%s\t%s\t%s\n" % (timestamp,identifier,args)        
+        text = "%s\t%s\t%s\n" % (timestamp,identifier,args)
         self.__file.write(text)
         self.__file.flush()
 
     #===========================================================================
     def getFilename(self):
         return self.__filename
-    
+
     #===========================================================================
     def reload(self):
         pass
@@ -90,7 +90,7 @@ class DatabaseAsRun(Database):
     #===========================================================================
     def commit(self):
         pass
-    
+
     #===========================================================================
     def keys(self):
         return []

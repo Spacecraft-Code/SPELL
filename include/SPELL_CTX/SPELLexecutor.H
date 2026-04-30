@@ -5,7 +5,7 @@
 // DESCRIPTION: Executor manager and controller
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -46,7 +46,9 @@
 
 
 // FORWARD REFERENCES ////////////////////////////////////////////////////////
+
 class LoginMonitor;
+
 // TYPES /////////////////////////////////////////////////////////////////////
 // DEFINES ///////////////////////////////////////////////////////////////////
 
@@ -55,7 +57,7 @@ class LoginMonitor;
  ** \brief
  **
 **////////////////////////////////////////////////////////////////////////////
-class SPELLexecutor : public SPELLexecutorListener, SPELLprocessListener
+class SPELLexecutor : public SPELLexecutorListener,public SPELLprocessListener
 {
 public: //--------------------------------------------------------------------
 
@@ -79,126 +81,126 @@ public: //--------------------------------------------------------------------
 	    //////////////////////////////////////////////////////////////////////
 	    /** Start the executor process
 	    **////////////////////////////////////////////////////////////////////
-	    void start();
+		virtual void start();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Close the executor process
 	    **////////////////////////////////////////////////////////////////////
-	    void close();
+		virtual void close();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Kill the executor process
 	    **////////////////////////////////////////////////////////////////////
-	    void kill();
+		virtual void kill();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Wait for a given executor status
 	     *
 	     * \returns True on timeout
 	    **////////////////////////////////////////////////////////////////////
-	    bool waitStatus( const SPELLexecutorStatus& status, unsigned int timeoutSec );
+		virtual bool waitStatus( const SPELLexecutorStatus& status, unsigned int timeoutSec );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Wait for executor login
 	     *
 	     * \returns True if logged in
 	    **////////////////////////////////////////////////////////////////////
-	    bool waitLogin( unsigned int timeoutMsec );
+		virtual bool waitLogin( unsigned int timeoutMsec );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check for executor login
 	     *
 	     * \returns True if logged in
 	    **////////////////////////////////////////////////////////////////////
-	    bool isLoggedIn() { return m_loggedIn; };
+		virtual bool isLoggedIn() { return m_loggedIn; };
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Get the status of the executor
 	     *
 	     * \returns The status
 	    **////////////////////////////////////////////////////////////////////
-	    SPELLexecutorStatus getStatus();
+		virtual SPELLexecutorStatus getStatus();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check if the executor is active
 	     *
 	     * \returns True if active
 	    **////////////////////////////////////////////////////////////////////
-	    bool isActive();
+		virtual bool isActive();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check if the executor has a parent procedure
 	     *
 	     * \returns True if has a parent
 	    **////////////////////////////////////////////////////////////////////
-	    bool hasParent() { return m_model.getParentInstanceId() != ""; } ;
+		virtual bool hasParent() { return m_model.getParentInstanceId() != ""; } ;
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Get the executor parent procedure
 	     *
 	     * \returns The parent procedure id
 	    **////////////////////////////////////////////////////////////////////
-	    std::string getParentInstanceId() { return m_model.getParentInstanceId(); } ;
+		virtual std::string getParentInstanceId() { return m_model.getParentInstanceId(); } ;
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Send a command to the executor
 	    **////////////////////////////////////////////////////////////////////
-	    void command( const ExecutorCommand& command );
+		virtual void command( const ExecutorCommand& command );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Set the controlling client
 	    **////////////////////////////////////////////////////////////////////
-	    void setControllingClient( SPELLclient* client );
+		virtual  void setControllingClient( SPELLclient* client );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Set the procedure to headless (background) mode
 	    **////////////////////////////////////////////////////////////////////
-	    void setBackground();
+		virtual void setBackground();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check whether the procedure is in headless (background) mode
 	    **////////////////////////////////////////////////////////////////////
-	    bool isBackground() { return m_clientConnection == CLI_BACKGROUND; };
+		virtual bool isBackground() { return m_clientConnection == CLI_BACKGROUND; };
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Remove the controlling client
 	    **////////////////////////////////////////////////////////////////////
-	    void removeControllingClient( bool clientLost );
+		virtual void removeControllingClient( bool clientLost );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check if it has controlling client
 	    **////////////////////////////////////////////////////////////////////
-	    bool hasControllingClient();
+		virtual bool hasControllingClient();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Check if it has controlling client
 	    **////////////////////////////////////////////////////////////////////
-	    SPELLclient* getControllingClient();
+		virtual SPELLclient* getControllingClient();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Send a message to the executor process
 	    **////////////////////////////////////////////////////////////////////
-	    void sendMessageToExecutor( const SPELLipcMessage& msg );
+		virtual void sendMessageToExecutor( const SPELLipcMessage& msg );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Send a request to the executor process
 	    **////////////////////////////////////////////////////////////////////
-	    SPELLipcMessage sendRequestToExecutor( const SPELLipcMessage& msg );
+		virtual SPELLipcMessage sendRequestToExecutor( const SPELLipcMessage& msg );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Get the executor model
 	    **////////////////////////////////////////////////////////////////////
-	    SPELLexecutorModel& getModel() { return m_model; };
+		SPELLexecutorModel& getModel() { return m_model; };
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Register executor notifier for monitoring mode
 	    **////////////////////////////////////////////////////////////////////
-	    void registerNotifier( std::string id, SPELLexecutorListener* listener );
+		virtual void registerNotifier( std::string id, SPELLexecutorListener* listener );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Deregister executor notifier
 	    **////////////////////////////////////////////////////////////////////
-	    void deregisterNotifier( std::string id );
+		virtual void deregisterNotifier( std::string id );
 
 	// DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -207,7 +209,7 @@ protected: //-----------------------------------------------------------------
 		friend class SPELLexecutorInterestList;
 		friend class SPELLprocessManager;
 		friend class SPELLexecutorIPC;
-
+		//friend class SPELLservice;
 	// EXCEPTIONS ////////////////////////////////////////////////////////////
 	// ENUMS /////////////////////////////////////////////////////////////////
 	// TYPES /////////////////////////////////////////////////////////////////
@@ -219,9 +221,9 @@ protected: //-----------------------------------------------------------------
 		// EXECUTOR REQUEST HANDLING
 		//====================================================================
 
-		SPELLipcMessage executorLogin( const SPELLipcMessage& msg );
+		virtual SPELLipcMessage executorLogin( const SPELLipcMessage& msg );
 
-		void executorNotification( const SPELLipcMessage& msg );
+		virtual void executorNotification( const SPELLipcMessage& msg );
 
 		//====================================================================
 		// INTERNAL IPC METHODS
@@ -230,27 +232,27 @@ protected: //-----------------------------------------------------------------
 	    //////////////////////////////////////////////////////////////////////
 	    /** \see SPELLexecutorListener.
 	    **////////////////////////////////////////////////////////////////////
-	    void processMessageFromExecutor( SPELLipcMessage msg );
+		virtual void processMessageFromExecutor( SPELLipcMessage msg );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** \see SPELLexecutorListener.
 	    **////////////////////////////////////////////////////////////////////
-	    SPELLipcMessage processRequestFromExecutor( SPELLipcMessage msg );
+		virtual SPELLipcMessage processRequestFromExecutor( SPELLipcMessage msg );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Forward a message from the executor to the client
 	    **////////////////////////////////////////////////////////////////////
-	    void forwardMessageToClient( const SPELLipcMessage& msg );
+		virtual void forwardMessageToClient( const SPELLipcMessage& msg );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Forward a request from the executor to the client
 	    **////////////////////////////////////////////////////////////////////
-	    SPELLipcMessage forwardRequestToClient( const SPELLipcMessage& msg );
+		virtual SPELLipcMessage forwardRequestToClient( const SPELLipcMessage& msg );
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Force an executor pause
 	    **////////////////////////////////////////////////////////////////////
-	    void forcePause();
+		virtual void forcePause();
 
 		//====================================================================
 		// INTERNAL PROCESS CONTROL METHODS
@@ -261,36 +263,36 @@ protected: //-----------------------------------------------------------------
 	     *
 	     * \returns True if active
 	    **////////////////////////////////////////////////////////////////////
-	    bool processOk();
+		virtual bool processOk();
 
 	    //////////////////////////////////////////////////////////////////////
 	    /** Wait until the executor process has finished
 	    **////////////////////////////////////////////////////////////////////
-	    void waitFinish();
+		virtual void waitFinish();
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLprocessListener.
 		**////////////////////////////////////////////////////////////////////
-		void processStarted( const std::string& identifier );
+		virtual void processStarted( const std::string identifier );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLprocessListener.
 		**////////////////////////////////////////////////////////////////////
-		void processFinished( const std::string& identifier, const int& retValue );
+		virtual void processFinished( const std::string identifier, const int& retValue );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLprocessListener.
 		**////////////////////////////////////////////////////////////////////
-		void processKilled( const std::string& identifier );
+		virtual void processKilled( const std::string identifier );
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLprocessListener.
 		**////////////////////////////////////////////////////////////////////
-		void processFailed( const std::string& identifier );
+		virtual void processFailed( const std::string identifier );
 
 
 private: //-------------------------------------------------------------------
-
+		friend class SPELLservice;
 	// EXCEPTIONS ////////////////////////////////////////////////////////////
 	// ENUMS /////////////////////////////////////////////////////////////////
 	// TYPES /////////////////////////////////////////////////////////////////
@@ -347,6 +349,19 @@ private: //-------------------------------------------------------------------
 
 };
 
+class LoginMonitor : public SPELLthread
+{
+public:
+    LoginMonitor( SPELLexecutor& exec )
+    : SPELLthread("login-" + exec.getModel().getInstanceId() ),
+      m_exec( exec )
+    {}
 
+    void run();
+
+
+private:
+    SPELLexecutor& m_exec;
+};
 /*@}*/
 #endif

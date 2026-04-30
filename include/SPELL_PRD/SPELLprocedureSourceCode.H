@@ -5,7 +5,7 @@
 // DESCRIPTION: Procedure source code model
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -64,7 +64,6 @@ public: //--------------------------------------------------------------------
 		SPELLprocedureSourceCode( const std::string filename )
 		{
 			m_filename = filename;
-			m_source = "";
 			m_sourceLines.clear();
 		}
 
@@ -81,22 +80,11 @@ public: //--------------------------------------------------------------------
 		} ;
 
 		//////////////////////////////////////////////////////////////////////
-		/** Obtain the procedure source code.
-		 *
-		 * \returns The procedure source code.
-		**////////////////////////////////////////////////////////////////////
-		const std::string getSourceCode() const {
-			return m_source;
-		};
-
-		//////////////////////////////////////////////////////////////////////
 		/** Obtain the procedure source code lines.
 		 *
 		 * \returns The procedure source code lines.
 		**////////////////////////////////////////////////////////////////////
-		const std::vector<std::string> getSourceCodeLines() const {
-			return m_sourceLines;
-		};
+		const std::vector<std::string> getSourceCodeLines();
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 
@@ -119,7 +107,6 @@ protected: //-----------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void addSourceCodeLine( const std::string& sourceLine )
 		{
-			m_source += sourceLine + "\n";
 			m_sourceLines.push_back(sourceLine);
 		};
 
@@ -128,7 +115,6 @@ protected: //-----------------------------------------------------------------
 		**////////////////////////////////////////////////////////////////////
 		void clear()
 		{
-			m_source = "";
 			m_sourceLines.clear();
 		};
 
@@ -142,8 +128,6 @@ private: //-------------------------------------------------------------------
     // DATA MEMBERS //////////////////////////////////////////////////////////
 		/** Procedure file name */
 		std::string m_filename;
-		/** Procedure source code */
-		std::string m_source;
 		/** Procedure source code splitted in lines */
 		std::vector<std::string> m_sourceLines;
 };

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the thread mechanism
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -55,7 +55,7 @@ SPELLthread::SPELLthread( std::string id )
     pthread_attr_init(&m_threadAttr);
 	pthread_attr_setdetachstate(&m_threadAttr, PTHREAD_CREATE_JOINABLE);
     m_threadRunning = false;
-    DEBUG("[THR] Thread " + m_threadId + " created")
+   // DEBUG("[THR] Thread " + m_threadId + " created")
 }
 
 //=============================================================================
@@ -63,7 +63,7 @@ SPELLthread::SPELLthread( std::string id )
 //=============================================================================
 SPELLthread::~SPELLthread()
 {
-    DEBUG("[THR] Thread " + m_threadId + " do destroy");
+    //DEBUG("[THR] Thread " + m_threadId + " do destroy");
     m_threadRunning = false;
     pthread_attr_destroy(&m_threadAttr);
 }
@@ -74,12 +74,24 @@ SPELLthread::~SPELLthread()
 void SPELLthread::start()
 {
     SPELLmonitor m(m_threadLock);
-    int result = pthread_create(&m_thread, (const pthread_attr_t*) &m_threadAttr, do_run, this );
-    //std::cerr << "==== create thread " << m_thread << " " << m_threadId << std::endl;
-    if( result != 0)
-    {
-        throw SPELLsyncError("Unable to start thread", "Cannot create thread: " + ISTR(result));
-    }
+    int result;
+    int tries = 0;
+    do {
+        result = pthread_create(&m_thread, (const pthread_attr_t*) &m_threadAttr, do_run, this );
+        tries++;
+        if (result != 0)
+        {
+            if (tries > 10)
+            {
+                perror("pthread_create");
+                throw SPELLsyncError("Unable to start thread", "Cannot create thread: " + ISTR(result));
+            }
+            else
+            {
+                usleep(500000);
+            }
+        }
+    } while (result != 0);
 }
 
 //=============================================================================
@@ -116,10 +128,10 @@ void SPELLthread::doRun()
 void SPELLthread::join()
 {
     //std::cerr << "==== before join " << m_thread << " " << m_threadId << std::endl;
-    SPELLmonitor m(m_threadLock);
-	if (m_thread != 0)
+	pthread_t thread = m_thread;
+	if (thread != 0)
 	{
-		pthread_join(m_thread, NULL);
+		pthread_join(thread, NULL);
 	    //std::cerr << "==== after join " << m_thread << " " << m_threadId << std::endl;
 		m_thread = 0;
 		m_threadRunning = false;

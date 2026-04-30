@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+################################################################################
+#
+#  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
+#
+#  This file is part of SPELL.
+#
+#  SPELL is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  SPELL is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with SPELL. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+
+import py_compile, sys
+
+if len(sys.argv) not in [2, 3]:
+    print("please provide an input file and optionally an output file")
+    sys.exit(1)
+
+outFile = '/tmp/ignore.py'
+if len(sys.argv) == 3:
+    outFile = sys.argv[2]
+
+try:
+    py_compile.compile(sys.argv[1], cfile=outFile, doraise=True)
+except Exception as e:
+    sys.stderr.write('### Python compile error:\n' + str(e) + '\n')
+    raise

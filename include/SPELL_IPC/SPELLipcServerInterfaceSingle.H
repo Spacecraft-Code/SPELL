@@ -5,7 +5,7 @@
 // DESCRIPTION: Interface for single-client servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -187,6 +187,7 @@ private: //-------------------------------------------------------------------
 		/** Remove the client
 		**////////////////////////////////////////////////////////////////////
 		void removeClient();
+		void removeClientInternal();
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLipcInterface.
@@ -272,7 +273,8 @@ private: //-------------------------------------------------------------------
 		/** Synchronization mutex for operations */
 		SPELLmutex 						m_clientLock;
 		/** True if the interface is connected */
-		bool 							m_connected;
+		bool                            m_connected;
+		bool                            m_removeClient;
 		/** Associated IPC listener */
 		SPELLipcInterfaceListener* 		m_listener;
 		/** Holds the set of incoming request processors to be cleaned up */
@@ -289,6 +291,8 @@ private: //-------------------------------------------------------------------
 		SPELLevent                      m_clientConnectionEvent;
 		/** Blocks processing of incoming requests */
 		SPELLmutex                      m_incomingLock;
+		/** Only allow one thread to cleanup the channel */
+		SPELLmutex                      m_cleanupLock;
 		/** IPC channel */
 		SPELLipcChannel*                m_channel;
 		/** Timeout for request retries */

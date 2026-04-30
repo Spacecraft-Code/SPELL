@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL executor main program
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -34,7 +34,12 @@
 #include "SPELL_EXC/SPELLinterpreter.H"
 #include "SPELL_CIFS/SPELLserverCif.H"
 #include "SPELL_UTIL/SPELLpythonHelper.H"
-
+#ifdef WITH_KUBERNETES
+#include <sys/prctl.h>
+#endif
+#ifdef WITH_BACKTRACE
+#include <backward.hpp>
+#endif
 // GLOBALS ///////////////////////////////////////////////////////////////////
 
 // Initialization/configuration variables
@@ -47,6 +52,7 @@ static std::string context = "";
 static std::string procId  = "";
 static std::string persis  = "";
 static std::string timeId  = "";
+
 
 // STATIC ////////////////////////////////////////////////////////////////////
 
@@ -140,8 +146,15 @@ int parseArgs( int argc, char** argv )
 //============================================================================
 int main( int argc, char** argv )
 {
+    #ifdef WITH_KUBERNETES
+    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+    #endif
+    #ifdef WITH_BACKTRACE
+    backward::SignalHandling sh;
+    std::cout << "Singal Handlers loaded: " << sh.loaded() << std::endl;
+    #endif
     if ( parseArgs(argc,argv) != 0 ) return 1;
-
+    
     // Create an instance of the interpreter.
     SPELLinterpreter& interp = SPELLinterpreter::instance();
 
@@ -153,10 +166,6 @@ int main( int argc, char** argv )
 
     // Setup the logging capabilities
     SPELLlog::instance().setLogFile("_Executor_" + procId, timeId);
-
-#ifdef WITH_DEBUG
-    LOG_ENABLE
-#endif
 
     // Configuration of the interpreter
     SPELLinterpreterConfig config;

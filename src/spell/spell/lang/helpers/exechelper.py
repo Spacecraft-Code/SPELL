@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Helpers for execution functions
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -40,7 +40,7 @@ from spell.lib.adapter.interface import Interface
 #*******************************************************************************
 # Local Imports
 #*******************************************************************************
-from basehelper import *
+from .basehelper import *
 
 #*******************************************************************************
 # System Imports
@@ -49,32 +49,31 @@ import time,sys,threading
 import inspect
 
 
-
 ################################################################################
 class Pause_Helper(WrapperHelper):
-    
+
     __condition = None
     __timeout = None
     __configDict = {}
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "TM")
         self.__condition = None
         self.__timeout = None
         self.__configDict = {}
-        self._opName = "Pause" 
+        self._opName = "Pause"
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
 
         if len(args)==0:
             return
-        
+
         useConfig = {}
         useConfig.update(self.getConfig())
 
-        # Since args is a tuple we have to convert it to a list for TM.verify        
+        # Since args is a tuple we have to convert it to a list for TM.verify
         if len(args)!=1:
             # The case of giving a simple step for verification
             self.__condition = [ item for item in args ]
@@ -85,13 +84,13 @@ class Pause_Helper(WrapperHelper):
         self.__timeout = self.getConfig(Timeout)
         if self.__timeout is None:
             raise SyntaxException("Timeout is required")
-            
+
         self.__configDict = {}
         self.__configDict.update(self.getConfig())
         self.__configDict[Wait] = False
         self.__configDict[HandleError] = False
         self.__configDict[AllowInterrupt] = True
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -99,14 +98,14 @@ class Pause_Helper(WrapperHelper):
             if REGISTRY.exists('EXEC'):
                 REGISTRY['EXEC'].pause()
             return [False,True,NOTIF_STATUS_OK,"Execution paused"]
-        
+
         startTime = NOW.abs() #time.time()
 
         from spell.lang.functions import Verify
         while(True):
             result = Verify( self.__condition, self.__configDict )
             if result and REGISTRY.exists('EXEC'):
-                REGISTRY['EXEC'].pause() 
+                REGISTRY['EXEC'].pause()
                 return [False,True,NOTIF_STATUS_OK,"Execution paused on condition"]
 
             time.sleep(0.5)
@@ -122,54 +121,98 @@ class SetExecDelay_Helper(WrapperHelper):
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
-        self._opName = "Exec Delay" 
-    
+        self._opName = "Exec Delay"
+
     #===========================================================================
     def _doOperation(self, *args, **kargs):
-        
-        if not REGISTRY.exists('EXEC'): raise DriverException("Cannot execute") 
+
+        if not REGISTRY.exists('EXEC'): raise DriverException("Cannot execute")
         delay = None
         if len(args)==0:
-            if not kargs.has_key('delay'): 
+            if 'delay' not in kargs:
                 raise SyntaxException("No arguments given")
-            if kargs.has_key('delay'):
+            if 'delay' in kargs:
                 delay = kargs.get('delay')
         else:
             delay = args[0]
-        
+
         if delay is not None:
             self._write("Setting execution delay to " + str(delay), {Severity:WARNING})
             REGISTRY['EXEC'].setExecutionDelay(delay)
-            
+
         return [False,None,NOTIF_STATUS_OK,"Delay set to " + str(delay)]
-        
+
+################################################################################
+class SetByStep_Helper(WrapperHelper):
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self)
+        self._opName = "SetByStep"
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs):
+
+        if not REGISTRY.exists('EXEC'): raise DriverException("Cannot execute")
+        byStep = None
+        if len(args)==0:
+            if 'byStep' not in kargs:
+                raise SyntaxException("No arguments given")
+            if 'byStep' in kargs:
+                byStep = kargs.get('byStep')
+        else:
+            byStep = args[0]
+
+        self._write("Setting byStep Configuration to " + str(byStep), {Severity:WARNING})
+        REGISTRY['EXEC'].setByStep(byStep)
+
+        return [False,None,NOTIF_STATUS_OK,"ByStep set to " + str(byStep)]
+
+################################################################################
+
+class GetByStep_Helper(WrapperHelper):
+
+    #===========================================================================
+    def __init__(self):
+        WrapperHelper.__init__(self)
+        self._opName = "GetByStep"
+
+    #===========================================================================
+    def _doOperation(self, *args, **kargs):
+
+        if not REGISTRY.exists('EXEC'): raise DriverException("Cannot execute")
+        byStep = REGISTRY['EXEC'].getByStep()
+       
+        return [False,byStep,NOTIF_STATUS_OK,"ByStep is" + str(byStep)]
+
+
 ################################################################################
 class Script_Helper(WrapperHelper):
 
     """
     DESCRIPTION:
         Helper for the Script wrapper.
-    """    
-    
+    """
+
     __code = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self)
         self.__code = None
-        self._opName = "Script" 
+        self._opName = "Script"
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
-        
+
         if len(args)==0:
             raise SyntaxError("No arguments given")
-        
+
         if type(args[0])!=str:
             raise SyntaxError("Expected a source code string")
-        
+
         self.__code = args[0]
-    
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
         result = REGISTRY['EXEC'].script(self.__code)
@@ -177,16 +220,16 @@ class Script_Helper(WrapperHelper):
 
 ################################################################################
 class SetUserAction_Helper(WrapperHelper):
-    
+
     __function = None
     __label = None
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "")
         self.__function = None
         self.__label = None
-        self._opName = "User action" 
+        self._opName = "User action"
 
     #===========================================================================
     def _doPreOperation(self, *args, **kargs ):
@@ -201,7 +244,7 @@ class SetUserAction_Helper(WrapperHelper):
         self.__label = args[1]
         if type(self.__label) != str:
             raise SyntaxException("Expected label string as second argument")
-        
+
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
 
@@ -211,19 +254,19 @@ class SetUserAction_Helper(WrapperHelper):
 
         if REGISTRY.exists('EXEC'):
             REGISTRY['EXEC'].setUserAction(self.__function,self.__label,self.getConfig())
-            
+
         return [False,True,NOTIF_STATUS_OK,""]
-        
+
     #===========================================================================
     def _doSkip(self):
         self._write("Set user action skipped", {Severity:WARNING} )
-        return [False,True]        
+        return [False,True]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Set user action skipped", {Severity:WARNING} )
-        return [False,False]        
-                
+        return [False,False]
+
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry set user action", {Severity:WARNING} )
@@ -231,11 +274,11 @@ class SetUserAction_Helper(WrapperHelper):
 
 ################################################################################
 class EnableUserAction_Helper(WrapperHelper):
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "")
-        self._opName = "Enable user action" 
+        self._opName = "Enable user action"
 
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
@@ -246,19 +289,19 @@ class EnableUserAction_Helper(WrapperHelper):
 
         if REGISTRY.exists('EXEC'):
             REGISTRY['EXEC'].enableUserAction()
-            
+
         return [False,True,NOTIF_STATUS_OK,"Action enabled"]
-        
+
     #===========================================================================
     def _doSkip(self):
         self._write("Enable user action skipped", {Severity:WARNING} )
-        return [False,True]        
+        return [False,True]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Enable user action skipped", {Severity:WARNING} )
-        return [False,False]        
-                
+        return [False,False]
+
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry enable user action", {Severity:WARNING} )
@@ -266,11 +309,11 @@ class EnableUserAction_Helper(WrapperHelper):
 
 ################################################################################
 class DisableUserAction_Helper(WrapperHelper):
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "")
-        self._opName = "Disable user action" 
+        self._opName = "Disable user action"
 
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
@@ -281,19 +324,19 @@ class DisableUserAction_Helper(WrapperHelper):
 
         if REGISTRY.exists('EXEC'):
             REGISTRY['EXEC'].disableUserAction()
-            
+
         return [False,True,NOTIF_STATUS_OK,"Action disabled"]
-        
+
     #===========================================================================
     def _doSkip(self):
         self._write("Disable user action skipped", {Severity:WARNING} )
-        return [False,True]        
+        return [False,True]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Disable user action skipped", {Severity:WARNING} )
-        return [False,False]        
-                
+        return [False,False]
+
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry disable user action", {Severity:WARNING} )
@@ -301,36 +344,35 @@ class DisableUserAction_Helper(WrapperHelper):
 
 ################################################################################
 class DismissUserAction_Helper(WrapperHelper):
-    
+
     #===========================================================================
     def __init__(self):
         WrapperHelper.__init__(self, "")
-        self._opName = "Dismiss user action" 
+        self._opName = "Dismiss user action"
 
     #===========================================================================
     def _doOperation(self, *args, **kargs ):
-        
+
         self._setActionString( ACTION_SKIP   ,  "Skip removing the user action button and return success (True)")
         self._setActionString( ACTION_CANCEL ,  "Skip removing the user action button and return failure (False)")
         self._setActionString( ACTION_REPEAT ,  "Try to remove the user action button again")
 
         if REGISTRY.exists('EXEC'):
             REGISTRY['EXEC'].dismissUserAction()
-            
+
         return [False,True,NOTIF_STATUS_OK,"Action dismissed"]
-        
+
     #===========================================================================
     def _doSkip(self):
         self._write("Dismiss user action skipped", {Severity:WARNING} )
-        return [False,True]        
+        return [False,True]
 
     #===========================================================================
     def _doCancel(self):
         self._write("Dismiss user action skipped", {Severity:WARNING} )
-        return [False,False]        
-                
+        return [False,False]
+
     #===========================================================================
     def _doRepeat(self):
         self._write("Retry dismiss user action", {Severity:WARNING} )
         return [True,False]
-

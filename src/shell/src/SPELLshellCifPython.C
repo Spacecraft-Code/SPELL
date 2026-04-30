@@ -5,7 +5,7 @@
 // DESCRIPTION: Python bindings for CIF
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -115,8 +115,7 @@ static PyMethodDef ClientIF_Methods[] =
 //============================================================================
 static PyTypeObject ClientIF_Type =
 {
-    PyObject_HEAD_INIT(NULL)
-    0,                                 //ob_size
+    PyVarObject_HEAD_INIT(NULL,0)
     "shell.ClientIF",                  //tp_name
     sizeof(PyClientIFObject),          //tp_basicsize
     0,                                 //tp_itemsize
@@ -170,7 +169,7 @@ static int ClientIF_Init( PyClientIFObject* self, PyObject* args, PyObject* kwds
 //============================================================================
 static void ClientIF_Dealloc( PyClientIFObject* self )
 {
-    self->ob_type->tp_free( (PyObject*) self );
+    Py_TYPE(self)->tp_free( (PyObject*) self );
 }
 
 //============================================================================
@@ -236,7 +235,7 @@ static PyObject* ClientIF_ResetVerbosity( PyObject* self, PyObject* args )
 //============================================================================
 static PyObject* ClientIF_Write( PyObject* self, PyObject* args )
 {
-    DEBUG("[CIF PY] Write args: " + PYREPR(args))
+    DEBUG("[CIF PY] Write args: " + PYREPR(args));
     char* message;
     PyObject* config = NULL;
     if (!PyArg_ParseTuple( args, "sO", &message, &config ))
@@ -251,7 +250,7 @@ static PyObject* ClientIF_Write( PyObject* self, PyObject* args )
             PyErr_Clear();
         }
     }
-    DEBUG("[CIF PY] Write args parsed")
+    DEBUG("[CIF PY] Write args parsed");
 
     int severity = INFORMATION;
     if ( config != NULL && PyDict_Contains(config, SSTRPY(Severity)))
@@ -274,7 +273,7 @@ static PyObject* ClientIF_Write( PyObject* self, PyObject* args )
     default:
     	THROW_SYNTAX_EXCEPTION("Syntax error on CIF::write()", "Unknown severity: " + severity);
     }
-    DEBUG("[CIF PY] Write finished")
+    DEBUG("[CIF PY] Write finished");
     Py_RETURN_NONE;
 }
 
@@ -285,8 +284,8 @@ static PyObject* ClientIF_Notify( PyObject* self, PyObject* args, PyObject* kwds
 {
     ItemNotification notification;
 
-    DEBUG("[CIF PY] Notify args : " + PYREPR(args))
-    DEBUG("[CIF PY] Notify kargs: " + PYREPR(kwds))
+    DEBUG("[CIF PY] Notify args : " + PYREPR(args));
+    DEBUG("[CIF PY] Notify kargs: " + PYREPR(kwds));
 
     PyObject* o_type = PyTuple_GetItem( args, 0 );
     assert( o_type != NULL );
@@ -356,10 +355,10 @@ static PyObject* ClientIF_Notify( PyObject* self, PyObject* args, PyObject* kwds
 //============================================================================
 static PyObject* ClientIF_Prompt( PyObject* self, PyObject* args, PyObject* kwds )
 {
-    DEBUG("[CIF PY] Prompt args : " + PYREPR(args))
-    DEBUG("[CIF PY] Prompt kargs: " + PYREPR(kwds))
-    DEBUG("[CIF PY] Prompt args : " + PYREPR(args))
-    DEBUG("[CIF PY] Prompt kargs: " + PYREPR(kwds))
+    DEBUG("[CIF PY] Prompt args : " + PYREPR(args));
+    DEBUG("[CIF PY] Prompt kargs: " + PYREPR(kwds));
+    DEBUG("[CIF PY] Prompt args : " + PYREPR(args));
+    DEBUG("[CIF PY] Prompt kargs: " + PYREPR(kwds));
 
     if (PyTuple_Size(args)==0)
     {

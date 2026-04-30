@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the interface for servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -27,6 +27,7 @@
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // Local includes ----------------------------------------------------------
 #include "SPELL_IPC/SPELLipcError.H"
+#include "SPELL_SYN/SPELLsyncError.H"
 #include "SPELL_IPC/SPELLipcServerInterface.H"
 #include "SPELL_IPC/SPELLipcHelper.H"
 #include "SPELL_IPC/SPELLtimeoutValues.H"
@@ -56,7 +57,7 @@ SPELLipcServerInterface::SPELLipcServerInterface( const std::string& name, int k
     m_serverPort = port;
 
     m_clients.clear();
-
+    m_clientKeysToRemove.clear();
     m_serverSocket = NULL;
 
     m_ifcName = name;
@@ -125,6 +126,19 @@ void SPELLipcServerInterface::run()
         bool disconnected = false;
         SPELLsocket* clientSocket = m_serverSocket->acceptClient( &disconnected );
 
+        if (clientSocket == NULL && !m_clientKeysToRemove.empty())
+        {
+            SPELLmonitor m(m_clientCleanupLock);
+            SPELLmonitor m2(m_clientLock);
+            
+            std::vector<int>::const_iterator it = m_clientKeysToRemove.begin();
+            while(it != m_clientKeysToRemove.end())
+            {
+                removeClientInternal(*it);
+                ++it;
+            }
+            m_clientKeysToRemove.clear();
+        }
         if ((!disconnected)&&clientSocket != NULL)
         {
             LOG_INFO(NAME + "Accepted new client connection");
@@ -159,6 +173,10 @@ void SPELLipcServerInterface::run()
             {
             	LOG_ERROR("Failed to accept client: " + err.what());
             }
+            catch(SPELLsyncError& err)
+			{
+				LOG_ERROR("Failed to accept client: " + err.what());
+			}
         }
 
         if (disconnected) return;
@@ -213,7 +231,8 @@ bool SPELLipcServerInterface::hasClient( int key )
     DEBUG(NAME + "Has client TRY-IN");
     SPELLmonitor m(m_clientLock);
     DEBUG(NAME + "Has client OUT");
-    return ( m_clients.find(key) != m_clients.end() );
+    SPELLipcChannelMap::iterator client = m_clients.find(key);
+    return ( client != m_clients.end() && client->second != NULL );
 }
 
 //=============================================================================
@@ -223,12 +242,11 @@ void SPELLipcServerInterface::addClient( int key, SPELLsocket* skt )
 {
     DEBUG( NAME + "add Client TRY-IN");
 
-    SPELLmonitor m(m_clientLock);
-
     SPELLipcChannel* channel = new SPELLipcChannel( std::string(m_ifcName), skt, key, *this );
     channel->connect();
 
-    m_clients.insert( std::make_pair( key, channel ));
+    SPELLmonitor m(m_clientLock);
+    m_clients[key] = channel;
     LOG_INFO(NAME + "Added client " + ISTR(key));
     m_clientConnectionEvent.set();
 }
@@ -238,18 +256,35 @@ void SPELLipcServerInterface::addClient( int key, SPELLsocket* skt )
 //=============================================================================
 void SPELLipcServerInterface::removeClient( int key )
 {
+    SPELLmonitor m(m_clientCleanupLock);
+    m_clientKeysToRemove.push_back(key);
+}
+
+
+void SPELLipcServerInterface::removeClientInternal( int key )
+{
     if (!hasClient(key))
     {
         return;
     }
     DEBUG( NAME + "Remove client TRY-IN" );
 
-    SPELLmonitor m(m_clientLock);
-
     SPELLipcChannelMap::iterator cit = m_clients.find(key);
-    cit->second->disconnect();
-    delete cit->second;
-    m_clients.erase(cit);
+    if (cit->second != NULL)
+    {
+    	cit->second->disconnect();
+
+        m_clientLock.unlock();
+        m_clientCleanupLock.unlock();
+		delete cit->second;
+        m_clientCleanupLock.lock();
+        m_clientLock.lock();
+
+		// FIXME: Clearing clients may invalidate references in other threads
+		// resulting in a crash. This ought to be fixed with the new IPC layer.
+		//m_clients.erase(cit);
+		m_clients[cit->first] = NULL;
+    }
     std::vector<int>::iterator kit = std::find(m_usedClientKeys.begin(), m_usedClientKeys.end(), key);
     if (kit != m_usedClientKeys.end())
     {
@@ -270,12 +305,20 @@ void SPELLipcServerInterface::removeAllClients()
     for( cit = m_clients.begin(); cit != m_clients.end(); cit++)
     {
         DEBUG(NAME + "Removing client " + ISTR(cit->first));
-        cit->second->disconnect();
-        delete cit->second;
+        if (cit->second != NULL)
+        {
+        	cit->second->disconnect();
+			delete cit->second;
+			m_clients[cit->first] = NULL;
+        }
+
         DEBUG(NAME + "Removing client " + ISTR(cit->first) + " done" );
     }
     m_usedClientKeys.clear();
-    m_clients.clear();
+    m_clientKeysToRemove.clear();
+    // FIXME: Clearing clients may invalidate references in other threads
+    // resulting in a crash. This ought to be fixed with the new IPC layer.
+    //m_clients.clear();
 	DEBUG( NAME + "Remove all clients OUT");
 }
 
@@ -339,7 +382,7 @@ void SPELLipcServerInterface::connectionLost( int peerKey, int errNo, const std:
 			cit = m_clients.find(peerKey);
 		}
     }
-    if (cit != m_clients.end())
+    if (cit != m_clients.end() && cit->second != NULL)
     {
         LOG_INFO(NAME + "#### Peer " + ISTR(peerKey) + " reconnected!");
     }
@@ -376,8 +419,9 @@ void SPELLipcServerInterface::sendMessage( int peerKey, SPELLipcMessage& msg )
     {
 		// Must set the appropriate key to the message beforehand. The key info is used
 		// to identify requests and their responses
+    	SPELLmonitor m(m_clientLock);
 		msg.setKey(peerKey);
-    	getChannel(peerKey).getWriter().send(msg);
+    	(*getChannel(peerKey))->getWriter().send(msg);
     }
     catch(SPELLipcError& err)
     {
@@ -397,9 +441,10 @@ SPELLipcMessage SPELLipcServerInterface::sendRequest( int peerKey, SPELLipcMessa
 		DEBUG(NAME + "Get writer for peer " + ISTR(peerKey));
 		// Must set the appropriate key to the message beforehand. The key info is used
 		// to identify requests and their responses
+    	SPELLmonitor m(m_clientLock);
 		msg.setKey(peerKey);
 		DEBUG(NAME + "Sending now request to peer " + ISTR(peerKey));
-		resp = performRequest( getChannel(peerKey), msg, timeoutMsec );
+		resp = performRequest( **getChannel(peerKey), msg, timeoutMsec );
     }
     catch( SPELLipcError& err )
     {
@@ -418,16 +463,16 @@ SPELLipcMessage SPELLipcServerInterface::sendRequest( int peerKey, SPELLipcMessa
 //=============================================================================
 // METHOD: SPELLipcServerInterface:getChannel
 //=============================================================================
-SPELLipcChannel& SPELLipcServerInterface::getChannel( int peerKey )
+SPELLipcChannel** SPELLipcServerInterface::getChannel( int peerKey )
 {
-    DEBUG( NAME + "Get channel TRY-IN" );
+    //DEBUG( NAME + "Get channel TRY-IN" );
 
     SPELLmonitor m(m_clientLock);
     SPELLipcChannelMap::iterator cit = m_clients.find(peerKey);
-    if (cit != m_clients.end())
+    if (cit != m_clients.end() && cit->second != NULL)
     {
-        DEBUG( NAME + "Get channel OUT" );
-        return *cit->second;
+        //DEBUG( NAME + "Get channel OUT" );
+        return &m_clients[peerKey];
     }
     DEBUG( NAME + "Get channel FAIL" );
     throw SPELLipcError("Cannot get writer, no such key: " + ISTR(peerKey));
@@ -514,11 +559,11 @@ void SPELLipcServerInterface::cancelOutgoingRequests( int peerKey )
     DEBUG(NAME + "Cancel outgoing requests for peer " + ISTR(peerKey));
 
 	// Obtain the channel corresponding to the client
-	SPELLipcChannel& channel = getChannel(peerKey);
+	SPELLipcChannel* channel = *getChannel(peerKey);
 
 	// Iterate over the list of ongoing requests, and cancel the requests in the mailbox
 	std::vector<std::string>::iterator it;
-		std::vector<std::string> requestList = channel.getOngoingRequests();
+		std::vector<std::string> requestList = channel->getOngoingRequests();
 	for( it = requestList.begin(); it != requestList.end(); it++)
 	{
 				DEBUG(NAME + "   - cancel " + *it);
@@ -543,7 +588,7 @@ void SPELLipcServerInterface::cancelIncomingRequests( int peerKey )
 //=============================================================================
 void SPELLipcServerInterface::incomingRequest( const SPELLipcMessage& msg )
 {
-    DEBUG(NAME + "IPC interface incoming request TRY IN (" + msg.getSequenceStr() + ")");
+    //DEBUG(NAME + "IPC interface incoming request TRY IN (" + msg.getSequenceStr() + ")");
 
     {
         SPELLmonitor m(m_ipcLock);
@@ -559,23 +604,24 @@ void SPELLipcServerInterface::incomingRequest( const SPELLipcMessage& msg )
 		}
     }
 
-    DEBUG(NAME + "IPC interface incoming request IN (" + msg.getSequenceStr() + ")");
+    //DEBUG(NAME + "IPC interface incoming request IN (" + msg.getSequenceStr() + ")");
 
     try
     {
-        DEBUG(NAME + "Creating request processor  (" + msg.getSequenceStr() + ")");
-    	SPELLipcIncomingRequest* ireq = new SPELLipcIncomingRequest( msg.requestId(), m_ifcName, msg, getChannel(msg.getKey()).getWriter(), *m_listener );
+        //DEBUG(NAME + "Creating request processor  (" + msg.getSequenceStr() + ")");
+    	SPELLipcIncomingRequest* ireq = new SPELLipcIncomingRequest( msg.requestId(), m_ifcName, msg,m_clientLock, getChannel(msg.getKey()), *m_listener );
     	ireq->start();
-        DEBUG(NAME + "Wait request processor to start (" + msg.getSequenceStr() + ")");
-    	ireq->waitStarted();
+        //DEBUG(NAME + "Wait request processor to start (" + msg.getSequenceStr() + ")");
+        // TODO: No reason to wait here. Remove once validated.
+    	//ireq->waitStarted();
     	{
-    		DEBUG(NAME + "Place in trash");
+    		//DEBUG(NAME + "Place in trash");
             SPELLmonitor m(m_ipcLock);
         	m_trash.place(ireq);
-    		DEBUG(NAME + "Place in trash DONE");
+    		//DEBUG(NAME + "Place in trash DONE");
     	}
 
-        DEBUG(NAME + "Creating request processor DONE (" + msg.getSequenceStr() + ")");
+        //DEBUG(NAME + "Creating request processor DONE (" + msg.getSequenceStr() + ")");
     }
     catch(SPELLipcError& err)
     {
@@ -597,19 +643,20 @@ void SPELLipcServerInterface::incomingMessage( const SPELLipcMessage& msg )
     	if (m_listener == NULL) return;
     }
 
-    DEBUG(NAME + "Creating message processor");
+    //DEBUG(NAME + "Creating message processor");
     SPELLipcIncomingMessage* imsg = new SPELLipcIncomingMessage( msg.requestId(), m_ifcName, msg, *m_listener);
     imsg->start();
-    DEBUG(NAME + "Wait processor to start");
-	imsg->waitStarted();
+    //DEBUG(NAME + "Wait processor to start");
+    // TODO: No reason to wait here. Remove once validated.
+	//imsg->waitStarted();
 	{
-		DEBUG(NAME + "Place in trash");
+		//DEBUG(NAME + "Place in trash");
     	SPELLmonitor m(m_ipcLock);
 		m_trash.place(imsg);
-		DEBUG(NAME + "Place in trash DONE");
+		//DEBUG(NAME + "Place in trash DONE");
 	}
 
-    DEBUG(NAME + "IPC interface incoming message OUT");
+    //DEBUG(NAME + "IPC interface incoming message OUT");
 }
 
 //=============================================================================

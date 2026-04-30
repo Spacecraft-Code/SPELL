@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the warm start mechanism controller
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -175,6 +175,7 @@ void SPELLwsWarmStartImpl::saveState()
 	SPELLsafePythonOperations ops("SPELLwsWarmstartImpl::saveState()");
 
 	//TODO check, possibly there are several states that need to be saved
+#if PY_MAJOR_VERSION < 3
 	PyThreadState* state = m_topFrame->getFrameObject()->f_tstate;
 	DEBUG("Current thread state: " + PSTR(state));
 
@@ -188,6 +189,7 @@ void SPELLwsWarmStartImpl::saveState()
 	m_storage->storeLong( state->tick_counter );
 	DEBUG("    - GIL counter     : " + ISTR(state->gilstate_counter));
 	m_storage->storeLong( state->gilstate_counter );
+#endif
 	DEBUG("    - Number of frames: " + ISTR(m_frames.size()));
 	m_storage->storeLong( m_frames.size() );
 
@@ -233,8 +235,10 @@ PyFrameObject* SPELLwsWarmStartImpl::restoreState()
 
 		tstate->recursion_depth = m_storage->loadLong();
 		DEBUG("    - Recursion depth : " + ISTR(tstate->recursion_depth));
+#if PY_MAJOR_VERSION < 3
 		tstate->tick_counter = m_storage->loadLong();
 		DEBUG("    - Tcik counter    : " + ISTR(tstate->tick_counter));
+#endif
 		tstate->gilstate_counter = m_storage->loadLong();
 		DEBUG("    - GIL counter     : " + ISTR(tstate->gilstate_counter));
 		int numFrames = m_storage->loadLong();
@@ -338,7 +342,9 @@ PyFrameObject* SPELLwsWarmStartImpl::fixState()
 	newState->recursion_depth = oldState->recursion_depth;
 	newState->tracing = oldState->tracing;
 	newState->use_tracing = oldState->use_tracing;
+#if PY_MAJOR_VERSION < 3
 	newState->tick_counter = oldState->tick_counter;
+#endif
 	newState->gilstate_counter = oldState->gilstate_counter;
 	newState->dict = PyDict_Copy(oldState->dict);
 
@@ -349,7 +355,7 @@ PyFrameObject* SPELLwsWarmStartImpl::fixState()
 	for( unsigned int index = 0; index < frameCount; index++)
 	{
 		bool isHead = (index == (frameCount-1));
-		DEBUG("[WS] Fix state on frame index " + ISTR(index) + " frame=" + PYCREPR(m_frames[index]));
+		DEBUG("[WS] Fix state on frame index " + ISTR(index) + " frame=" + PYCREPR(m_frames[index]->getFrameObject()));
 		m_topFrame = m_frames[index];
 		m_topFrame->fixState(newState, isHead);
 	}

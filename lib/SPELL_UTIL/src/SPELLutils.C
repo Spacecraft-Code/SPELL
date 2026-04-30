@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the utilities
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -29,14 +29,13 @@
 #include "SPELL_UTIL/SPELLbase.H"
 #include "SPELL_UTIL/SPELLerror.H"
 #include "SPELL_UTIL/SPELLpythonMonitors.H"
+#include "SPELL_IPC/SPELLipcError.H"
 // Project includes --------------------------------------------------------
 #include "SPELL_WRP/SPELLpyHandle.H"
 // System includes ---------------------------------------------------------
 #include <time.h>
 
 static int s_timeFormat = TIME_FORMAT_DEFAULT;
-
-
 
 //============================================================================
 // FUNCTION : PYSIZE
@@ -146,7 +145,7 @@ std::string SPELLutils::pyObjectRepr( PyObject* obj )
 	SPELLpyHandle str = PyObject_Repr(obj);
 	if (str.get() != NULL)
 	{
-		result = PyString_AsString(str.get());
+		result = std::string(PyString_AsString(str.get()));
 	}
 	return result;
 }
@@ -186,7 +185,6 @@ std::map<std::string, std::vector<BYTE> > SPELLutils::tokenizeData( const std::s
     std::vector<BYTE> value;
     unsigned int keyLength;
     unsigned int valueLength;
-    unsigned int byte;
     unsigned int pos;
 
     for( pos = 0 ; pos < data.size() ; )
@@ -201,6 +199,10 @@ std::map<std::string, std::vector<BYTE> > SPELLutils::tokenizeData( const std::s
         valueLength += (((unsigned char) data[pos+2]) << 8);
         valueLength += (unsigned char) data[pos+3];
         pos += 4;
+        if (pos + valueLength > data.size())
+        {
+            throw SPELLipcError( "Peer has sent bad data disconnecting!", 0);
+        }
         value.assign(data.begin() + pos, data.begin() + pos + valueLength);
         pos += valueLength;
 
@@ -429,6 +431,20 @@ bool SPELLutils::isFile( const std::string& path )
 }
 
 //============================================================================
+// FUNCTION : SPELLutils::isLink
+//============================================================================
+bool SPELLutils::isLink( const std::string& path )
+{
+    struct stat buf;
+    bool isLink = false;
+    if (stat(path.c_str(),&buf) == 0)
+    {
+        isLink = S_ISLNK( buf.st_mode );
+    }
+    return isLink;
+}
+
+//============================================================================
 // FUNCTION : SPELLutils::fileCopy
 //============================================================================
 void SPELLutils::copyFile( const std::string& sourcePath, const std::string& targetPath )
@@ -448,6 +464,18 @@ void SPELLutils::copyFile( const std::string& sourcePath, const std::string& tar
 	outfile.close();
 }
 
+bool compare_nocase (const std::string& first, const std::string& second)
+{
+  unsigned int i=0;
+  while ( (i<first.length()) && (i<second.length()) )
+  {
+    if (tolower(first[i])<tolower(second[i])) return true;
+    else if (tolower(first[i])>tolower(second[i])) return false;
+    ++i;
+  }
+  return ( first.length() < second.length() );
+}
+
 //============================================================================
 // FUNCTION : SPELLutils::getFilesInDir
 //============================================================================
@@ -455,6 +483,7 @@ std::list<std::string> SPELLutils::getFilesInDir( const std::string& path )
 {
     DIR *dirp;
     struct dirent *dp;
+    char buffer[512];
 
     std::list<std::string> files;
 
@@ -463,7 +492,29 @@ std::list<std::string> SPELLutils::getFilesInDir( const std::string& path )
     {
 		while ( (dp = readdir(dirp)) != NULL )
 		{
-			if (dp->d_type & DT_REG)
+			if (dp->d_type == DT_LNK)
+			{
+				// Check the target of the link
+				std::string abspath = path + "/" + dp->d_name;
+				ssize_t fwd = readlink( abspath.c_str(), buffer, 512);
+				// Ignore it in case of errors
+				if (fwd<0)
+				{
+					LOG_ERROR("Unable to follow link " + std::string(dp->d_name));
+					continue;
+				}
+				std::string target_name(buffer,fwd);
+				if (target_name.find("/") != 0) // root path target
+				{
+					target_name = path + "/" + target_name;
+				}
+				LOG_WARN("Resolving file link " + std::string(dp->d_name) + " to " + target_name);
+				if (SPELLutils::isFile(target_name))
+				{
+					files.push_back(dp->d_name);
+				}
+			}
+			else if (dp->d_type == DT_REG)
 			{
 				files.push_back(dp->d_name);
 			}
@@ -484,6 +535,8 @@ std::list<std::string> SPELLutils::getFilesInDir( const std::string& path )
     {
     	LOG_ERROR("Failed to open directory '" + path + "' to read");
     }
+    files.sort(compare_nocase);
+
     return files;
 }
 
@@ -494,10 +547,11 @@ std::list<std::string> SPELLutils::getSubdirs( const std::string& path )
 {
     DIR* dirp;
     struct dirent *dp;
+    char buffer[512];
 
     std::string dot = ".";
     std::string pdot = "..";
-    std::string svn = ".svn";
+
     std::list<std::string> subdirs;
 
     dirp = opendir( path.c_str() );
@@ -505,12 +559,37 @@ std::list<std::string> SPELLutils::getSubdirs( const std::string& path )
     {
 		while ( (dp = readdir(dirp)) != NULL )
 		{
-			if (dp->d_type & DT_DIR)
+			std::string fname = dp->d_name;
+			if ( fname.find(".") == 0 )
+				continue; // discard ., .., all hidden directories including .svn and .git
+
+			if (dp->d_type == DT_LNK)
 			{
-				if ( dp->d_name != dot && dp->d_name != pdot && dp->d_name != svn )
+				// Check the target of the link
+				std::string abspath = path + "/" + dp->d_name;
+				LOG_WARN("Found link " + abspath);
+
+				ssize_t fwd = readlink( abspath.c_str(), buffer, 512);
+				// Ignore it in case of errors
+				if (fwd<0)
+				{
+					LOG_ERROR("Unable to follow link " + std::string(dp->d_name));
+					continue;
+				}
+				std::string target_name(buffer,fwd);
+				if (target_name.find("/") != 0) // root path target
+				{
+					target_name = path + "/" + target_name;
+				}
+				LOG_WARN("Resolving directory link " + std::string(dp->d_name) + " to " + target_name);
+				if (SPELLutils::isDirectory(target_name))
 				{
 					subdirs.push_back(dp->d_name);
 				}
+			}
+			else if (dp->d_type & DT_DIR)
+			{
+				subdirs.push_back(dp->d_name);
 			}
 			// IMPORTANT: in some filesystems, the type may be impossible
 			// to get with readdir. In these cases we need to use stat().
@@ -518,10 +597,7 @@ std::list<std::string> SPELLutils::getSubdirs( const std::string& path )
 			{
 				if ( isDirectory( path + PATH_SEPARATOR + std::string(dp->d_name) ) )
 				{
-					if ( dp->d_name != dot && dp->d_name != pdot && dp->d_name != svn )
-					{
-						subdirs.push_back(dp->d_name);
-					}
+					subdirs.push_back(dp->d_name);
 				}
 			}
 			// Ignore other types like symbolic links, sockets, etc.
@@ -665,9 +741,7 @@ void SPELLutils::showEnvironment()
     envVar("SPELL_COTS");
     envVar("SPELL_DATA");
     envVar("SPELL_CONFIG");
-    envVar("SPELL_SYS_DATA");
     envVar("SPELL_LOG");
-    envVar("SPELL_PROCS");
     std::cerr << "==============================================================================" << std::endl;
 }
 
@@ -771,7 +845,11 @@ void SPELLutils::dumpInterpreterInfo( const std::string& id )
 		dumpFile << "Modules     : " << PYSIZE(currIS->modules)  << " items." << std::endl;
 		dumpFile << "Sysdict     : " << PYSIZE(currIS->sysdict)  << " items." << std::endl;
 		dumpFile << "Builtins    : " << PYSIZE(currIS->builtins) << " items." << std::endl;
+#if PY_MAJOR_VERSION >= 3
+
+#else
 		dumpFile << "Reloading   : " << PYSIZE(currIS->modules_reloading)  << " items." << std::endl;
+#endif
 		dumpFile << "Search path : " << PYSIZE(currIS->codec_search_path)  << " items." << std::endl;
 		dumpFile << "Search cache: " << PYSIZE(currIS->codec_search_cache) << " items." << std::endl;
 		dumpFile << "Error regst.: " << PYSIZE(currIS->codec_error_registry) << " items." << std::endl;
@@ -825,11 +903,22 @@ void SPELLutils::dumpThreadStateInfo( const std::string& id, PyThreadState* ts, 
 	dumpFile << "Current exc. type : " << PYREPR(ts->curexc_type) << std::endl;
 	dumpFile << "Current exc. value: " << PYREPR(ts->curexc_value) << std::endl;
 	dumpFile << "Current exc. tback: " << PYREPR(ts->curexc_traceback) << std::endl;
+#if PY_MAJOR_VERSION >= 3
+	if (ts->exc_info)
+	{
+		dumpFile << "Exception type    : " << PYREPR(ts->exc_info->exc_type) << std::endl;
+		dumpFile << "Exception value   : " << PYREPR(ts->exc_info->exc_value) << std::endl;
+		dumpFile << "Exception tback   : " << PYREPR(ts->exc_info->exc_traceback) << std::endl;
+	}
+#else
 	dumpFile << "Exception type    : " << PYREPR(ts->exc_type) << std::endl;
 	dumpFile << "Exception value   : " << PYREPR(ts->exc_value) << std::endl;
 	dumpFile << "Exception tback   : " << PYREPR(ts->exc_traceback) << std::endl;
+#endif
 	dumpFile << "Main dict         : " << PYSIZE(ts->dict) << " items." << std::endl;
+#if PY_MAJOR_VERSION < 3
 	dumpFile << "Tick counter      : " << ts->tick_counter << std::endl;
+#endif
 	dumpFile << "GIL state counter : " << ts->gilstate_counter << std::endl;
 	dumpFile << "Async. exception  : " << PYREPR(ts->async_exc) << std::endl;
 	dumpFile << "Thread id         : " << ts->thread_id << std::endl;
@@ -866,7 +955,9 @@ void SPELLutils::dumpFrameInfo( const std::string& id, PyFrameObject* frame, int
 	dumpFile << "--------------------------------------" << std::endl;
 	dumpFile << "Address              : " << PSTR(frame) << std::endl;
 	dumpFile << "Next address         : " << PSTR(frame->f_back) << std::endl;
+#if PY_MAJOR_VERSION < 3
 	dumpFile << "Thread state address : " << PSTR(frame->f_tstate) << std::endl;
+#endif
 	dumpFile << "Last instruction     : " << frame->f_lasti << std::endl;
 	dumpFile << "Last line            : " << frame->f_lineno << std::endl;
 	dumpFile << "Try blocks count     : " << frame->f_iblock << std::endl;
@@ -875,9 +966,11 @@ void SPELLutils::dumpFrameInfo( const std::string& id, PyFrameObject* frame, int
 	dumpFile << "Stack top            : " << PSTR(frame->f_stacktop) << std::endl;
 	dumpFile << "Stack count          : " << (frame->f_stacktop - frame->f_valuestack) << std::endl;
 	dumpFile << "Fast locals          : " << (frame->f_code->co_nlocals-1) << std::endl;
+#if PY_MAJOR_VERSION < 3
 	dumpFile << "Exception type       : " << PYREPR(frame->f_exc_type) << std::endl;
 	dumpFile << "Exception value      : " << PYREPR(frame->f_exc_value) << std::endl;
 	dumpFile << "Exception traceback  : " << PYREPR(frame->f_exc_traceback) << std::endl;
+#endif
 	dumpFile << "Trace function       : " << PYREPR(frame->f_trace) << std::endl;
 	dumpFile << "Builtins             : " << PYSIZE(frame->f_builtins) << std::endl;
 	dumpFile << "Globals              : " << PYSIZE(frame->f_globals) << std::endl;
@@ -990,4 +1083,19 @@ SPELLutils::SPELLdateDesc SPELLutils::getSystemDate()
     date.yday = theTime->tm_yday + 1;
 
     return date;
+}
+
+//============================================================================
+// FUNCTION:    SPELLutils::compareNocase (const std::string& first, const std::string& second)
+//============================================================================
+bool SPELLutils::compareNocase (const std::string& first, const std::string& second)
+{
+  unsigned int i=0;
+  while ( (i<first.length()) && (i<second.length()) )
+  {
+    if (tolower(first[i])<tolower(second[i])) return true;
+    else if (tolower(first[i])>tolower(second[i])) return false;
+    ++i;
+  }
+  return ( first.length() < second.length() );
 }

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Telemetry verifier thread
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -48,7 +48,7 @@ class TmVerifierClass(threading.Thread):
     __tmClass = None
     __tmItem = None
     __definition = []
-    
+
     step = None
     name = None
     value = None
@@ -58,28 +58,28 @@ class TmVerifierClass(threading.Thread):
     reason = " "
     updtime = " "
     error = None
-    
+
     __inExpression = False
     __paramName  = None
     __comparison = None
     __fromValue  = None
     __toValue    = None
     __stepConfig = {}
-    
+
     #===========================================================================
     def __init__(self, stepNum, parameters, globalConfig = {}, inExpression = False ):
-        
+
         threading.Thread.__init__(self)
-        
+
         self.__tmClass = REGISTRY['TM']
-        
+
         # Initialize handles
         self.setName("VRF STEP " + str(stepNum))
         self.step = stepNum
         self.__definition = [ stepNum, parameters, globalConfig ]
         self.__inExpression = inExpression
         self.stopped = False
-        
+
         # Status information accessed from tm interface
         self.name = None
         self.value = None
@@ -97,19 +97,19 @@ class TmVerifierClass(threading.Thread):
         if type(self.__comparison)!=str:
             raise SyntaxException("Bad parameter, expected comparison operator")
 
-        # Check wether first element is a param name or a tm item 
+        # Check wether first element is a param name or a tm item
         if isinstance(parameters[0],TmItemClass):
             self.__tmItem = parameters[0]
-            self.__paramName = parameters[0].name() 
+            self.__paramName = parameters[0].name()
         elif type(parameters[0]) == str:
-            self.__paramName = parameters[0]  
+            self.__paramName = parameters[0]
             self.__tmItem = self.__tmClass[self.__paramName]
         else:
-            raise SyntaxException("Bad arguments") 
-    
+            raise SyntaxException("Bad arguments")
+
         # Guess the structure of the verification step
         hasConfig = (type(parameters[-1]) == dict)
-        
+
         if hasConfig:
             twoValues = (len(parameters)==5)
         else:
@@ -119,8 +119,8 @@ class TmVerifierClass(threading.Thread):
         if twoValues:
             self.__toValue = parameters[3]
         else:
-            self.__toValue = None        
-    
+            self.__toValue = None
+
         # Build the configuration dictionary
         self.__stepConfig = {}
         self.__stepConfig.update(globalConfig)
@@ -129,38 +129,38 @@ class TmVerifierClass(threading.Thread):
         # Get step specific configuration
         if hasConfig:
             self.__stepConfig.update(parameters[-1])
-            
+
         self.__updateInfo("UNINIT", False, "", False)
 
     #===========================================================================
     def __updateInfo(self, status, failed, reason = " ", notify = True):
 
-        # Configuration to be used in this step        
+        # Configuration to be used in this step
         useConfig = self.__stepConfig.copy()
         # We do not want to wait for notifications
         useConfig[Wait] = False
         useConfig[Notify] = False
-        
+
         # The name
         self.name = repr(self.step) + "@" + self.__paramName
         self.updtime = str(datetime.datetime.now())[:-3]
-        
+
         # Build the value
         if isinstance(self.__fromValue,TmItemClass):
             if useConfig.get(ValueFormat) == ENG:
                 currentValue = self.__fromValue._getEng()
             else:
-                currentValue = self.__fromValue._getRaw() 
+                currentValue = self.__fromValue._getRaw()
             fromValue = str(currentValue)
         else:
             fromValue = str(self.__fromValue)
-                         
+
         if self.__toValue is not None:
             if isinstance(self.__toValue,TmItemClass):
                 if useConfig.get(ValueFormat) == ENG:
                     currentToValue = self.__toValue._getEng()
                 else:
-                    currentToValue = self.__toValue._getRaw() 
+                    currentToValue = self.__toValue._getRaw()
                 self.value = COMP_SYMBOLS[self.__comparison] +\
                              "[" + fromValue + ", " + str(currentToValue) + "]"
             else:
@@ -168,26 +168,26 @@ class TmVerifierClass(threading.Thread):
                              "[" + fromValue + "," + str(self.__toValue) + "]"
         else:
             self.value = COMP_SYMBOLS[self.__comparison] + fromValue
-                 
+
         self.status = status
         self.failed = failed
         self.reason = reason
         if notify:
             self.__tmClass.updateVerificationStatus( self )
-        
+
     #===========================================================================
     def run(self):
 
-        # Update verification status info 
+        # Update verification status info
         self.__updateInfo("IN PROGRESS", False)
         self.__shouldStop = False
-        
+
         result = False
         reason = " "
         self.error = None
-        
+
         LOG("[V] Starting verification with config: " + repr(self.__stepConfig))
-        
+
         try:
             if self.__comparison == eq:
                 result = self.__tmClass.eq( self.__tmItem, self.__fromValue, self.__stepConfig )
@@ -205,9 +205,9 @@ class TmVerifierClass(threading.Thread):
                 result = self.__tmClass.between( self.__tmItem, self.__fromValue, self.__toValue, self.__stepConfig )
             elif self.__comparison == nbw:
                 result = self.__tmClass.not_between( self.__tmItem, self.__fromValue, self.__toValue, self.__stepConfig )
-                
+
             actualValue = self.getActualValue()
-                
+
             LOG("[V] Comparison result: " + repr(result))
             if not result:
                 if self.__inExpression:
@@ -219,15 +219,15 @@ class TmVerifierClass(threading.Thread):
                     reason = "[EXPRESSION] Value is " + str(actualValue)
                 else:
                     reason = "Value is " + str(actualValue)
-            
-        except DriverException,ex:
+
+        except DriverException as ex:
             LOG("[V] Verification process failed: " + str(ex), LOG_ERROR)
             self.error = ex
             reason = ex.message
             if (ex.reason != "unknown"):
                 reason += ". " + ex.reason
             result = False
-            
+
         finally:
             if not self.stopped:
                 LOG("[V] Declaring verification process success: " + repr(result))

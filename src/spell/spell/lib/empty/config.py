@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Configuration interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -51,7 +51,7 @@ INTERFACE_DEFAULTS = {}
 # Superclass
 import spell.lib.adapter.config
 superClass = spell.lib.adapter.config.ConfigInterface
-        
+
 ###############################################################################
 class ConfigInterface(superClass):
 
@@ -59,7 +59,7 @@ class ConfigInterface(superClass):
     def __init__(self):
         superClass.__init__(self)
         LOG("Created")
-    
+
     #==========================================================================
     def setup(self, ctxConfig, drvConfig):
         superClass.setup(self, ctxConfig,drvConfig)
@@ -69,7 +69,7 @@ class ConfigInterface(superClass):
     def cleanup(self, shutdown = False):
         superClass.cleanup(self, shutdown)
         LOG("Cleanup empty CFG interface")
-        
+
 ###############################################################################
 # Interface instance
 CONFIG = ConfigInterface()

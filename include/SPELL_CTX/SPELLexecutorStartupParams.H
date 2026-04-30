@@ -5,7 +5,7 @@
 // DESCRIPTION: Configuration for the executor process
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -126,7 +126,7 @@ public: //--------------------------------------------------------------------
 		void setRecoveryFile( const std::string& recoveryFile ) { m_recoveryFile = recoveryFile; };
 
 private: //-------------------------------------------------------------------
-
+		friend class SPELLserviceStartupParams;
 	// EXCEPTIONS ////////////////////////////////////////////////////////////
 	// ENUMS /////////////////////////////////////////////////////////////////
 	// TYPES /////////////////////////////////////////////////////////////////

@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Ranging  interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -39,8 +39,8 @@ from spell.lib.adapter.constants.notification import *
 #*******************************************************************************
 # Local imports
 #*******************************************************************************
-from config import Configurable
-from interface import Interface
+from .config import Configurable
+from .interface import Interface
 
 #*******************************************************************************
 # System imports
@@ -52,7 +52,7 @@ import time,string,sys
 
 __all__ = ['RngInterface']
 
-INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | CANCEL } 
+INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | CANCEL }
 
 ###############################################################################
 class RngInterface(Configurable, Interface):
@@ -71,7 +71,7 @@ class RngInterface(Configurable, Interface):
         Configurable.__init__(self)
         self.__ctxName = None
         LOG("Created")
-        
+
     #===========================================================================
     def refreshConfig(self):
         ctxConfig = self.getContextConfig()
@@ -147,6 +147,11 @@ class RngInterface(Configurable, Interface):
         return self._getRangingPaths( useConfig )
 
     #===========================================================================
+    def updateCortexConf(self, *args, **kargs):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        return self._updateCortexConf( useConfig )
+
+    #===========================================================================
     def _enableRanging(self, config):
         REGISTRY['CIF'].write("Ranging service not implemented on this driver", {Severity:WARNING})
         return False
@@ -198,5 +203,10 @@ class RngInterface(Configurable, Interface):
 
     #===========================================================================
     def _getRangingStatus(self, config):
+        REGISTRY['CIF'].write("Ranging service not implemented on this driver", {Severity:WARNING})
+        return None
+
+    #===========================================================================
+    def _updateCortexConf(self, config):
         REGISTRY['CIF'].write("Ranging service not implemented on this driver", {Severity:WARNING})
         return None

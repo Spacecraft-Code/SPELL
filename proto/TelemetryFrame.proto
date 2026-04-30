@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+message TelemetryPacket {
+  uint32 vcID = 1;
+  uint32 apID = 2;
+  uint32 sequenceCounter = 3;
+  uint32 length = 4;
+  bool pecfValid = 5;
+  bool pusHeader = 6;
+  uint32 pusService = 7;
+  uint32 pusSubservice = 8;
+  uint32 destination = 9;
+  uint32 subCounter = 10;
+  uint64 onboardTS = 11;
+  bytes rawPacket = 100;
+}
+
+message TelemetryPoint {
+  uint32 pID = 1;
+  uint64 onboardTS = 2;
+  double engV = 3;
+  int64 rawV = 4;
+  string calV = 5;
+
+  enum STATEV {
+    VALID = 0;
+    INVALID = 1;
+    CRC_ERROR = 2;
+    INVALID_AND_CRC_ERROR = 3;
+    EXPIRED = 4;
+    INVALID_AND_EXPIRED = 5;
+    CRC_ERROR_AND_EXPIRED = 6;
+    INVALID_AND_CRC_ERROR_AND_EXPIRED = 7;
+  }
+
+  STATEV stateV = 6;
+  int32 pktID = 7;
+}
+
+message TelemetryFrame {
+  uint32 msgType = 1;
+  uint32 scID = 2;
+
+  enum STREAMID {
+    STREAM1 = 0;
+    STREAM2 = 1;
+  }
+
+  STREAMID streamID = 3;
+  uint32 frameCounter = 4;
+  uint64 groundTS = 5;
+  uint32 familyID = 6;
+  
+  repeated bytes rawFrame = 98;
+  repeated TelemetryPacket packet = 99;
+  repeated TelemetryPoint point = 100;
+}

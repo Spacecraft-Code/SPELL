@@ -5,7 +5,7 @@
 // DESCRIPTION: Call stack model for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -86,7 +86,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcallstackIF.
 		**////////////////////////////////////////////////////////////////////
-		const std::string& getStack() { return m_fakeStack; };
+		const std::string getStack() { return m_fakeStack; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcallstackIF.
@@ -126,7 +126,7 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcallstackIF.
 		**////////////////////////////////////////////////////////////////////
-		const std::string& getCodeName() { return m_fakeCode; };
+		const std::string getCodeName() { return m_fakeCode; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLcallstackIF.

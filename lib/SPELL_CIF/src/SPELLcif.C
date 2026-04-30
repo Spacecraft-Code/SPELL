@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the CIF
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -56,8 +56,9 @@ SPELLcif::SPELLcif()
     m_ctxName = "";
     m_ctxPort = 0;
     m_notificationsEnabled = true;
-
+    m_forcePromptConfirm = false;
     m_finishEvent.clear();
+    m_errorState = false;
 }
 
 //=============================================================================
@@ -135,6 +136,15 @@ void SPELLcif::setVerbosity( int verbosity )
 {
     m_verbosity = verbosity;
 }
+
+//=============================================================================
+// METHOD    : SPELLcif::setVerbosity
+//=============================================================================
+void SPELLcif::setForcePromptConfirm( bool force )
+{
+    m_forcePromptConfirm = force;
+}
+
 //=============================================================================
 // METHOD    : SPELLcif::setVerbosityFilter
 //=============================================================================
@@ -188,6 +198,8 @@ const int SPELLcif::getVerbosityFilter() const
 //=============================================================================
 const std::string SPELLcif::getProcId() const
 {
+    if (m_procId.find("#") == std::string::npos)
+        return m_procId + "#0";
     return m_procId;
 }
 
@@ -450,24 +462,53 @@ void SPELLcif::error( const std::string& msg, unsigned int scope )
 //=============================================================================
 // METHOD: SPELLcif::prompt
 //=============================================================================
-std::string  SPELLcif::prompt( const SPELLpromptDefinition& def )
+std::string  SPELLcif::prompt( const SPELLpromptDefinition& def ,bool doPromptConfirm /* = true*/)
 {
-	// Local variables
+	bool canExit = true;
 	std::string answerToShow= "";
 	std::string rawAnswer = "";
+	// Local variables
+	do {
+		// Debug trace
+		canExit = true;
+		DEBUG("[CIF] Prompt message");
 
-	// Debug trace
-	DEBUG("[CIF] Prompt message");
+		// Write the prompt in the asrun
+		m_asRun->writePrompt( getStack(), def );
 
-	// Write the prompt in the asrun
-	m_asRun->writePrompt( getStack(), def );
+		//Run Implementation Specifics
+		specificPrompt( def, rawAnswer, answerToShow );
 
-	//Run Implementation Specifics
-	specificPrompt( def, rawAnswer, answerToShow );
+		// Write the answer in asrun
+		if ( (def.typecode & LanguageConstants::PROMPT_PASSWORD)>0)
+			m_asRun->writeAnswer( getStack(), "***", def.scope );
+		else
+			m_asRun->writeAnswer( getStack(), answerToShow, def.scope );
 
-	// Write the answer in asrun
-	m_asRun->writeAnswer( getStack(), rawAnswer, def.scope );
+		if (m_forcePromptConfirm && doPromptConfirm)
+		{
+			DEBUG("[CIF] Prompt Confirm message");
+			SPELLpromptDefinition confirmPromptDefiniton;
+			confirmPromptDefiniton.message = "The answer '" + answerToShow + "' was provided for the previous Prompt.\nIs this value correct?";
+			confirmPromptDefiniton.options.push_back("YES");
+			confirmPromptDefiniton.options.push_back("NO");
+			confirmPromptDefiniton.expected.push_back("YES");
+			confirmPromptDefiniton.expected.push_back("NO");
+			confirmPromptDefiniton.scope = def.scope;
+			confirmPromptDefiniton.typecode = 128;
 
+			std::string confirmResult = this->prompt(confirmPromptDefiniton,false);
+
+			if (confirmResult != "YES")
+			{
+				canExit = false;
+			}
+			else
+			{
+				canExit = true;
+			}
+		}
+	} while (!canExit);
 	return answerToShow;
 } //std::string  SPELLcif::prompt( const SPELLpromptDefinition& definition )
 
@@ -485,6 +526,7 @@ void SPELLcif::canClose()
 //=============================================================================
 void SPELLcif::waitClose()
 {
+    SPELLsafeThreadOperations ops("waitClose");
     m_finishEvent.wait();
 }
 
@@ -557,6 +599,23 @@ void SPELLcif::notifyVariableScopeChange( const std::string& scopeName,
 		                                        const std::vector<SPELLvarInfo>& locals )
 {
 	specificNotifyVariableScopeChange( scopeName, globals, locals );
+}
+
+
+//=============================================================================
+// METHOD: SPELLcif::notifyResourceChange()
+//=============================================================================
+void SPELLcif::notifyResourceChange( const std::vector<SPELLresourceInfo>& changed )
+{
+	specificNotifyResourceChange( changed );
+}
+
+//=============================================================================
+// METHOD: SPELLcif::notifyResourceList()
+//=============================================================================
+void SPELLcif::notifyResourceList( const std::vector<SPELLresourceInfo>& resources )
+{
+	specificNotifyResourceList( resources );
 }
 
 

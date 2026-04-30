@@ -5,7 +5,7 @@
 // DESCRIPTION: Fake executor model for shell
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -126,12 +126,17 @@ public: //--------------------------------------------------------------------
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
-		SPELLexecutorConfig& getConfiguration() const { return m_cif->getExecutorConfig(); };
+		SPELLexecutorConfig& getConfiguration() { return m_cif->getExecutorConfig(); };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
 		**////////////////////////////////////////////////////////////////////
 		SPELLvariableManager& getVariableManager() const { return *m_varManager; };
+
+		//////////////////////////////////////////////////////////////////////
+		/** \see SPELLexecutorIF.
+		**////////////////////////////////////////////////////////////////////
+		SPELLresourceManager& getResourceManager() const { return *m_resourceManager; };
 
 		//////////////////////////////////////////////////////////////////////
 		/** \see SPELLexecutorIF.
@@ -276,7 +281,7 @@ public: //--------------------------------------------------------------------
 		/** \see SPELLexecutorIF.
         **////////////////////////////////////////////////////////////////////
         void setForceTcConfirm( const bool force ) {;};
-
+        void setForcePromptConfirm( const bool force ) {;};
     // *******************************************************************
     // LANGUAGE INTERLOCK
     // *******************************************************************
@@ -392,6 +397,8 @@ private: //-------------------------------------------------------------------
 		SPELLchildManager*           m_childMgr;
 		/** Holds the variable manager */
 		SPELLvariableManager*        m_varManager;
+		/** Holds the resource manager */
+		SPELLresourceManager*        m_resourceManager;
 		/** Holds the fake execution frame */
 		SPELLframeManager*           m_frameManager;
 };

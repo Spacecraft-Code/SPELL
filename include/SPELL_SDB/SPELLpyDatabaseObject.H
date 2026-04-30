@@ -5,7 +5,7 @@
 // DESCRIPTION: SPELL database Python extension
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -218,8 +218,7 @@ PyObject* SPELLpyDatabase_IterLen( PyDatabaseIteratorObject* iterator );
 #define DATABASE_DEFINITION(__type__,__name__,__doc__)  \
 		static PyTypeObject __type__ =                  \
 		{                                               \
-		    PyObject_HEAD_INIT(NULL)					/* basic object head */ \
-		    0,               							/* var objects */ 		\
+		    PyVarObject_HEAD_INIT(NULL,0)				/* basic object head */ \
 		    __name__,									/* type name */  		\
 		    sizeof(PyDatabaseObject),    				/* type size */ 		\
 		    0,											/* item size */         \
@@ -278,7 +277,7 @@ PyObject* SPELLpyDatabase_IterLen( PyDatabaseIteratorObject* iterator );
 			err += std::string(__type__.tp_name);		\
 			PyErr_SetString( PyExc_RuntimeError, err.c_str());	\
 			std::cerr << "ERROR: " << err << std::endl; \
-			return;                                     \
+			return MOD_ERROR_VAL;                              \
 		}
 
 /** Convenience macro to load a new type into the given module */

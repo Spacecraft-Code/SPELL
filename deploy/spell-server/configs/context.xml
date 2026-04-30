@@ -1,0 +1,112 @@
+{{- define "spell-server.input-folder" -}}
+{{- if .Values.spell_server.input_folder -}}
+{{ tpl .Values.spell_server.input_folder . }}
+{{- else -}}
+{{ .Values.spell_server.mission }}/InputFiles
+{{- end -}}
+{{- end -}}
+{{- define "spell-server.output-folder" -}}
+{{- if .Values.spell_server.output_folder -}}
+{{ tpl .Values.spell_server.output_folder . }}
+{{- else -}}
+{{ .Values.spell_server.mission }}/OutputFiles
+{{- end -}}
+{{- end }}
+<context id="{{ .Values.spell_server.mission }}">
+
+    <!-- =================================================================== -->
+    <!-- CONTEXT IDENTIFICATION -->
+    <!-- =================================================================== -->
+    <name>{{ .Values.spell_server.mission }} Spacecraft</name>
+    <description>Context for {{ .Values.spell_server.mission }}</description>
+    
+    
+    <!-- =================================================================== -->
+    <!-- SPELL DRIVER TO BE USED -->
+    <!-- =================================================================== -->
+    <driver>{{ .Values.spell_server.driver.name}}</driver>
+
+
+    <!-- =================================================================== -->
+    <!-- SPACECRAFT INFORMATION -->
+    <!-- =================================================================== -->
+    <spacecraft>{{ .Values.spell_server.spacecraft | default .Values.spell_server.mission }}</spacecraft>
+    <satname>{{ .Values.spell_server.mission }}</satname>
+    <family>{{ .Values.spell_server.family }}</family>
+    <gcs>{{ .Values.spell_server.driver.name}}</gcs>
+
+
+    <!-- =================================================================== -->
+    <!-- PROCEDURE INFORMATION -->
+    <!-- =================================================================== -->
+    <procpath>$SPELL_DATA/{{ .Values.spell_server.mission }}/Procedures</procpath>
+    <libpath>$SPELL_DATA/{{ .Values.spell_server.mission }}/UserLib</libpath>
+
+    <output_dir>$SPELL_DATA/{{- include "spell-server.output-folder" . }}</output_dir>
+    <input_dir>$SPELL_DATA/{{- include "spell-server.input-folder" . }}</input_dir>
+
+    <!-- =================================================================== -->
+    <!-- DRIVER CONFIGURATION -->
+    <!-- =================================================================== -->
+    <driverconfig>
+{{- range $key, $value := .Values.spell_server.driver.settings }}
+        <property name="{{ $key | upper }}">{{ tpl $value $ }}</property>
+{{- end}}
+	   
+	      <property name="SEAT">{{ .Values.spell_server.seat }}</property>
+    </driverconfig>
+
+
+    <!-- =================================================================== -->
+    <!-- EXECUTOR CONFIGURATION -->
+    <!-- =================================================================== -->
+    <executor>
+        <property name="ExecDelay">0</property>
+        <property name="PromptWarningDelay">60</property>
+        <property name="RunInto">True</property>
+        <property name="ByStep">False</property>
+        <property name="BrowsableLib">False</property>
+        <property name="MaxVerbosity">5</property>
+        <property name="SaveStateMode">DISABLED</property>
+        <property name="WatchVariables">DISABLED</property>
+        <property name="ResourcesDisplay">ENABLED</property>
+        <property name="LocalResourcesSupported">True</property>
+    </executor>
+
+    <!-- =================================================================== -->
+    <!-- DATABASE CONFIGURATION -->
+    <!-- =================================================================== -->
+    <databases>
+        <location name="SCDB"       type="file"      ext="DB"    >{{- include "spell-server.input-folder" . }}/SpacecraftDB</location>
+        <location name="GDB"        type="file"      ext="DB"    >{{- include "spell-server.input-folder" . }}/GroundDB</location>
+        <location name="mmd"        type="file"      ext="IMP"   >{{- include "spell-server.input-folder" . }}/ManeuvreMessage</location>
+        <location name="usr"        type="file"      ext="IMP"   >{{- include "spell-server.input-folder" . }}/User</location>
+        <location name="ar"         type="asrun"     ext="ASRUN" >{{- include "spell-server.output-folder" . }}/AsRun</location>
+        <location name="ws"         type="file"      ext="WS"    >{{- include "spell-server.output-folder" . }}/Warmstart</location>
+        <location name="svn"        type="file"       ext="SVN"  >{{- include "spell-server.input-folder" . }}/User</location>
+        <location name="eph_bss702" type="eph_bss702" ext="TBL"  >{{- include "spell-server.input-folder" . }}/EphemerisFile</location>
+
+        <database name="SCDB" location="SCDB">SCDB</database>
+        <database name="GDB"  location="GDB">GDB</database>
+    </databases>
+
+    <!-- =================================================================== -->
+    <!-- LANGUAGE DEFAULTS -->
+    <!-- this section allows overriding SPELL defaults for this context only -->
+    <!-- =================================================================== -->
+    <language>
+        <defaults interface="TM">
+            <modifier name="Tolerance">0.0</modifier>
+            <modifier name="TmTimeout">140</modifier>
+        </defaults>
+        <defaults interface="TC">
+            <modifier name="TcTimeout">600</modifier>
+            <modifier name="Tolerance">0.0</modifier>
+        </defaults>
+        <defaults function="Verify">
+            <modifier name="Wait">False</modifier>
+            <modifier name="Tolerance">0.0</modifier>
+        </defaults>
+    </language>
+
+</context>

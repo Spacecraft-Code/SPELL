@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the database manager wrapper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -83,15 +83,26 @@ PyObject* SPELLdatabaseManager::getDatabaseManagerObject()
 //=============================================================================
 void SPELLdatabaseManager::loadBuiltinDatabases()
 {
-	SPELLsafePythonOperations ops("SPELLdatabaseManager::loadBuiltinDatabases()");
-	PyObject* mgr = getDatabaseManagerObject();
-	// New reference
-	PyObject* scdb = SPELLpythonHelper::instance().callMethod( mgr, "loadDatabase", STRPY("SCDB"), NULL);
-	SPELLpythonHelper::instance().checkError();
-	// New reference
-	PyObject* gdb = SPELLpythonHelper::instance().callMethod( mgr, "loadDatabase", STRPY("GDB"), NULL );
-	SPELLpythonHelper::instance().checkError();
-	SPELLpythonHelper::instance().install( scdb, "SCDB" );
-	SPELLpythonHelper::instance().install( gdb,  "GDB" );
-	SPELLpythonHelper::instance().checkError();
+	try {
+		PyObject* mgr = getDatabaseManagerObject();
+		// New reference
+		PyObject* scdb = SPELLpythonHelper::instance().callMethod( mgr, "loadDatabase", STRPY("SCDB"), NULL);
+		SPELLpythonHelper::instance().checkError();
+		// New reference
+		PyObject* gdb = SPELLpythonHelper::instance().callMethod( mgr, "loadDatabase", STRPY("GDB"), NULL );
+		SPELLpythonHelper::instance().checkError();
+		SPELLpythonHelper::instance().install( scdb, "SCDB" );
+		SPELLpythonHelper::instance().install( gdb,  "GDB" );
+		SPELLpythonHelper::instance().checkError();
+	}
+	catch(SPELLcoreException& ex)
+    {
+    	LOG_ERROR("loadBuiltinDatabases failed: " + ex.what());
+		throw ex;
+    }
+	catch(...)
+    {
+    	LOG_ERROR("loadBuiltinDatabases failed: Unknown!");
+        throw;
+    }
 }

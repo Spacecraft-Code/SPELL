@@ -1,0 +1,410 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  {{ include "spell-server.fullname" . }}
+  labels:
+    {{- include "spell-server.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "spell-server.selectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "spell-server.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccountName | default "sa-spell" }}
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+      - name: spell-driver-init
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        image: {{ .Values.image.registry }}/spell/spell-driver-ubuntu-{{ .Values.spell_server.driver.name }}:{{ .Values.spell_server.version }}
+        command: ["cp", "-r", "/home/spell/SPELL/", "/home/spell/SPELL_DRIVER"]
+        imagePullPolicy: {{  .Values.image.pullPolicy  | default "Always"}}
+        volumeMounts:
+        - mountPath: /home/spell/SPELL_DRIVER
+          name: spell-driver
+      containers:
+      - image: {{ .Values.image.registry }}/spell/spell-server-ubuntu:{{ .Values.spell_server.version }}
+        name:  spell-server
+        imagePullPolicy: {{  .Values.image.pullPolicy  | default "Always"}}
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+          limits:
+            cpu: "3"
+            memory: "4Gi"
+        args:
+          - {{ .Values.spell_server.mission }}
+        securityContext:
+          capabilities:
+            drop:
+            - all
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1000
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh 
+              - -c
+              - "pgrep SPELL | xargs -I{} /bin/sh -c 'echo \\\\$(ps -p {} -o comm=): >> $SPELL_LOG/SPELL_Restart_$(date +\"%Y%m%d%H%M\").log && gdb -p {} -ex \"thread apply all bt\" >> $SPELL_LOG/SPELL_Restart_$(date +\"%Y%m%d%H%M\").log 2>&1 '"
+              
+          postStart:
+            exec:
+              command: 
+              - "/bin/sh"
+              - "-c"
+              - "mkdir -p /home/spell/procs/DEPLOYMENT/ && cp /home/spell/SPELL/release.nfo /home/spell/procs/DEPLOYMENT ; {{ .Values.spell_server.additionalInitSteps }}"
+        env:
+        - name:  SPELL_MISSION
+          value:  {{ .Values.spell_server.mission }} 
+        - name:  SPELL_DRIVER
+          value: /home/spell/SPELL_DRIVER/SPELL
+        - name: SPELL_DATA
+          value: /home/spell/procs/SPELL_PROCS
+{{- range $key, $value := .Values.spell_server.driver.env }}
+        - name: {{$key}}
+          value: {{$value | quote}}
+{{- end }}
+        startupProbe:
+          exec:
+            command:
+            - /home/spell/SPELL/bin/SPELL-Ping 
+          failureThreshold: 20
+          timeoutSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        livenessProbe:
+          exec:
+            command:
+            - /home/spell/SPELL/bin/SPELL-Ping
+          failureThreshold: 3
+          timeoutSeconds: 15
+          periodSeconds: 15
+        volumeMounts:
+        {{- with .Values.spell_server.additionalVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - mountPath: /home/spell/SPELL_DRIVER
+          name: spell-driver
+        - mountPath: /home/spell/SPELL_CONFIG/contexts/context.xml
+          name: {{ include "spell-server.fullname" . }}
+          subPath: context.xml
+        - mountPath: /home/spell/SPELL_CONFIG/server/server_{{ .Values.spell_server.mission }}.xml
+          name: {{ include "spell-server.fullname" . }}
+          subPath: server.xml
+        - mountPath: /home/spell/SPELL_CONFIG/spell/language.xml
+          name: {{ include "spell-server.fullname" . }}
+          subPath: language.xml
+        - mountPath: /home/spell/SPELL_CONFIG/spell/log.properties
+          name: {{ include "spell-server.fullname" . }}
+          subPath: log.properties
+        - mountPath: /home/spell/SPELL_CONFIG/spell/driver.xml
+          name: {{ include "spell-server.fullname" . }}
+          subPath: driver.xml
+        - mountPath: /home/spell/services
+          name: {{ include "spell-server.fullname" . }}
+          subPath: services
+          
+        - mountPath: /home/spell/procs
+          name: spell-procs
+
+      - name: fileds
+        image:  {{ .Values.image.registry }}/{{ .Values.fileds.image }}:{{ .Values.fileds.version }}
+        imagePullPolicy: {{  .Values.image.pullPolicy  | default "Always"}}
+        args:
+        - "{{ .Values.procedures.server }}"
+        - "{{ .Values.spell_server.mission }}"
+        - "{{ .Values.procedures.repo_folder }}"
+        - "{{ .Values.procedures.branch }}"
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1000
+          capabilities:
+            drop: ["all"]
+        startupProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - test -d /home/spell/SPELL_PROCS/{{ .Values.spell_server.mission }}/Procedures || (echo "Checkout still in Progress" && exit 1)
+          failureThreshold: 20
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        volumeMounts:
+          - name: git-ssh-key
+            mountPath: "/home/dt/.ssh/id_rsa"
+            subPath: "id_rsa"
+            readOnly: true
+          - name: git-ssh-key
+            mountPath: "/home/dt/.ssh/id_rsa.pub"
+            subPath: "id_rsa.pub"
+            readOnly: true
+          - name: git-ssh-key
+            mountPath: "/home/dt/.ssh/config"
+            subPath: "config"
+            readOnly: true
+
+          - mountPath: /home/spell/
+            name: spell-procs
+          - name: dispatch-folder
+            mountPath: /home/dispatch/
+          - name: dispatch-log-folder
+            mountPath: /home/dt/fileds/log/dispatch
+      - image: "{{ .Values.image.registry }}/{{ .Values.auth.ssh.image }}:{{ .Values.auth.ssh.version }}"
+        name:  spell-ssh
+        imagePullPolicy: {{  .Values.image.pullPolicy  | default "Always"}}
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+        securityContext:
+          capabilities:
+            add: ["SYS_CHROOT", "CAP_AUDIT_WRITE"]
+        readinessProbe:
+          tcpSocket:
+            port: 8422
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        env:
+        - name:  SPELL_MISSION
+          value:  {{ .Values.spell_server.mission }}   
+        - name: LDAP_URL
+          value:  {{ .Values.auth.ssh.ldap.url }}
+        - name: LDAP_BIND_DN
+          value: {{ .Values.auth.ssh.ldap.binddn }}
+        - name: SSH_PORT
+          value: "8422"
+        - name: SPELL_HOME
+          value: /home/spell/
+        ports:
+        - containerPort:  8422
+          name: ssh
+        volumeMounts:
+        {{- with .Values.procedures.additionalVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: {{ .Values.auth.ssh.ldap.bindpwSecret }}
+          mountPath: /etc/ldap_password
+          subPath: ldap-secret
+        - mountPath: /home/spell
+          name: spell-procs
+{{- if .Values.spell_addons.logrotate.enabled }}
+      - image: {{ .Values.image.registry }}/{{ .Values.spell_addons.logrotate.image }}:{{ .Values.spell_addons.logrotate.version }}
+        name: logrotate
+        imagePullPolicy: {{  .Values.image.pullPolicy  | default "Always"}}
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+          limits:
+            cpu: "2"
+            memory: "1000M"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1000
+          capabilities:
+            drop: ["all"]
+        env:
+        - name:  SPELL_MISSION
+          value:  {{ .Values.spell_server.mission }} 
+        - name:  SPELL_DRIVER
+          value: /home/spell/SPELL_DRIVER/SPELL
+        - name: SPELL_DATA
+          value: /home/spell/procs/SPELL_PROCS
+{{- range $key, $value := .Values.spell_addons.logrotate.env }}
+        - name: {{$key}}
+          value: {{$value | quote}}
+{{- end }}
+        volumeMounts:
+          {{- with .Values.spell_addons.logrotate.additionalVolumeMounts }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          - mountPath: /home/spell/SPELL_DRIVER
+            name: spell-driver
+          - mountPath: /home/spell/SPELL_CONFIG/contexts/context_{{ .Values.spell_server.mission }}.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: context.xml
+          - mountPath: /home/spell/SPELL_CONFIG/contexts/context.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: context.xml
+          - mountPath: /home/spell/SPELL_CONFIG/server/server_{{ .Values.spell_server.mission }}.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: server.xml
+          - mountPath: /home/spell/SPELL_CONFIG/spell/language.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: language.xml
+          - mountPath: /home/spell/SPELL_CONFIG/spell/log.properties
+            name: {{ include "spell-server.fullname" . }}
+            subPath: log.properties
+          - mountPath: /home/spell/SPELL_CONFIG/spell/scheduler_wasp.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: scheduler_wasp.xml
+          - mountPath: /home/spell/SPELL_CONFIG/spell/driver.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: driver.xml
+          - mountPath: /home/spell/services
+            name: {{ include "spell-server.fullname" . }}
+            subPath: services        
+          - mountPath: /home/spell/procs
+            name: spell-procs
+{{- end }}
+{{- if .Values.spell_addons.pace.enabled }}
+      - image: {{ .Values.image.registry }}/{{ .Values.spell_addons.pace.image }}:{{ .Values.spell_addons.pace.version }}
+        name: pace
+        imagePullPolicy: {{  .Values.image.pullPolicy  | default "Always"}}
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+          limits:
+            cpu: "1"
+            memory: "500M"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1000
+          capabilities:
+            drop: ["all"]
+        args:
+{{- range $idx,$value := .Values.spell_addons.pace.args }}
+        - {{ $value }}
+{{- end }}
+        env:
+        - name:  SPELL_MISSION
+          value:  {{ .Values.spell_server.mission }} 
+        - name:  SPELL_DRIVER
+          value: /home/spell/SPELL_DRIVER/SPELL
+        - name: SPELL_DATA
+          value: /home/spell/procs/SPELL_PROCS
+{{- if .Values.spell_addons.pace.useDriver }}
+{{- range $key, $value := .Values.spell_server.driver.env }}
+        - name: {{$key}}
+          value: {{$value | quote}}
+{{- end }}
+{{- end }}
+{{- range $key, $value := .Values.spell_addons.pace.env }}
+        - name: {{$key}}
+          value: {{$value | quote}}
+{{- end }}
+        volumeMounts:
+          {{- with .Values.spell_addons.pace.additionalVolumeMounts }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+{{- if .Values.spell_addons.pace.useDriver }}
+          - mountPath: /home/spell/SPELL_DRIVER
+            name: spell-driver
+{{- end }}
+          - mountPath: /home/spell/SPELL_CONFIG/contexts/context_{{ .Values.spell_server.mission }}.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: context.xml
+          - mountPath: /home/spell/SPELL_CONFIG/contexts/context.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: context.xml
+          - mountPath: /home/spell/SPELL_CONFIG/server/server_{{ .Values.spell_server.mission }}.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: server.xml
+          - mountPath: /home/spell/SPELL_CONFIG/spell/language.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: language.xml
+          - mountPath: /home/spell/SPELL_CONFIG/spell/log.properties
+            name: {{ include "spell-server.fullname" . }}
+            subPath: log.properties
+          - mountPath: /home/spell/SPELL_CONFIG/spell/scheduler_wasp.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: scheduler_wasp.xml
+          - mountPath: /home/spell/SPELL_CONFIG/spell/driver.xml
+            name: {{ include "spell-server.fullname" . }}
+            subPath: driver.xml
+          - mountPath: /home/spell/services
+            name: {{ include "spell-server.fullname" . }}
+            subPath: services
+{{- if .Values.spell_addons.pace.mountProcs }}          
+          - mountPath: /home/spell/procs
+            name: spell-procs
+{{- end }}
+
+{{- end }}
+      volumes:
+        {{- with .Values.spell_addons.pace.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.spell_server.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: dispatch-folder
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: dispatch-log-folder
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: sssd-cache-folder
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: git-ssh-key
+          secret:
+            secretName: spell-git-access
+            optional: false 
+            defaultMode: 0400
+        - name: spell-procs
+          persistentVolumeClaim:
+            claimName: {{ include "spell-server.fullname" . }}-pvc
+        - name: {{ .Values.auth.ssh.ldap.bindpwSecret }}
+          secret:
+            secretName: {{ .Values.auth.ssh.ldap.bindpwSecret }}
+            optional: false
+        - name: {{ include "spell-server.fullname" . }}
+          configMap:
+            name: {{ include "spell-server.fullname" . }}
+        - name: spell-driver
+          emptyDir: {}
+      restartPolicy: Always
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -5,7 +5,7 @@
 // DESCRIPTION: IPC - Interface for clients
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -268,6 +268,8 @@ protected: //-----------------------------------------------------------------
 		/** \see SPELLipcInterface.
 		**////////////////////////////////////////////////////////////////////
 		void incomingResponse( const SPELLipcMessage& msg );
+
+		SPELLipcMessage getPingMessage();
 
     // DATA MEMBERS //////////////////////////////////////////////////////////
 

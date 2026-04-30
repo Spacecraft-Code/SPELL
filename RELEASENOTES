@@ -1,0 +1,332 @@
+---------
+CHANGELOG
+---------
+
+What's new in SPELL 2.6.8.4
+==========================
+** Task
+    * Fix procedure listener cleanup
+    * Fix port assignment for on prem deployment
+    * Fix badly formatted WaitFor
+    * Fix loading of SCDB and GDB entries
+
+What's new in SPELL 2.6.8.2
+==========================
+** Task
+    * [SPELL-650] - Issue when taking control of a background (ARC) service running for a long time
+
+What's new in SPELL 2.6.8.1
+==========================
+** Bug
+    * [SPELL-644] - AOS_TM_TC_MONITOR stuck on ARC BB and SPELL Froze
+
+** Enhancement
+    * [SPELL-547] - Containerize SPELL to ease deployment
+
+What's new in SPELL 2.6.8
+==========================
+** Bug
+    * [SPELL-631] - Merge file import does not read content correctly
+    * [SPELL-641] - TIME object can't be created using a long anymore
+
+What's new in SPELL 2.6.7.8
+==========================
+** Bug
+    * [SPELL-640] - SPELL Listener and SPELL context crash on Disconnect
+
+What's new in SPELL 2.6.7.7
+==========================
+** Enhancement
+    * [SPELL-635] - Implement RestoreNormalLimits using FleetLimits
+    * [SPELL-637] - allow fleetlimits and archiva to coexist in the driver config
+
+What's new in SPELL 2.6.7.6
+==========================
+** Bug
+    * [SPELL-636] - SPELL Scorpio driver crashes when loosing connection to GCS
+
+What's new in SPELL 2.6.7.5
+==========================
+** Bug
+    * [SPELL-631] - Merge file import does not read content correctly
+
+What's new in SPELL 2.6.7.4
+==========================
+** Bug
+    * [SPELL-625] - IPA_CALIBRATION procedure crashed for MP01 on M2
+    * [SPELL-631] - Merge file import does not read content correctly
+
+** Enhancement
+    * [FLEET-3342] - Use a clientname to enable sticky sessions
+
+What's new in SPELL 2.6.7.3
+==========================
+** Bug
+    * [SPELL-626] - PACE activities failing and not being able to reopen in SPELL
+
+What's new in SPELL 2.6.7.2
+==========================
+** Bug
+    * [SPELL-622] - Regression - Issues with Prompt after ECHO CV Failure
+
+What's new in SPELL 2.6.7.1
+==========================
+** Bug
+    * [SPELL-622] - Issues with Prompt after ECHO CV Failure
+
+What's new in SPELL 2.6.7
+==========================
+** Bug
+    * [SPELL-624] - Retry Command Prompts are broken
+
+What's new in SPELL 2.6.6.5
+==========================
+** Bug
+    * [SPELL-618] - stranded crtxcmdb processes on m2cntl - SPELL false CV failures
+
+What's new in SPELL 2.6.6.4
+==========================
+** Bug
+    * [SPELL-619] - NORTH_SOUTH_STATIONKEEPING proc crash due to Execution aborted: Key error
+
+What's new in SPELL 2.6.6.3
+==========================
+** Bug
+    * [SPELL-616] - Undefined error variable in Scoprio driver causes memory corruption in SPELL
+
+What's new in SPELL 2.6.6.2
+==========================
+** Bug
+    * [SPELL-615] - ORT Uplink Check script failing. (additional fix)
+
+What's new in SPELL 2.6.6.1
+==========================
+** Bug
+    * [SPELL-615] - ORT Uplink Check script failing.
+
+What's new in SPELL 2.6.6
+==========================
+** Bug
+    * [SPELL-608] - IPC not connected message for long running procedures
+    * [SPELL-610] - Recurrent failures trying to acquire ground variables
+    * [SPELL-611] - Use After Free Crash of scorpio driver interface
+    * [SPELL-614] - GAR13043-Procedure 31104_North_South_Stationkeeping aborted and could not be unrecovered
+
+What's new in SPELL 2.6.5.5
+==========================
+** Bug
+    * [SPELL-307] - Sorting of files at the import file viewer/edit calling arguments (Server file selection)Sorting of files at the import file viewer/edit calling arguments (Server file selection)
+    * [Commit-cb233664787] Fix-regression-in-sce-toggle-functionality
+
+What's new in SPELL 2.6.5.4
+==========================
+** Bug
+    * [SPELL-599] - SPELL error : Lost connection with executor - Process crashed.
+
+** New Requirement
+    * [SPELL-590] - Retrieve and output current limit, msg ab algo version and time stamp and output it in SPELL
+    * [MPD-705] - Update Lookup_DataObject with Field fswpackage
+
+What's new in SPELL 2.6.5.3
+==========================
+** Enhancement
+    * [FLEET-720] - Activation of ephemeral and Overlay limits from SPELL
+    * [SCO-2992] - Trigger TPU restart from SPELL script
+
+What's new in SPELL 2.6.5.2
+==========================
+** Enhancement
+    * [SCO-3740] - SPELL prompt options after command failure
+
+What's new in SPELL 2.6.5.1
+==========================
+** Bug
+    * [SES2223-190] - Spell instruction WaitFor cannot be interrupted
+
+What's new in SPELL 2.6.5
+==========================
+** Bug
+    * [SPELL-582] - Avoid calling doStep when doSkip fails
+
+What's new in SPELL 2.6.4.3
+==========================
+** Bug
+    * [SPELL-573] - SPELL Crash on Python 3 Abort()
+
+What's new in SPELL 2.6.4.2
+==========================
+** Bug
+    * [SPELL-571] - Setting DUVs is only supported on the SES Mnemonic
+
+What's new in SPELL 2.6.4.1
+==========================
+** Bug
+    * [SPELL-557] - SPELL Deadlock when Pausing a Procedure inside a WaitFor with TM checks
+    * [SPELL-560] - WaitFor TM instruction crashed upon REPEAT
+    * [SPELL-568] - FleetTM connector is reutrning 999999 as a raw value for DPs
+
+
+** New Requirement
+    * [SPELL-565] - Ability to set the Spell Execution by STEP in the procedure
+
+What's new in SPELL 2.6.4
+==========================
+** Bug
+    * [SPELL-554] - Fix SB4000 tduinfo global rewrite
+
+
+    ** New Requirement
+        * [SPELL-517] - SPELL procedure should be able to restore manually applied limits
+
+What's new in SPELL 2.6.3.3
+==========================
+** Enhancement
+    * [SPELL-551] - Make SPELL driver more robust when accessing Scorpio variables
+
+What's new in SPELL 2.6.3.2
+==========================
+** Hotfix
+    * [SPELL-549] - SPELL Unable to Read\Set Resources - Fix for endless loop when receiving bad data
+
+What's new in SPELL 2.6.3.1
+==========================
+** Bug
+    * [SPELL-549] - SPELL Unable to Read\Set Resources
+
+What's new in SPELL 2.6.3
+==========================
+** Bug
+    * [SPELL-539] - Send ping to Collector
+    * [SPELL-542] - SetGroundParameter can't be executed
+    * [SPELL-544] - SPELL did not send all commands during a PACE Bi-weekly operations (PR #261).  
+
+What's new in SPELL 2.6.2.3
+==========================
+** Bug
+    * [SPELL-544] - SPELL did not send all commands during a PACE Bi-weekly operations.
+
+What's new in SPELL 2.6.2.2
+==========================
+** Bug
+    * [SPELL-537] - Properly handle Collector connection error and failures
+    * [SPELL-475] - Enable LoadDictionary to load Data from Pharos
+
+What's new in SPELL 2.6.2.1
+==========================
+** Bug
+    * [SPELL-536] - SPELL SCE toggle error checking mistake success with error
+
+
+    ** New Requirement
+        * [SPELL-475] - Enable LoadDictionary to load Data from Pharos
+
+What's new in SPELL 2.6.2
+==========================
+
+** Bug
+    * [SPELL-505] - Unable to command after a TC failure
+    * [SPELL-512] - Deadlock caused by ping not receiving any data
+
+
+** New Requirement
+    * [SPELL-516] - SPELL back-end to query for applied overlay limit files
+
+** Enhancement
+    * [SPELL-456] - GCS Enhancement Request - Automated Uplink Checks via SPELL
+    * [SPELL-484] - Raise an alarm (if possible) if procedure loses connection to context
+    * [SPELL-527] - Collector interfacing for SES20/21
+    * [SPELL-533] - Add bzcesim collector node number to scorpio driver
+
+What's new in SPELL 2.6.1.1
+==========================
+
+** Bug
+    * [SPELL-513] - SPELL failure to command at P2 for AMC18
+
+What's new in SPELL 2.6.1
+==========================
+
+** New Requirement
+    * [SPELL-457] - New message from SPELL to CWS to request VCC bump
+    * [SPELL-500] - New SPELL function to retrieve TM packets
+
+** Bug
+    * [SPELL-465] - Fix Python3 Memory lookup functions in Scorpio driver
+    * [SPELL-482] - SPELL crash during SN preparation
+    * [SPELL-489] - Python3: OpenFile with MODE=WRITE doesn't create a new file
+    * [SPELL-493] - IVARS and ARGS missing millisecond and microsecond
+    * [SPELL-496] - SPELL Context locks up when more then one service needs to get started
+    * [SPELL-506] - Missing import of TIME in the implementation of GetTMPackets makes the SPELL context crash
+
+** Enhancement
+    * [SPELL-426] - SPELL resource display (to check and set local TC options)
+    * [SPELL-455] - SES17: Improve CWS timeout message when TC packets are pending
+    * [SPELL-464] - Catch Common key/value parsing errors
+    * [SPELL-471] - Add M1/M2 node names
+    * [SPELL-473] - Add proto Git submodule
+    * [SPELL-494] - Improve SPELL Scorpio driver to make available exception messages to ARC
+    * [SPELL-507] - Meaningful error message on SCE toggle driver function error
+    * [SPELL-508] - Do not enforce the Collector availability for a procedure to run with mPower
+    * [SPELL-510] - Helper wrapping library to easily make GPS communication in Scorpio Driver
+
+What's new in SPELL 2.6.0.1
+==========================
+
+** Bug
+    * [SPELL-466] - SN1313: Process crashed during manoeuvre set up
+
+What's new in SPELL 2.6.0
+==========================
+
+** New Requirement
+    * [SPELL-337] - Make SPELL Python 3 compatible
+    * [SPELL-338] - Implement SES17 command capability
+    * [SPELL-344] - New SPELL functions to access Ground DTP Image
+
+** Bug
+    * [SPELL-281] - Don't do busy waiting while trying to receive an Ack in Scorpio driver
+    * [SPELL-340] - No audible for Spell Prompts
+    * [SPELL-356] - SES17 SetResource doesn't work and gives SPELL exeception
+    * [SPELL-357] - PACE alarm : Backup seat GE (g2anal02) not reachable: listener: login: send request: response timeout)
+    * [SPELL-358] - AMC07 & AMC08 SPELL Crash During BATMON Script
+    * [SPELL-359] - P.A3B.SEASON_MANAGEMENT procedure got stuck in the WaitFor statement
+    * [SPELL-365] - SPELL WaitFor TM crashes when there are issues
+    * [SPELL-373] - SPELl Service not copmpatible with Python3
+    * [SPELL-377] - Prompt will cuase SPELL v3 to crash
+    * [SPELL-383] - GOTO doesn't work on Python 3
+    * [SPELL-388] - Update STC.i for increased commanding buffer
+    * [SPELL-389] - Default sec/millis must be positive
+    * [SPELL-390] - Setting further TC options fails after encryption is set to ON
+    * [SPELL-392] - Python 3 breaks the Watch variables feature
+    * [SPELL-393] - SaveDictionary is not python 3 compatible
+    * [SPELL-394] - SPELL Warmstart crashes on throwing an excpetion within SPELL library code
+    * [SPELL-395] - SetUserAction crashes in Python 3
+    * [SPELL-396] - SendDelay/ReleaseTime modifiers don't work
+    * [SPELL-398] - Group command sending fails
+    * [SPELL-399] - mPower - big command crashes procedure
+    * [SPELL-401] - The Dynamic GRPCThreadPool used for GRPC connections and the SPELL Service is not working in Python 3
+    * [SPELL-403] - LoadExternalData doesn't work in new SPELL version
+    * [SPELL-406] - BuildTC command options are dropped in a command group of size one
+    * [SPELL-407] - SPELL-Driver start-up fails due to relative and missing imports
+    * [SPELL-413] - PACE: SPELL-Driver does not like relative parts
+    * [SPELL-430] - FleetTM output bus: With Wait=True, gRPC timeout does not work
+    * [SPELL-434] - SES17/mPower: Reset TC group after skip/cancel Prompt (Q, K, C)
+    * [SPELL-451] - Add missing sc= keyword in the GPS message
+    * [SPELL-460] - SES17 TC acceptance: n/a messges are not correctly handled resulting in timeouts
+    * [SPELL-463] - Long CWS messages crash Common client in the driver
+
+** Enhancement
+    * [SPELL-341] - FLEET - Enable SPELL access to PHAROS
+    * [SPELL-346] - Kill SPELL-Service as well when stopping SPELL
+    * [SPELL-348] - Add mission name to SPELL driver log file name
+    * [SPELL-354] - Add subschedule_id flag to SBNEO time tag command format
+    * [SPELL-370] - Add millisecond support for SES17 (SBNEO) platform
+    * [SPELL-371] - Make TC options and other ground resources local to the procedure
+    * [SPELL-372] - Update Scorpio TM Archiva interface to new Python3 module
+    * [SPELL-376] - Notify = False is not implemented for BuildTC
+    * [SPELL-385] - Teach mPower/sbneo drivers to use the convert_arguments_validate function
+    * [SPELL-391] - Add TC acceptance & verification flags to SBNEO
+    * [SPELL-429] - FleetTM output bus: Add gRPC request retries before throwing an exception
+    * [SPELL-433] - Check CWS request buffer size to avoid overflow in Common and STC
+    * [SPELL-453] - Refresh GPS connections after (long) commanding to avoid disconnections
+    * [SPELL-454] - Make Handle exception inherit from Exception

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the argument helper
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -220,7 +220,7 @@ SPELLtime SPELLpyArgs::getModifier_AsTime( const std::string& modifier ) const
 bool SPELLpyArgs::getModifier_AsBoolean( const std::string& modifier ) const
 {
     PyObject* valueObj = (*this)[modifier];
-    DEBUG("[CFGHLP] Configured modifier: " + PYREPR(valueObj))
+    DEBUG("[CFGHLP] Configured modifier: " + PYREPR(valueObj));
     bool value = false;
     if (valueObj != NULL)
     {
@@ -282,7 +282,7 @@ SPELLtime SPELLpyArgs::getModifier_Delay() const
 std::string SPELLpyArgs::getModifier_ValueFormat() const
 {
     PyObject* formatObj = (*this)[LanguageModifiers::ValueFormat];
-    DEBUG("[CFGHLP] Configured ValueFormat: " + PYREPR(formatObj))
+    DEBUG("[CFGHLP] Configured ValueFormat: " + PYREPR(formatObj));
 
     std::string format = LanguageConstants::ENG;
 
@@ -310,7 +310,7 @@ std::string SPELLpyArgs::getModifier_ValueFormat() const
 std::string SPELLpyArgs::getModifier_Expected() const
 {
     PyObject* expectedObj = (*this)[LanguageModifiers::Expected];
-    DEBUG("[CFGHLP] Configured Expected: " + PYREPR(expectedObj))
+    DEBUG("[CFGHLP] Configured Expected: " + PYREPR(expectedObj));
 
     std::string expected = "";
     if ( expectedObj != NULL )
@@ -333,7 +333,7 @@ std::string SPELLpyArgs::getModifier_Expected() const
 std::string SPELLpyArgs::getModifier_LoRed() const
 {
     PyObject* valueObj = (*this)[LanguageModifiers::LoRed];
-    DEBUG("[CFGHLP] Configured LoRed: " + PYREPR(valueObj))
+    DEBUG("[CFGHLP] Configured LoRed: " + PYREPR(valueObj));
 
     std::string value = "";
     if ( valueObj != NULL )
@@ -349,7 +349,7 @@ std::string SPELLpyArgs::getModifier_LoRed() const
 std::string SPELLpyArgs::getModifier_LoYel() const
 {
     PyObject* valueObj = (*this)[LanguageModifiers::LoYel];
-    DEBUG("[CFGHLP] Configured LoYel: " + PYREPR(valueObj))
+    DEBUG("[CFGHLP] Configured LoYel: " + PYREPR(valueObj));
 
     std::string value = "";
     if ( valueObj != NULL )
@@ -365,7 +365,7 @@ std::string SPELLpyArgs::getModifier_LoYel() const
 std::string SPELLpyArgs::getModifier_HiRed() const
 {
     PyObject* valueObj = (*this)[LanguageModifiers::HiRed];
-    DEBUG("[CFGHLP] Configured HiRed: " + PYREPR(valueObj))
+    DEBUG("[CFGHLP] Configured HiRed: " + PYREPR(valueObj));
 
     std::string value = "";
     if ( valueObj != NULL )
@@ -381,7 +381,39 @@ std::string SPELLpyArgs::getModifier_HiRed() const
 std::string SPELLpyArgs::getModifier_HiYel() const
 {
     PyObject* valueObj = (*this)[LanguageModifiers::HiYel];
-    DEBUG("[CFGHLP] Configured HiYel: " + PYREPR(valueObj))
+    DEBUG("[CFGHLP] Configured HiYel: " + PYREPR(valueObj));
+
+    std::string value = "";
+    if ( valueObj != NULL )
+    {
+		value = PYSSTR(valueObj);
+    }
+	return value;
+}
+
+//=============================================================================
+// METHOD: SPELLpyArgs::getModifier_Select()
+//=============================================================================
+std::string SPELLpyArgs::getModifier_Select() const
+{
+    PyObject* valueObj = (*this)[LanguageModifiers::Select];
+    DEBUG("[CFGHLP] Configured Select: " + PYREPR(valueObj));
+
+    std::string value = "";
+    if ( valueObj != NULL )
+    {
+		value = PYSSTR(valueObj);
+    }
+	return value;
+}
+
+//=============================================================================
+// METHOD: SPELLpyArgs::getModifier_LimitType()
+//=============================================================================
+std::string SPELLpyArgs::getModifier_LimitType() const
+{
+    PyObject* valueObj = (*this)[LanguageModifiers::Type];
+    DEBUG("[CFGHLP] Configured Limit Type: " + PYREPR(valueObj));
 
     std::string value = "";
     if ( valueObj != NULL )
@@ -546,10 +578,16 @@ std::string SPELLpyArgs::getModifier_Default() const
         }
         else if (PyFloat_Check( valueObj ))
         {
+#if PY_MAJOR_VERSION >= 3
+        	PyObject* obj = PyObject_Str(valueObj);
+        	value =  PyUnicode_AsUTF8(obj);
+        	Py_DECREF(obj);
+#else
         	char* buffer = new char[512];
-        	PyFloat_AsString(buffer, (PyFloatObject*) (valueObj) );
-        	value = std::string(buffer);
-        	delete buffer;
+			PyFloat_AsString(buffer, (PyFloatObject*) (valueObj) );
+			value = std::string(buffer);
+			delete buffer;
+#endif
         }
         else if (PyBool_Check( valueObj ))
         {
@@ -573,3 +611,4 @@ std::string SPELLpyArgs::getModifier_Default() const
     }
 	return value;
 }
+

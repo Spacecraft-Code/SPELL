@@ -1,0 +1,147 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  branches:
+    include:
+      - develop
+  paths:
+    include:
+      - azure_pipelines/variables/spell_server.yaml
+      - azure_pipelines/variables/baseline.yaml
+      - azure_pipelines/ci_spell_server.yaml
+      - lib/**
+      - src/**
+      - include/**
+      - configure.ac
+      - RELEASENOTES
+      - build_spell_ubuntu.sh
+      - docker/spell-server/**
+      - proto/**
+      - protos/**
+
+
+name: "SPELL Server CI Pipeline"
+
+pool:
+  name: weu1-d-keda
+
+variables:
+- template: variables/baseline.yaml
+- name: tags
+  value: "$(Build.DefinitionName)_$(Build.DefinitionVersion)_$(Build.BuildId)_$(Build.BuildNumber)"
+- name: DOCKER_BUILDKIT
+  value: 1
+- name: NODE_TLS_REJECT_UNAUTHORIZED
+  value: 0
+- template: variables/spell_server.yaml
+- group: nexus-auth
+- name: NEXUS_CONTAINER_SCANNING_SCANNER_IMAGE
+  value: neuvector/scanner
+- name: NEXUS_CONTAINER_SCANNING_REGISTRY_URL
+  value: https://docker-weu.spo.internal.ses.com 
+- name: NEXUS_CONTAINER_IMAGE_REGISTRY_USER
+  value: $(NEXUS_USER)
+- name: NEXUS_CONTAINER_IMAGE_REGISTRY_PASSWORD
+  value: $(NEXUS_PASSWORD)
+- name: NEXUS_CONTAINER_SCANNING_REGISTRY_USER
+  value: $(NEXUS_USER)
+- name: NEXUS_CONTAINER_SCANNING_REGISTRY_PASSWORD
+  value: $(NEXUS_PASSWORD)
+  
+
+stages:
+- stage:
+  displayName: Nexus IQ Check
+  jobs:
+  - job:
+    displayName: Docker image
+    steps:
+    - task: Bash@3
+      displayName: Extract Version
+      inputs:
+        targetType: inline
+        script: |
+            get_next_version() {
+              local increment_type="$1"
+              local RE='([0-9]*)[.]([0-9]*)[.]([0-9]*)([.-][0-9A-Za-z.-]+)?'
+
+              if [ -z "$increment_type" ]; then
+                increment_type="patch"
+              fi
+              if [[ "$2" =~ $RE ]]; then
+                local MAJOR="${BASH_REMATCH[1]}"
+                local MINOR="${BASH_REMATCH[2]}"
+                local PATCH="${BASH_REMATCH[3]}"
+                local pre=""
+              else
+                local MAJOR=0
+                local MINOR=0
+                local PATCH=0
+                local pre=""
+              fi
+              
+              case "$increment_type" in
+              major)
+                ((MAJOR += 1))
+                ((MINOR = 0))
+                ((PATCH = 0))
+              ;;
+              minor)
+                ((MINOR += 1))
+                ((PATCH = 0))
+              ;;
+              patch)
+               ((PATCH += 1))
+              ;;
+              esac
+              
+              local NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
+              echo "$NEXT_VERSION"
+            }
+
+            HEAD=`git rev-parse --short HEAD` && echo HEAD: ${HEAD}
+            VERSION_TAG=`git describe --abbrev=0 --tags ${HEAD} 2>/dev/null || true` && echo VERSION_TAG: ${VERSION_TAG}
+            TAG_COMMIT=`git rev-list -n 1 --abbrev-commit ${VERSION_TAG}` && echo TAG_COMMIT: ${TAG_COMMIT}
+            if [[ "$HEAD" != "$TAG_COMMIT" ]]
+            then
+              VERSION_TAG=`get_next_version patch ${VERSION_TAG}`
+            fi
+            echo "##vso[task.setvariable variable=VERSION_TAG]$VERSION_TAG"
+            echo "ADO Tag: $(tags)"
+            echo "New Version to be built: ${VERSION_TAG}"
+
+        workingDirectory: "$(system.defaultWorkingDirectory)/"
+    - task: Docker@2
+      displayName: Build
+      inputs:
+        command: build
+        repository: "$(DOCKER_IMAGE)"
+        containerRegistry: "$(NEXUS_REGISTRY)"
+        buildContext: "**$(DOCKER_BUILD_CONTEXT)"
+        Dockerfile: "$(DOCKER_FILEPATH)/Dockerfile"
+        tags: "$(VERSION_TAG)"
+        arguments: "--build-arg RUNTIME_IMAGE=$(RUNTIME_IMAGE) --build-arg VERSION_TAG=$(VERSION_TAG) --build-arg BUILD_IMAGE=$(BUILD_IMAGE) --build-arg  http_proxy=$(PROXY) --build-arg https_proxy=$(PROXY) --build-arg no_proxy=$(NO_PROXY)"
+    - task: Docker@2
+      displayName: Push
+      inputs:
+        command: push
+        repository: "$(DOCKER_IMAGE)"
+        containerRegistry: "$(NEXUS_REGISTRY)"
+        tags: "$(VERSION_TAG)"
+    - task: NexusIqPipelineTask@1
+      continueOnError: true
+      env:
+        NEXUS_CONTAINER_IMAGE_REGISTRY_PASSWORD: $(NEXUS_PASSWORD) 
+        NEXUS_CONTAINER_SCANNING_REGISTRY_PASSWORD: $(NEXUS_PASSWORD)
+      inputs:
+        nexusIqService: 'nexus-iq'
+        organizationId: 'b57c0bd6dfd247fa964dbc4cbfdf2f2a'
+        applicationId: '$(NEXUS_APPLICATION)'
+        stage: 'Build'
+        scanTargets: 'container:https://$(NEXUS_REGISTRY_URL)/$(DOCKER_IMAGE):$(VERSION_TAG)'
+        enableDebugLogging: true
+        ignoreSystemError: true
+        ignoreScanningError: true        

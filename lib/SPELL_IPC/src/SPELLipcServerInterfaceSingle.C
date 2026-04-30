@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the interface for single client servers
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -49,7 +49,8 @@ SPELLipcServerInterfaceSingle::SPELLipcServerInterfaceSingle( const std::string&
       m_connected(false),
       m_trash(name),
       m_ipcSequence(0),
-      m_mailbox(name)
+      m_mailbox(name),
+      m_removeClient(false)
 {
     m_serverKey = key;
     m_serverPort = port;
@@ -73,6 +74,7 @@ SPELLipcServerInterfaceSingle::~SPELLipcServerInterfaceSingle()
 {
     DEBUG(NAME + "Destroying server interface");
     DEBUG(NAME + "Server interface destroyed");
+    removeClientInternal();
 }
 
 //=============================================================================
@@ -116,12 +118,14 @@ void SPELLipcServerInterfaceSingle::run()
     DEBUG("  - Entering select loop");
 
     DEBUG(NAME + "Accepting connections");
-
     while(isConnected())
     {
         bool disconnected = false;
         SPELLsocket* clientSocket = m_serverSocket->acceptClient( &disconnected );
-
+        if (clientSocket == NULL && m_removeClient)
+        {
+            removeClientInternal();
+        }
         if ( (!disconnected) && (clientSocket != NULL) && (isConnected()) )
         {
             LOG_INFO(NAME + "Accepted new client connection");
@@ -172,7 +176,7 @@ void SPELLipcServerInterfaceSingle::addClient( SPELLsocket* skt )
     DEBUG( NAME + "add Client TRY-IN");
 
     SPELLmonitor m(m_clientLock);
-
+    m_removeClient = false;
     m_channel = new SPELLipcChannel( std::string(m_ifcName), skt, 1, *this );
     m_channel->connect();
 
@@ -185,22 +189,27 @@ void SPELLipcServerInterfaceSingle::addClient( SPELLsocket* skt )
 //=============================================================================
 void SPELLipcServerInterfaceSingle::removeClient()
 {
-    DEBUG( NAME + "Remove client TRY-IN" );
-    SPELLmonitor m(m_clientLock);
-    if (m_channel)
-    {
-    	m_channel->disconnect();
-    	delete m_channel;
-    	m_channel = NULL;
-    }
-    DEBUG( NAME + "Remove client OUT" );
+    m_removeClient = true;
 }
 
+void SPELLipcServerInterfaceSingle::removeClientInternal()
+{
+	SPELLmonitor m(m_cleanupLock);
+    if (m_channel)
+    {
+        m_channel->disconnect();
+        delete m_channel;
+        m_channel = NULL;
+        m_removeClient = false;
+    }
+
+}
 //=============================================================================
 // METHOD: SPELLipcServerInterfaceSingle:disconnect
 //=============================================================================
 void SPELLipcServerInterfaceSingle::disconnect()
 {
+
     DEBUG(NAME + "Server interface disconnect TRY-IN");
     if (!isConnected()) return;
     DEBUG(NAME + "Server interface disconnect ALL IN");
@@ -220,7 +229,7 @@ void SPELLipcServerInterfaceSingle::disconnect()
     //DEBUG(NAME + "Shutdown thread pool");
     //m_msgPool.shutdown();
     DEBUG(NAME + "Removing clients");
-    removeClient();
+    removeClientInternal();
     LOG_INFO(NAME + "Wait to end...");
     join();
     LOG_INFO(NAME + "Server interface disconnected");
@@ -272,11 +281,14 @@ void SPELLipcServerInterfaceSingle::sendMessage( SPELLipcMessage& msg )
     DEBUG(NAME + "Send message to peer");
     try
     {
-    	SPELLipcOutput& writer = m_channel->getWriter();
-		// Must set the appropriate key to the message beforehand. The key info is used
-		// to identify requests and their responses
-		msg.setKey(1);
-    	writer.send(msg);
+        if (m_channel != NULL)
+        {
+            SPELLipcOutput& writer = m_channel->getWriter();
+		    // Must set the appropriate key to the message beforehand. The key info is used
+		    // to identify requests and their responses
+		    msg.setKey(1);
+    	    writer.send(msg);
+        }
     }
     catch(SPELLipcError& err)
     {
@@ -428,15 +440,16 @@ void SPELLipcServerInterfaceSingle::incomingRequest( const SPELLipcMessage& msg 
 		}
     }
 
-    DEBUG(NAME + "IPC interface incoming request IN (" + msg.getSequenceStr() + ")");
+    DEBUG(NAME + "IPC interface incoming request IN (" + msg.getSequenceStr() + ") for ("+msg.get("User")+")");
 
     try
     {
         DEBUG(NAME + "Creating request processor  (" + msg.getSequenceStr() + ")");
-    	SPELLipcIncomingRequest* ireq = new SPELLipcIncomingRequest( msg.requestId(), m_ifcName, msg, m_channel->getWriter(), *m_listener );
+    	SPELLipcIncomingRequest* ireq = new SPELLipcIncomingRequest( msg.requestId(), m_ifcName, msg, m_clientLock,&m_channel, *m_listener );
     	ireq->start();
         DEBUG(NAME + "Wait request processor to start (" + msg.getSequenceStr() + ")");
-    	ireq->waitStarted();
+        // TODO: No reason to wait here. Remove once validated.
+    	//ireq->waitStarted();
 		DEBUG(NAME + "Place in trash");
 		m_trash.place(ireq);
 		DEBUG(NAME + "Place in trash DONE");
@@ -456,9 +469,9 @@ void SPELLipcServerInterfaceSingle::incomingRequest( const SPELLipcMessage& msg 
 //=============================================================================
 void SPELLipcServerInterfaceSingle::incomingMessage( const SPELLipcMessage& msg )
 {
-    DEBUG(NAME + "IPC interface incoming message TRY IN");
+    // DEBUG(NAME + "IPC interface incoming message TRY IN");
 	SPELLmonitor m(m_incomingLock);
-    DEBUG(NAME + "IPC interface incoming message IN " + msg.getId());
+    // DEBUG(NAME + "IPC interface incoming message IN " + msg.getId());
     {
     	SPELLmonitor m(m_ipcLock);
     	if (!isConnected()) return;
@@ -468,18 +481,29 @@ void SPELLipcServerInterfaceSingle::incomingMessage( const SPELLipcMessage& msg 
     DEBUG(NAME + "Creating message processor");
     while(m_trash.size()>50)
     {
-        //LOG_WARN(NAME + "Waiting for free space in queue");
-    	usleep(2000);
+    	m_trash.clearData();
+    	if (m_trash.size()>50)
+    	{
+    		LOG_WARN(NAME + "Waiting for free space in queue");
+    		usleep(50000);
+    	}
     }
-    SPELLipcIncomingMessage* imsg = new SPELLipcIncomingMessage( msg.requestId(), m_ifcName, msg, *m_listener);
-    imsg->start();
-    DEBUG(NAME + "Wait processor to start");
-	imsg->waitStarted();
-	DEBUG(NAME + "Place in trash");
-	m_trash.place(imsg);
-	DEBUG(NAME + "Place in trash DONE");
+    SPELLipcInterfaceListener* listener = m_listener;
+    if (listener != NULL){
+    	SPELLipcIncomingMessage* imsg = new SPELLipcIncomingMessage( msg.requestId(), m_ifcName, msg, *listener);
+		imsg->start();
+		//DEBUG(NAME + "Wait processor to start");
+		// TODO: No reason to wait here. Remove once validated.
+		//imsg->waitStarted();
+		// DEBUG(NAME + "Place in trash");
+		m_trash.place(imsg);
+    } else {
+    	LOG_WARN("!! Request discarded: no listener: " + msg.getId());
+    }
 
-    DEBUG(NAME + "IPC interface incoming message OUT");
+	// DEBUG(NAME + "Place in trash DONE");
+
+    // DEBUG(NAME + "IPC interface incoming message OUT");
 }
 
 //=============================================================================

@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the message mailbox
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -107,22 +107,6 @@ void SPELLipcMessageMailbox::shutdown()
         SPELLmonitor m(m_lock);
         DEBUG(NAME + "Shutdown")
         m_working = false;
-    }
-    cancelAll();
-}
-
-//=============================================================================
-// METHOD: SPELLipcMessageMailbox::cancelAll()
-//=============================================================================
-void SPELLipcMessageMailbox::cancelAll()
-{
-    SPELLipcMessageQueueMap::iterator mit;
-    for( mit = m_queueMap.begin(); mit != m_queueMap.end(); mit++)
-    {
-        SPELLipcMessage* dummyResponse = new SPELLipcMessage("dummy");
-        dummyResponse->setType( MSG_TYPE_RESPONSE );
-        SPELLipcMessageQueue* queue = (*mit).second;
-        queue->push(dummyResponse);
     }
 }
 

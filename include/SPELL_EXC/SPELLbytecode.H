@@ -6,7 +6,7 @@
 //				that affect the executor features at runtime.
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -27,6 +27,11 @@
 
 #ifndef __SPELL_BCODE_H__
 #define __SPELL_BCODE_H__
+
+#ifndef JUMP_IF_TRUE
+#define JUMP_IF_TRUE JUMP_IF_TRUE_OR_POP
+#define JUMP_IF_FALSE JUMP_IF_FALSE_OR_POP
+#endif
 
 // FILES TO INCLUDE ////////////////////////////////////////////////////////
 // System includes ---------------------------------------------------------

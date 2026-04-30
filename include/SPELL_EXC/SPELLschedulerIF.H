@@ -5,7 +5,7 @@
 // DESCRIPTION: Defines the interface of the executor scheduler
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -172,6 +172,11 @@ public: //--------------------------------------------------------------------
 		/** Set default delay for prompt warnings
 		**////////////////////////////////////////////////////////////////////
 		virtual void setPromptWarningDelay( unsigned int secs ) = 0;
+
+		//////////////////////////////////////////////////////////////////////
+		/** Inject a warning event message to GCS
+		**////////////////////////////////////////////////////////////////////
+		virtual void raiseWarningEventToGCS( const std::string& message ) = 0;
 };
 
 /*@}*/

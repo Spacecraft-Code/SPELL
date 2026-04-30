@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spell-registry
+  labels:
+    app.kubernetes.io/name: spell-registry
+    app.kubernetes.io/instance: spell
+    app.kubernetes.io/version: "v2.6.5.1-dev" # {"$imagepolicy": "spell:spell-registry:tag"}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spell-registry
+      app.kubernetes.io/instance: spell
+      app.kubernetes.io/version: "v2.6.5.1-dev" # {"$imagepolicy": "spell:spell-registry:tag"}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: spell-registry
+        app.kubernetes.io/instance: spell
+        app.kubernetes.io/version: "v2.6.5.1-dev" # {"$imagepolicy": "spell:spell-registry:tag"}
+    spec:
+      automountServiceAccountToken: true
+      serviceAccountName: spell-registry-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+      - image: bzengnexus1.idmz.eng.ses/spell/spell-registry:v2.6.5.1-dev # {"$imagepolicy": "spell:spell-registry"}
+        name: spell-registry
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "55M"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 90
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        env:
+        - name: ENVVARNAME
+          value: ENVVARVALUE
+        ports:
+        - containerPort: 8080
+          name: http

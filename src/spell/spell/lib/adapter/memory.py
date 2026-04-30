@@ -3,9 +3,9 @@
 ## DATE       : Mar 18, 2011
 ## PROJECT    : SPELL
 ## DESCRIPTION: Memory interface
-## -------------------------------------------------------------------------------- 
+## --------------------------------------------------------------------------------
 ##
-##  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+##  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 ##
 ##  This file is part of SPELL.
 ##
@@ -39,8 +39,8 @@ from spell.lib.adapter.constants.notification import *
 #*******************************************************************************
 # Local imports
 #*******************************************************************************
-from config import Configurable
-from interface import Interface
+from .config import Configurable
+from .interface import Interface
 
 #*******************************************************************************
 # System imports
@@ -52,7 +52,7 @@ import time,string,sys
 
 __all__ = ['MemInterface']
 
-INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | CANCEL } 
+INTERFACE_DEFAULTS = {  OnFailure:ABORT | SKIP | CANCEL }
 
 ###############################################################################
 class MemInterface(Configurable, Interface):
@@ -71,7 +71,7 @@ class MemInterface(Configurable, Interface):
         Configurable.__init__(self)
         self.__ctxName = None
         LOG("Created")
-        
+
     #===========================================================================
     def refreshConfig(self):
         ctxConfig = self.getContextConfig()
@@ -113,6 +113,13 @@ class MemInterface(Configurable, Interface):
         return self._compareImages( image1, image2, rtype, begin, end, source, useConfig )
 
     #===========================================================================
+    def createGoldenImage(self, *args, **kargs):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        scp  = args[0]
+        filename  = args[1]
+        return self._createGoldenImage( scp, filename, useConfig )
+
+    #===========================================================================
     def memoryLookup(self, *args, **kargs):
         useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
         name   = args[0]
@@ -123,16 +130,59 @@ class MemInterface(Configurable, Interface):
         return self._memoryLookup( name, address, image, rtype, source, useConfig )
 
     #===========================================================================
+    def dataObjectLookup(self, *args, **kargs):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        name    = args[0]
+        type    = args[1]
+        return self._dataObjectLookup( name, type, useConfig )
+
+    #===========================================================================
+    def dataItemLookup(self, *args, **kargs):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        name        = args[0]
+        type        = args[1]
+        source      = args[2]
+        valueFormat = args[3]
+        return self._dataItemLookup( name, type, source, valueFormat, useConfig )
+
+    #===========================================================================
+    def getObjectIDs(self, *args, **kargs):
+        useConfig = self.buildConfig( args, kargs, self.getConfig(), INTERFACE_DEFAULTS)
+        type    = args[0]
+        source  = args[1]
+        return self._dataObjectLookup( type, source, useConfig )
+
+    #===========================================================================
     def _generateReport(self, image, report_type, begin, end, source, config):
-        REGISTRY['CIF'].write("Memory management service not implemented on this driver", {Severity:WARNING})
+        REGISTRY['CIF'].write("Memory report generation not implemented on this driver", {Severity:WARNING})
         return False
 
     #===========================================================================
     def _compareImages(self, image1, image2, report_type, begin, end, source, config):
-        REGISTRY['CIF'].write("Memory management service not implemented on this driver", {Severity:WARNING})
+        REGISTRY['CIF'].write("Comparison of memory images not implemented on this driver", {Severity:WARNING})
+        return False
+
+    #===========================================================================
+    def _createGoldenImage(self, scp, filename, config):
+        REGISTRY['CIF'].write("Creation of golden images not implemented on this driver", {Severity:WARNING})
         return False
 
     #===========================================================================
     def _memoryLookup(self, name, address, image, report_type, source, config):
-        REGISTRY['CIF'].write("Memory management service not implemented on this driver", {Severity:WARNING})
+        REGISTRY['CIF'].write("Memory lookup not implemented on this driver", {Severity:WARNING})
+        return None
+
+    #===========================================================================
+    def _dataObjectLookup(self, name, type, config):
+        REGISTRY['CIF'].write("DataObjectLookup not implemented on this driver", {Severity:WARNING})
+        return None
+
+    #===========================================================================
+    def _dataItemLookup(self, name, type, source, valueFormat, config):
+        REGISTRY['CIF'].write("DataItemLookup not implemented on this driver", {Severity:WARNING})
+        return None
+
+    #===========================================================================
+    def _getObjectIDs(self, type, source, config):
+        REGISTRY['CIF'].write("GetObjectIDs not implemented on this driver", {Severity:WARNING})
         return None

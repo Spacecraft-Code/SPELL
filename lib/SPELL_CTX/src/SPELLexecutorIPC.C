@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor IPC interface
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -59,10 +59,10 @@ SPELLexecutorIPC::SPELLexecutorIPC( SPELLexecutor& controller, const SPELLexecut
 //=============================================================================
 SPELLexecutorIPC::~SPELLexecutorIPC()
 {
-	DEBUG("[EXCIPC] Destroying");
+	//DEBUG("[EXCIPC] Destroying");
 	m_ipc.removeListener();
 	m_ipc.join();
-	DEBUG("[EXCIPC] Destroyed");
+	//DEBUG("[EXCIPC] Destroyed");
 }
 
 //=============================================================================
@@ -70,7 +70,7 @@ SPELLexecutorIPC::~SPELLexecutorIPC()
 //=============================================================================
 void SPELLexecutorIPC::setup()
 {
-	DEBUG("[EXCIPC] Setup");
+	//DEBUG("[EXCIPC] Setup");
 	m_ipc.initialize(&*this);
 	m_ipc.connect();
 	m_ipc.start();
@@ -83,13 +83,13 @@ void SPELLexecutorIPC::setup()
 void SPELLexecutorIPC::cleanup()
 {
 	SPELLmonitor m(m_notifyLock);
-	DEBUG("[EXCIPC] Cleanup");
+	//DEBUG("[EXCIPC] Cleanup");
 	m_connected = false;
-	DEBUG("[EXCIPC] Close executor connection");
+	//DEBUG("[EXCIPC] Close executor connection");
 	m_ipc.removeListener();
-	DEBUG("[EXCIPC] Perform disconnection");
+	//DEBUG("[EXCIPC] Perform disconnection");
 	m_ipc.disconnect();
-	DEBUG("[EXCIPC] Close executor connection done");
+	//DEBUG("[EXCIPC] Close executor connection done");
 }
 
 //=============================================================================
@@ -138,21 +138,21 @@ SPELLipcMessage SPELLexecutorIPC::sendRequest( const std::string& executorId, co
 void SPELLexecutorIPC::processMessage( const SPELLipcMessage& msg )
 {
 	TICK_IN;
-	DEBUG("[EXCIPC] Received message from executor: " + msg.dataStr());
+	//DEBUG("[EXCIPC] Received message from executor: " + msg.dataStr());
 
 	// Certain messages are for monitoring clients only
 	if ((msg.getId() != MessageId::MSG_ID_PROMPT_START)&&(msg.getId() != MessageId::MSG_ID_PROMPT_END))
 	{
-		DEBUG("[EXCIPC] Forward message to controller");
+		//DEBUG("[EXCIPC] Forward message to controller");
 		m_controller.processMessageFromExecutor(msg);
 	}
 
 	if (msg.getId() != ExecutorMessages::MSG_NOTIF_EXEC_CLOSE)
 	{
-		DEBUG("[EXCIPC] Forward message to monitoring clients");
+		//DEBUG("[EXCIPC] Forward message to monitoring clients");
 		notifyMessage(msg);
 	}
-	DEBUG("[EXCIPC] Message processed");
+	//DEBUG("[EXCIPC] Message processed");
 	TICK_OUT;
 }
 
@@ -163,21 +163,21 @@ SPELLipcMessage SPELLexecutorIPC::processRequest( const SPELLipcMessage& msg )
 {
 	TICK_IN;
 
-	DEBUG("[EXCIPC] Received request from executor: " + msg.dataStr());
+	//DEBUG("[EXCIPC] Received request from executor: " + msg.dataStr());
 	SPELLipcMessage resp = VOID_MESSAGE;
 
-	DEBUG("[EXCIPC] Forward request to controller");
+	//DEBUG("[EXCIPC] Forward request to controller");
 	resp = m_controller.processRequestFromExecutor(msg);
 
 	// Certain requests are to be sent to controlling clients only
 	if ( shouldForwardToMonitoring(msg) )
 	{
-		DEBUG("[EXCIPC] Forward to monitoring clients");
+		//DEBUG("[EXCIPC] Forward to monitoring clients");
 		// Notify request
 		notifyRequest(msg);
 	}
 
-	DEBUG("[EXCIPC] Request processed");
+	//DEBUG("[EXCIPC] Request processed");
 	TICK_OUT;
 	return resp;
 }
@@ -202,6 +202,10 @@ bool SPELLexecutorIPC::shouldForwardToMonitoring( const SPELLipcMessage& msg )
         return false;
     }
     else if ( requestId == ContextMessages::REQ_EXEC_INFO )
+    {
+        return false;
+    }
+    else if ( requestId == ContextMessages::REQ_SERVICE_INFO )
     {
         return false;
     }
@@ -257,9 +261,9 @@ void SPELLexecutorIPC::notifyMessage( const SPELLipcMessage& msg )
 {
 	if (m_connected)
 	{
+		SPELLmonitor m(m_notifyLock);
 		for( NotifierMap::iterator it = m_notifiers.begin(); it != m_notifiers.end(); it++)
 		{
-			SPELLmonitor m(m_notifyLock);
 			if (it->second!=NULL) it->second->processMessageFromExecutor(msg);
 		}
 	}
@@ -272,9 +276,9 @@ void SPELLexecutorIPC::notifyRequest( const SPELLipcMessage& msg )
 {
 	if (m_connected)
 	{
+		SPELLmonitor m(m_notifyLock);
 		for( NotifierMap::iterator it = m_notifiers.begin(); it != m_notifiers.end(); it++)
 		{
-			SPELLmonitor m(m_notifyLock);
 			if (it->second!=NULL) it->second->processRequestFromExecutor(msg);
 		}
 	}
@@ -288,7 +292,7 @@ void SPELLexecutorIPC::registerExecutorNotifier( std::string id, SPELLexecutorLi
 	SPELLmonitor m(m_notifyLock);
 	LOG_INFO("[EXCIPC] #### Register notifier listener: " + id);
 	NotifierMap::iterator it = m_notifiers.find(id);
-	if (it == m_notifiers.end())
+	if (it == m_notifiers.end() || it->second != notifier)
 	{
 		m_notifiers[id] = notifier;
 	}
@@ -304,6 +308,8 @@ void SPELLexecutorIPC::deregisterExecutorNotifier( std::string id )
 	NotifierMap::iterator it = m_notifiers.find(id);
 	if (it != m_notifiers.end())
 	{
-		m_notifiers.erase(it);
+	    // Don't invalidate iterators by just setting the entry to NULL
+		//m_notifiers.erase(it);
+	    m_notifiers[id] = NULL;
 	}
 }

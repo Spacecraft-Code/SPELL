@@ -5,7 +5,7 @@
 // DESCRIPTION: Implementation of the executor configuration
 // --------------------------------------------------------------------------------
 //
-//  Copyright (C) 2008, 2015 SES ENGINEERING, Luxembourg S.A.R.L.
+//  Copyright (C) 2008, 2018 SES ENGINEERING, Luxembourg S.A.R.L.
 //
 //  This file is part of SPELL.
 //
@@ -70,7 +70,10 @@ SPELLexecutorConfig::SPELLexecutorConfig( const SPELLexecutorConfig& refConfig )
 	m_blocking = refConfig.isBlocking();
 	m_saveStateMode = refConfig.getSaveStateMode();
 	m_watchVariables = refConfig.isWatchEnabled();
+	m_resourcesDisplay = refConfig.isResourcesDisplayEnabled();
+	m_localResourceSupport = refConfig.isLocalResourcesSupported();
 	m_forceTcConfirm = refConfig.isForceTcConfirm();
+	m_forcePromptConfirm = refConfig.isForcePromptConfirm();
 	m_controlClient = refConfig.getControlClient();
 	m_controlHost = refConfig.getControlHost();
 	m_headless = refConfig.isHeadless();
@@ -97,7 +100,10 @@ SPELLexecutorConfig& SPELLexecutorConfig::operator=( SPELLexecutorConfig& refCon
 	m_blocking = refConfig.isBlocking();
 	m_saveStateMode = refConfig.getSaveStateMode();
 	m_watchVariables = refConfig.isWatchEnabled();
+	m_resourcesDisplay = refConfig.isResourcesDisplayEnabled();
+	m_localResourceSupport = refConfig.isLocalResourcesSupported();
 	m_forceTcConfirm = refConfig.isForceTcConfirm();
+	m_forcePromptConfirm = refConfig.isForcePromptConfirm();
 	m_controlClient = refConfig.getControlClient();
 	m_controlHost = refConfig.getControlHost();
 	m_headless = refConfig.isHeadless();
@@ -129,7 +135,10 @@ void SPELLexecutorConfig::reset()
     m_runInto            = true;
 
     m_watchVariables 	 = false;
+    m_resourcesDisplay 	 = false;
+	m_localResourceSupport = false;
     m_forceTcConfirm     = false;
+    m_forcePromptConfirm     = false;
 	m_controlClient = "";
 	m_controlHost = "";
 	m_contextName = "";
